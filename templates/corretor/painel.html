@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-900">Painel do Corretor</h1>
+    <p class="text-gray-600 text-sm">Acompanhamento simples de novos leads e agendamentos de visitas.</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="bg-white p-6 rounded-lg shadow border">
+        <h2 class="font-bold text-slate-800 text-lg mb-4 border-b pb-2">📩 Solicitacões de Contato / Leads</h2>
+        {% for lead in leads %}
+            <div class="p-3 bg-gray-50 rounded mb-2 border text-sm">
+                <span class="font-bold text-slate-900">{{ lead.nome }}</span> ({{ lead.telefone }})<br>
+                <span class="text-gray-600 text-xs">{{ lead.email }}</span>
+                <p class="mt-1 text-gray-700 font-serif">"{{ lead.mensagem }}"</p>
+            </div>
+        {% else %}
+            <p class="text-gray-400 text-sm">Nenhum lead pendente no momento.</p>
+        {% endfor %}
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow border">
+        <h2 class="font-bold text-slate-800 text-lg mb-4 border-b pb-2">📅 Agendamentos de Visita</h2>
+        {% for ag in agendamentos %}
+            <div class="p-3 bg-amber-50 rounded mb-2 border border-amber-200 text-sm">
+                <span class="font-bold text-amber-900">{{ ag.visitante_snapshot.nome }}</span> - {{ ag.data_hora }}<br>
+                <span class="text-gray-600 text-xs">Tel: {{ ag.visitante_snapshot.telefone }}</span>
+            </div>
+        {% else %}
+            <p class="text-gray-400 text-sm">Nenhum agendamento futuro marcado.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
