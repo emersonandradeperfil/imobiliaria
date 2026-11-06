@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="secao"><h1>Visita · {{ ag.data_hora|data_br }}</h1>
+  <p><a href="{{ url_for('admin.agendamentos') }}">← Voltar para os agendamentos</a></p>
+  <p><span class="status {{ ag.status }}">{{ ag.status|title }}</span></p>
+
+  {% for c in conflitos %}
+    <div class="flash erro">⚠️ Você já tem uma visita confirmada próxima deste horário ({{ c.data_hora|data_br }}).</div>
+  {% endfor %}
+
+  <div class="duas-colunas">
+    <div>
+      <h2>Visitante</h2>
+      <p><b>{{ ag.visitante_snapshot.nome }}</b><br>
+        Telefone: {{ ag.visitante_snapshot.telefone }}
+        {% if ag.visitante_snapshot.telefone %} · <a href="{{ ag.visitante_snapshot.telefone|whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}<br>
+        Documento: {{ ag.visitante_snapshot.documento or 'não informado' }}</p>
+      {% if ag.observacoes %}<p><b>Observações do visitante:</b><br>{{ ag.observacoes }}</p>{% endif %}
+
+      <h2>Imóvel</h2>
+      {% if imovel %}
+        <p><b>{{ imovel.codigo }}</b> · {{ imovel.titulo }}<br>
+          <a href="{{ url_for('admin.imovel_editar', codigo=imovel.codigo) }}">Abrir no painel</a>
+          {% if imovel.status in ('ativo', 'reservado') %} · <a href="{{ url_for('public.detalhe', slug=imovel.slug) }}" target="_blank">Ver no site</a>{% endif %}</p>
+        {% if endereco %}<p class="endereco">{{ endereco.logradouro }}, {{ endereco.numero }}
+          {% if endereco.complemento %} · {{ endereco.complemento }}{% endif %}<br>{{ imovel.local_publico.bairro }} · CEP {{ endereco.cep or '—' }}</p>{% endif %}
+      {% else %}<p>Imóvel removido.</p>{% endif %}
+
+      <h2>Histórico</h2>
+      <ul class="hist">
+        {% for h in ag.historico or [] %}
+          <li>{{ h.em|data_br }} · <b>{{ h.status|title }}</b> por {{ h.por_nome }}{% if h.motivo %} — “{{ h.motivo }}”{% endif %}</li>
+        {% else %}<li>Sem registros.</li>{% endfor %}
+      </ul>
+    </div>
+
+    <aside class="lateral">
+      {% if transicoes %}
+        <h3>Ações</h3>
+        {% if 'confirmado' in transicoes %}
+          <form method="post" action="{{ url_for('admin.agendamento_status', ag_id=ag._id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="status" value="confirmado">
+            <button class="btn bloco">Confirmar visita</button>
+          </form>
+        {% endif %}
+        {% if 'realizado' in transicoes %}
+          <form method="post" action="{{ url_for('admin.agendamento_status', ag_id=ag._id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="status" value="realizado">
+            <button class="btn bloco" {{ 'disabled' if not ja_passou }}>Marcar como realizada</button>
+            {% if not ja_passou %}<small>Disponível após o horário da visita.</small>{% endif %}
+          </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('admin.agendamento_status', ag_id=ag._id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="status" value="cancelado">
+          <label>Motivo do cancelamento/recusa (o cliente verá)
+            <textarea name="motivo" rows="3" maxlength="300" required></textarea></label>
+          <button class="btn claro bloco">Recusar / cancelar</button>
+        </form>
+      {% else %}
+        <p class="meta">Este agendamento está encerrado.</p>
+      {% endif %}
+    </aside>
+  </div>
+</section>
+{% endblock %}

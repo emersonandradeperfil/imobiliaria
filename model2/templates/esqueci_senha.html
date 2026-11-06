@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="secao estreito">
+  <h1>Esqueci minha senha</h1>
+  <p>Informe seu e-mail e enviaremos um link para criar uma nova senha.</p>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>E-mail <input type="email" name="email" required autofocus></label>
+    <button class="btn bloco">Enviar link</button>
+  </form>
+</section>
+{% endblock %}

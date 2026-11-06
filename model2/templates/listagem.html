@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% from "_card.html" import card %}
+{% block title %}Imóveis · {{ config.NOME_SITE }}{% endblock %}
+{% block content %}
+<section class="secao">
+  {% include "_filtros.html" %}
+  <h2>{{ imoveis|length }} imóve{{ 'l' if imoveis|length == 1 else 'is' }} encontrado{{ '' if imoveis|length == 1 else 's' }}</h2>
+  <div class="grade">{% for i in imoveis %}{{ card(i) }}{% else %}<p>Nenhum imóvel com esses filtros.</p>{% endfor %}</div>
+</section>
+{% endblock %}

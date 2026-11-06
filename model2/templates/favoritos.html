@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% from "_card.html" import card %}
+{% block content %}
+<section class="secao"><h2>Meus favoritos</h2>
+  <div class="grade">{% for i in imoveis %}{{ card(i) }}{% else %}<p>Você ainda não favoritou nenhum imóvel.</p>{% endfor %}</div>
+</section>
+{% endblock %}

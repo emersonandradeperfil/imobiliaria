@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="secao estreito"><h1>Novo usuário da equipe</h1>
+  <p><a href="{{ url_for('admin.usuarios') }}">← Voltar</a></p>
+  <p class="meta">A pessoa recebe um link por e-mail para definir a própria senha. Você nunca vê nem define a senha dela.</p>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Nome <input name="nome" value="{{ v.get('nome', '') }}" required></label>
+    <label>E-mail <input type="email" name="email" value="{{ v.get('email', '') }}" required></label>
+    <label>Telefone <input name="telefone" value="{{ v.get('telefone', '') }}"></label>
+    <label>Papel <select name="papel">{% for k, n in papeis %}<option value="{{ k }}" {{ 'selected' if v.get('papel') == k }}>{{ n }}</option>{% endfor %}</select></label>
+    <button class="btn bloco">Criar e enviar convite</button>
+  </form>
+</section>
+{% endblock %}

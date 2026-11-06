@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ config.NOME_SITE }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<header class="topo">
+  <a class="marca" href="{{ url_for('public.home') }}">{{ config.NOME_SITE }}</a>
+  <nav>
+    <a href="{{ url_for('public.listagem', finalidade='venda') }}">Comprar</a>
+    <a href="{{ url_for('public.listagem', finalidade='locacao') }}">Alugar</a>
+    <a href="{{ url_for('leads.adm_condominio') }}">Condomínios</a>
+    <a href="{{ url_for('leads.cadastre_imovel') }}">Cadastre seu imóvel</a>
+    <a href="{{ url_for('public.quem_somos') }}">Quem somos</a>
+    <a href="{{ url_for('leads.contato') }}">Fale conosco</a>
+  </nav>
+  <div class="conta">
+    {% set u = usuario_atual() %}
+    {% if u %}
+      {% if u.papel in ('admin', 'corretor') %}<a href="{{ url_for('admin.dashboard') }}">Painel</a>{% endif %}
+      <a href="{{ url_for('account.favoritos') }}">Favoritos</a>
+      <a href="{{ url_for('account.conta') }}">Minha conta</a>
+      <a href="{{ url_for('account.meus_agendamentos') }}">Agendamentos</a>
+      <form method="post" action="{{ url_for('auth.logout') }}" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="link">Sair</button>
+      </form>
+    {% else %}
+      <a href="{{ url_for('auth.login') }}">Entrar</a>
+      <a class="btn pequeno" href="{{ url_for('auth.cadastro') }}">Cadastrar</a>
+    {% endif %}
+  </div>
+</header>
+
+{% with msgs = get_flashed_messages(with_categories=true) %}
+  {% if msgs %}<div class="flashes">{% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}</div>{% endif %}
+{% endwith %}
+
+<main>{% block content %}{% endblock %}</main>
+
+<footer class="rodape">
+  <span>© {{ config.NOME_SITE }}</span>
+  <a href="{{ url_for('public.privacidade') }}">Política de Privacidade</a>
+</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>

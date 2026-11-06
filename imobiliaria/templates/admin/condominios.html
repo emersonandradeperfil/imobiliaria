@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="secao"><h1>Condomínios</h1>
+  <p><a href="{{ url_for('admin.dashboard') }}">← Painel</a> · <a class="btn pequeno" href="{{ url_for('admin.condominio_novo') }}">+ Novo condomínio</a></p>
+  <div class="rolagem"><table class="tabela">
+    <tr><th>Nome</th><th>Bairro</th><th>Administrado por nós</th><th>Imóveis</th><th>Situação</th><th></th></tr>
+    {% for c in lista %}
+    <tr>
+      <td>{{ c.nome }}</td><td>{{ c.bairro }}</td>
+      <td>{{ 'Sim' if c.administrado_pela_imobiliaria else 'Não' }}</td>
+      <td>{{ contagem.get(c._id, 0) }}</td>
+      <td>{{ 'Ativo' if c.ativo != false else 'Inativo' }}</td>
+      <td class="acoes"><a href="{{ url_for('admin.condominio_editar', cid=c._id) }}">Editar</a>
+        {% if not contagem.get(c._id) %}
+          <form method="post" action="{{ url_for('admin.condominio_excluir', cid=c._id) }}" class="inline" onsubmit="return confirm('Excluir este condomínio?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> · <button class="link">Excluir</button></form>
+        {% endif %}</td>
+    </tr>
+    {% else %}<tr><td colspan="6">Nenhum condomínio cadastrado.</td></tr>{% endfor %}
+  </table></div>
+</section>
+{% endblock %}

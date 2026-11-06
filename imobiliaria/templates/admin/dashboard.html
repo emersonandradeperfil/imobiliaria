@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="secao"><h1>Painel</h1>
+  <p class="botoes">
+    <a class="btn" href="{{ url_for('admin.imoveis') }}">Imóveis</a>
+    <a class="btn claro" href="{{ url_for('admin.imovel_novo') }}">+ Novo imóvel</a>
+    <a class="btn claro" href="{{ url_for('admin.agendamentos') }}">Agendamentos</a>
+    <a class="btn claro" href="{{ url_for('admin.leads') }}">Leads</a>
+    {% if usuario_atual().papel == 'admin' %}
+      <a class="btn claro" href="{{ url_for('admin.condominios') }}">Condomínios</a>
+      <a class="btn claro" href="{{ url_for('admin.usuarios') }}">Usuários</a>
+    {% endif %}
+  </p>
+  <div class="grade-resumo">
+    <div class="kpi"><b>{{ resumo.imoveis_ativos }}</b>imóveis ativos</div>
+    <div class="kpi"><b>{{ resumo.ag_pendentes }}</b>visitas pendentes</div>
+    <div class="kpi"><b>{{ resumo.leads_novos }}</b>leads novos</div>
+    <div class="kpi"><b>{{ resumo.usuarios }}</b>clientes cadastrados</div>
+  </div>
+  <h2>Próximas visitas pendentes</h2>
+  {% for a in ags %}
+    {% set im = imoveis.get(a.imovel_id) %}
+    <a class="linha card-link" href="{{ url_for('admin.agendamento', ag_id=a._id) }}">
+      <div><b>{{ im.titulo if im else '—' }}</b><br>
+        <span class="meta">{{ a.data_hora|data_br }} · {{ a.visitante_snapshot.nome }} · {{ a.visitante_snapshot.telefone }}
+        {% if a.visitante_snapshot.documento %} · doc. {{ a.visitante_snapshot.documento }}{% endif %}</span></div>
+    </a>
+  {% else %}<p>Nenhuma visita pendente.</p>{% endfor %}
+  
+</section>
+{% endblock %}

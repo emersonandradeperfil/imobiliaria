@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="secao estreito">
+  <h1>Entrar</h1>
+  <form method="post" action="{{ url_for('auth.login', next=request.args.get('next')) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>E-mail <input type="email" name="email" required autofocus></label>
+    <label>Senha <input type="password" name="senha" required></label>
+    <button class="btn bloco">Entrar</button>
+  </form>
+  <p><a href="{{ url_for('auth.esqueci_senha') }}">Esqueci minha senha</a></p>
+  <p>Ainda não tem conta? <a href="{{ url_for('auth.cadastro', next=request.args.get('next')) }}">Cadastre-se</a></p>
+</section>
+{% endblock %}

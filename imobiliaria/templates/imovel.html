@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% from "_card.html" import card, preco %}
+{% block title %}{{ i.titulo }} · {{ config.NOME_SITE }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="{{ url_for('static', filename='js/mapa.js') }}"></script>
+{% endblock %}
+{% block content %}
+<section class="secao detalhe">
+  <div class="galeria">
+    {% for f in i.midia.fotos %}
+      <img src="{{ foto_url(f.arquivo) }}" alt="{{ f.legenda }}" {{ 'loading=lazy' if not loop.first }}>
+    {% else %}
+      <img src="{{ foto_url(None) }}" alt="Sem foto">
+    {% endfor %}
+  </div>
+
+  <div class="duas-colunas">
+    <div>
+      <small>{{ i.codigo }} · {{ i.tipo|replace('_', ' ')|title }}{% if i.status == 'reservado' %} · <b>Reservado</b>{% endif %}</small>
+      <h1>{{ i.titulo }}</h1>
+      <p class="preco grande">{{ preco(i) }}</p>
+      {% if not i.ocultar_preco and (i.precos.condominio or i.precos.iptu) %}
+        <p class="meta">
+          {% if i.precos.condominio %}Condomínio {{ i.precos.condominio|brl }}{% endif %}
+          {% if i.precos.condominio and i.precos.iptu %} · {% endif %}
+          {% if i.precos.iptu %}IPTU {{ i.precos.iptu|brl }}{% endif %}
+        </p>
+      {% endif %}
+
+      <ul class="ficha">
+        <li><b>{{ i.areas.util|int }} m²</b> área útil</li>
+        {% if i.quartos %}<li><b>{{ i.quartos }}</b> dormitórios</li>{% endif %}
+        {% if i.suites %}<li><b>{{ i.suites }}</b> suítes</li>{% endif %}
+        <li><b>{{ i.banheiros }}</b> banheiros</li>
+        <li><b>{{ i.vagas }}</b> vagas</li>
+      </ul>
+
+      <h2>Sobre o imóvel</h2>
+      <p>{{ i.descricao }}</p>
+
+      {% if i.comodidades %}
+        <h2>Comodidades</h2>
+        <ul class="tags">{% for c in i.comodidades %}<li>{{ c }}</li>{% endfor %}</ul>
+      {% endif %}
+
+      {% if i.midia.video_url %}
+        <h2>Vídeo</h2>
+        {% set emb = youtube_embed(i.midia.video_url) %}
+        {% if emb %}<iframe class="video" src="{{ emb }}" allowfullscreen loading="lazy"></iframe>
+        {% else %}<a href="{{ i.midia.video_url }}" target="_blank" rel="noopener">Assistir ao vídeo</a>{% endif %}
+      {% endif %}
+
+      {% if i.midia.tour_url and i.midia.tour_url.startswith('https://') %}
+        <h2>Tour virtual 360°</h2>
+        <iframe class="video" src="{{ i.midia.tour_url }}" allowfullscreen loading="lazy"></iframe>
+      {% endif %}
+
+      {% if condominio %}
+        <h2>{{ condominio.nome }}</h2>
+        <p>{{ condominio.descricao }}</p>
+        {% if condominio.fotos %}<div class="mini-galeria">{% for f in condominio.fotos[:3] %}<img src="{{ foto_url(f.arquivo, 'condominios') }}" alt="{{ condominio.nome }}" loading="lazy">{% endfor %}</div>{% endif %}
+      {% endif %}
+    </div>
+
+    <aside class="lateral" id="agendar">
+      <h3>Localização</h3>
+      <p>{{ i.local_publico.bairro }} · {{ i.local_publico.cidade }}/{{ i.local_publico.estado }}</p>
+
+      {% if i.local_publico.lat_aprox is not none and i.local_publico.lng_aprox is not none %}
+        {% if endereco and endereco.lat is not none and endereco.lng is not none %}
+          <div id="mapa" data-lat="{{ endereco.lat }}" data-lng="{{ endereco.lng }}" data-exato="1"></div>
+        {% else %}
+          <div id="mapa" data-lat="{{ i.local_publico.lat_aprox }}" data-lng="{{ i.local_publico.lng_aprox }}" data-exato="0"></div>
+          <p class="meta">Região aproximada. A localização exata é liberada após o login.</p>
+        {% endif %}
+      {% endif %}
+
+      {% if usuario_atual() %}
+        {% if endereco %}
+          <p class="endereco"><b>{{ endereco.logradouro }}, {{ endereco.numero }}</b>
+            {% if endereco.complemento %} · {{ endereco.complemento }}{% endif %}<br>CEP {{ endereco.cep }}</p>
+        {% endif %}
+
+        <h3>Agendar visita</h3>
+        <form method="post" action="{{ url_for('account.agendar', slug=i.slug) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label>Data e horário
+            <input type="datetime-local" name="data_hora" required></label>
+          <label>Observações
+            <textarea name="observacoes" maxlength="500" rows="3"></textarea></label>
+          <button class="btn bloco">Solicitar visita</button>
+        </form>
+
+        <form method="post" action="{{ url_for('account.favoritar', slug=i.slug) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn claro bloco">{{ 'Remover dos favoritos' if favorito else 'Favoritar' }}</button>
+        </form>
+      {% else %}
+        <div class="bloqueado">
+          <p>🔒 O endereço completo e o agendamento de visitas ficam disponíveis após o login.</p>
+          <a class="btn bloco" href="{{ url_for('auth.login', next=request.path) }}">Entrar</a>
+          <a class="btn claro bloco" href="{{ url_for('auth.cadastro', next=request.path) }}">Criar cadastro</a>
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+
+  {% if similares %}
+    <h2>Outros imóveis em {{ i.local_publico.bairro }}</h2>
+    <div class="grade">{% for s in similares %}{{ card(s) }}{% endfor %}</div>
+  {% endif %}
+</section>
+{% endblock %}
