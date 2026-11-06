@@ -1,0 +1,26 @@
+Fala champions! Blz ?
+Cara, to pra fazer um projeto pra uma imobiliaria, to vebdo ainda como estruturar um banco, provavelmente eu use o Atlas mongo DB, versão Free pra pode apresentar um "protótipo" pro cliente, e pode ser que acabe sendo oficial, não sei se as plataforma de hospedagem fornece um sistema parecido junto quando for hospedar o site lá tbm, mas por enquanto na construção, eu pretendo usar o Atlas (é o que eu vi mais intuitivo e fácil de deixar online), hospedar o código no GitPages e usar o Render para renderizar o projeto, como vai ser um sistema com back-end então só o gitPages não da conta. E eu pesquisei alguns sites pra ter referência em relação a estrutura, e gostei bastante desse que te mandei o código fonte (acessei o site e dei ctrl+u e copiei o código), e a partir dessa estrutura eu vou "personalizando" com a identidade visual que meu cliente quer. O que você precisa de informações ou dados pra dar andamento além do código ?
+
+
+1. Escopo do cliente (o mais importante)
+Terá painel administrativo
+Eu mesmo irei cadastrar os imoveis atuais e futuros, eles são bem arcaicos(já são de idade e 0 tecnologias, são bom com vendas e tema sua própria administração), então vão me mandar tudo por e-mail
+Os dois e tem imóveis comercial também, além de fazer administração predial de condominios
+Vamos precisar de login de usuarios, no anuncio da página sem logar, não vai dar pra ver o endereço do imóvel, são imóveis de alto padrão apenas, então para ver endereço e poder agendar, vai precisar logar pra termos dados (possivelmente sensiveis para segurança do corretor que for fazer a visita) pra dai sim começar a ter interatividade com o imóvel/corretora que é ela
+Se possível, me liste as páginas pra eu confirmar, mas até então em relação as funcionalidades seriam: 
+tour virtual (pra andar pelo imóvel através de imagem 360 né ? Se for isso com certerza mas eu não vi essa seção no site)
+Video e cadastre seu imóvel(Como uma opção pra eu confirmar com ela se é interessante, mas já é bom ter) e uma outra que seria algo do tipo para "Administração para o seu condominio"
+Calculadora não precisa, o nicho já é de alto padrão, então isso não combinaria com o publico
+
+2. Stack
+
+Confesso que eu não sei React e Next (Nem faço ideia qual a diferença e o motivo de usar cada um), sou iniciante em dev e dados, as linguagens que fiz projetos foram em html/css e Js pra fronte e no Back-end com Php e agora to usando bastante Python, e o Sql pra banco de dados.
+
+Em relação aos dados, a principio ficticio, mas já tenho dados de imóveis para cadastrar, mas vamos fazer tudo ficticio a primeiro momento para validar a estrutura do projeto com a clinete também
+
+3. Imagens
+
+A principio para validação, no Github mesmo no formato Webp pra deixar bem leve e só ir chamando (for) com o diretório mesmo, ai no render que vai fazer a requisição
+
+Sobre a infra:
+Legal em saber isso, eu fiz um projeto e tive essa experiencia, dai eu coloquei o site em um outro site que faz ping automatico programado pra não dormir, aconteceu isso no Streamlit. Mas pra esse projeto vou começar a usar o Render por motivo de estética, o Streamlit é limitado pra personalizar legal eu acho. E sobre usar o GitPages, é que eu gosto de codar pelo VsCode e já deixo vinculado com o git automático. Não sei se no render tem esse mesmo lance, se for posso até pensar em usar o render já vinculado com o VsCode, bom que aprendo uma plataforma nova
