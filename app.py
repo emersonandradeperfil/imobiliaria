@@ -1,13 +1,20 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from database import init_db, mongo
 import bcrypt
 from datetime import datetime
 from functools import wraps
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = "123456"  # Chave de sessão
 
 init_db(app)
+
+# Configuração da pasta de uploads de imóveis
+UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'upload')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Decorators de Segurança e Permissões
 def login_required(f):
@@ -28,13 +35,26 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Helper para gerar o próximo código sequencial (ex: AP0002)
+def gerar_proximo_codigo():
+    ultimo_imovel = mongo.db.imoveis.find_one({}, sort=[("criado_em", -1)])
+    if ultimo_imovel and "codigo" in ultimo_imovel:
+        try:
+            prefixo = ultimo_imovel["codigo"][:2]
+            numero = int(ultimo_imovel["codigo"][2:]) + 1
+            return f"{prefixo}{numero:04d}"
+        except ValueError:
+            pass
+    return "AP0001"
+
 # --- ROTAS PÚBLICAS E CLIENTE ---
 
 @app.route('/')
 def index():
     db = mongo.db
-    imoveis_destaque = list(db.imoveis.find({"destaque": True, "status": "ativo"}).limit(6))
-    return render_template('index.html', imoveis=imoveis_destaque)
+    # Traz apenas imóveis ativos, ordenados pelos mais recentes
+    imoveis = list(db.imoveis.find({"status": "ativo"}).sort("criado_em", -1))
+    return render_template('index.html', imoveis=imoveis)
 
 @app.route('/imovel/<slug>')
 def imovel_detalhe(slug):
@@ -69,7 +89,6 @@ def login():
             session['papel'] = user['papel']
             flash('Login realizado com sucesso!', 'success')
             
-            # Redireciona dependendo do papel
             if user['papel'] == 'admin':
                 return redirect(url_for('admin_imoveis'))
             elif user['papel'] == 'corretor':
@@ -90,7 +109,7 @@ def cadastrar_cliente():
         
         if mongo.db.users.find_one({"email": email}):
             flash('Este e-mail já está cadastrado.', 'danger')
-            return redirect(url_for('cadastrar_cliente'))
+            return redirect(url_for('login'))
             
         senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt())
         
@@ -108,7 +127,7 @@ def cadastrar_cliente():
         flash('Cadastro realizado com sucesso! Faça login para continuar.', 'success')
         return redirect(url_for('login'))
         
-    return render_template('cadastrar.html')
+    return redirect(url_for('login'))
 
 @app.route('/logout')
 def logout():
@@ -122,29 +141,46 @@ def logout():
 @login_required
 @admin_required
 def admin_imoveis():
-    imoveis = list(mongo.db.imoveis.find())
+    # Lista apenas os ativos no painel de gerenciamento geral
+    imoveis = list(mongo.db.imoveis.find({"status": "ativo"}))
     return render_template('admin/imoveis_lista.html', imoveis=imoveis)
 
 @app.route('/admin/imoveis/novo', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def admin_imovel_novo():
+    db = mongo.db
     if request.method == 'POST':
-        db = mongo.db
-        codigo = request.form.get('codigo')
+        codigo = gerar_proximo_codigo()
         titulo = request.form.get('titulo')
         slug = request.form.get('slug') or titulo.lower().replace(" ", "-")
         
-        # 1. Dados Públicos do Imóvel
+        condominio_id = request.form.get('condominio_id')
+        corretor_id = request.form.get('corretor_id')
+        
+        # Processamento do Upload da Imagem
+        foto_relativa = "upload/default.jpg"
+        file = request.files.get('foto_capa')
+        
+        if file and file.filename != '':
+            extensao = os.path.splitext(file.filename)[1]
+            pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
+            os.makedirs(pasta_imovel, exist_ok=True)
+            
+            nome_arquivo = secure_filename(f"{codigo}_capa{extensao}")
+            caminho_salvar = os.path.join(pasta_imovel, nome_arquivo)
+            file.save(caminho_salvar)
+            
+            foto_relativa = f"upload/{codigo}/{nome_arquivo}"
+
+        # Dados Públicos do Imóvel
         imovel_doc = {
             "codigo": codigo,
             "slug": slug,
             "titulo": titulo,
             "descricao": request.form.get('descricao'),
-            "finalidade": request.form.getlist('finalidade'),
-            "categoria": request.form.get('categoria'),
             "tipo": request.form.get('tipo'),
-            "status": request.form.get('status', 'ativo'),
+            "status": "ativo",
             "destaque": 'destaque' in request.form,
             "precos": {
                 "venda": float(request.form.get('preco_venda') or 0),
@@ -161,43 +197,54 @@ def admin_imovel_novo():
             "vagas": int(request.form.get('vagas') or 0),
             "local_publico": {
                 "bairro": request.form.get('bairro'),
-                "cidade": request.form.get('cidade'),
-                "estado": request.form.get('estado')
+                "cidade": request.form.get('cidade', 'São Paulo'),
+                "estado": request.form.get('estado', 'SP')
             },
+            "condominio_id": ObjectId(condominio_id) if condominio_id else None,
+            "corretor_id": ObjectId(corretor_id) if corretor_id else None, # Opcional
             "midia": {
-                "fotos": [{"arquivo": request.form.get('foto_capa'), "ordem": 1, "capa": True}]
+                "fotos": [{"arquivo": foto_relativa, "legenda": "Capa", "ordem": 1, "capa": True}]
             },
             "criado_em": datetime.utcnow()
         }
         
         res = db.imoveis.insert_one(imovel_doc)
         
-        # 2. Dados Privados (Endereço, Andar e Posição Solar)
+        # Tratamento seguro para o Andar (se vazio, salva como None ou 0)
+        andar_input = request.form.get('andar')
+        andar_val = int(andar_input) if andar_input and andar_input.strip() != "" else None
+
+        # Dados Privados (Com Andar opcional)
         db.imoveis_enderecos.insert_one({
             "imovel_id": res.inserted_id,
             "logradouro": request.form.get('logradouro'),
             "numero": request.form.get('numero'),
-            "complemento": request.form.get('complemento'),
-            "cep": request.form.get('cep'),
-            "andar": int(request.form.get('andar') or 0),
-            "posicao_solar": request.form.get('posicao_solar')
+            "complemento": request.form.get('complemento', ''),
+            "cep": request.form.get('cep', ''),
+            "andar": andar_val,
+            "posicao_solar": request.form.get('posicao_solar', '')
         })
         
-        flash('Imóvel cadastrado com sucesso!', 'success')
+        flash(f'Imóvel {codigo} cadastrado com sucesso!', 'success')
         return redirect(url_for('admin_imoveis'))
         
-    return render_template('admin/imovel_form.html')
+    corretores = list(db.users.find({"papel": {"$in": ["corretor", "admin"]}}))
+    condominios = list(db.condominios.find())
+    codigo_sugerido = gerar_proximo_codigo()
+    return render_template('admin/imovel_form.html', corretores=corretores, condominios=condominios, codigo_sugerido=codigo_sugerido)
 
+# Exclusão Lógica (Soft Delete)
 @app.route('/admin/imoveis/excluir/<codigo>')
 @login_required
 @admin_required
 def admin_imovel_excluir(codigo):
     db = mongo.db
-    imovel = db.imoveis.find_one({"codigo": codigo})
-    if imovel:
-        db.imoveis_enderecos.delete_one({"imovel_id": imovel["_id"]})
-        db.imoveis.delete_one({"_id": imovel["_id"]})
-        flash('Imóvel excluído com sucesso!', 'success')
+    resultado = db.imoveis.update_one(
+        {"codigo": codigo},
+        {"$set": {"status": "inativo", "desativado_em": datetime.utcnow()}}
+    )
+    if resultado.modified_count > 0:
+        flash(f'Imóvel {codigo} removido da vitrine do site (mantido no histórico interno do banco).', 'info')
     return redirect(url_for('admin_imoveis'))
 
 @app.route('/admin/usuarios', methods=['GET', 'POST'])
@@ -205,7 +252,6 @@ def admin_imovel_excluir(codigo):
 @admin_required
 def admin_usuarios():
     if request.method == 'POST':
-        # Cadastro de Usuários/Corretores pelo Admin
         nome = request.form.get('nome')
         email = request.form.get('email')
         senha = request.form.get('senha')
@@ -230,12 +276,11 @@ def admin_usuarios():
     usuarios = list(mongo.db.users.find())
     return render_template('admin/usuarios.html', usuarios=usuarios)
 
-# --- PAINEL DO CORRETOR (FOCADO E SIMPLES) ---
+# --- PAINEL DO CORRETOR ---
 
 @app.route('/corretor/painel')
 @login_required
 def painel_corretor():
-    # Painel direto sem complicação para os corretores
     leads = list(mongo.db.leads.find().sort("criado_em", -1))
     agendamentos = list(mongo.db.agendamentos.find().sort("data_hora", 1))
     return render_template('corretor/painel.html', leads=leads, agendamentos=agendamentos)

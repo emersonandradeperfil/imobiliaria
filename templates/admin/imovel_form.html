@@ -1,25 +1,54 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow border">
-    <h1 class="text-2xl font-bold mb-6 text-slate-900">Cadastrar Novo Imóvel de Alto Padrão</h1>
-    <form method="POST" class="space-y-6">
+<div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow border my-6">
+    <h1 class="text-2xl font-bold mb-6 text-slate-900">Cadastrar Novo Imóvel</h1>
+    
+    <!-- enctype="multipart/form-data" obrigatório para aceitar o upload da foto -->
+    <form method="POST" enctype="multipart/form-data" class="space-y-6">
         
-        <h2 class="font-bold text-amber-600 border-b pb-2">1. Informações Públicas (Vitrine)</h2>
+        <h2 class="font-bold text-amber-600 border-b pb-2">1. Informações Públicas</h2>
+        
         <div class="grid grid-cols-3 gap-4">
             <div>
-                <label class="block text-xs font-semibold">Código</label>
-                <input type="text" name="codigo" placeholder="AP0002" required class="w-full p-2 border rounded">
+                <label class="block text-xs font-semibold mb-1">Código (Gerado Automático)</label>
+                <input type="text" value="{{ codigo_sugerido }}" readonly class="w-full p-2 bg-gray-100 font-bold border rounded text-sm text-gray-600 cursor-not-allowed">
             </div>
             <div class="col-span-2">
-                <label class="block text-xs font-semibold">Título do Anúncio</label>
-                <input type="text" name="titulo" required class="w-full p-2 border rounded">
+                <label class="block text-xs font-semibold mb-1">Título do Anúncio</label>
+                <input type="text" name="titulo" required class="w-full p-2 border rounded text-sm" placeholder="Ex: Apartamento Luxuoso no Itaim Bibi">
             </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-semibold mb-1">Corretor Responsável (Opcional)</label>
+                <select name="corretor_id" class="w-full p-2 border rounded text-sm">
+                    <option value="">Nenhum / Geral da Imobiliária</option>
+                    {% for c in corretores %}
+                        <option value="{{ c._id }}">{{ c.nome }} ({{ c.papel }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold mb-1">Condomínio (Opcional)</label>
+                <select name="condominio_id" class="w-full p-2 border rounded text-sm">
+                    <option value="">Nenhum / Edifício Isolado</option>
+                    {% for cond in condominios %}
+                        <option value="{{ cond._id }}">{{ cond.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-semibold mb-1">Descrição Longa</label>
+            <textarea name="descricao" rows="3" class="w-full p-2 border rounded text-sm" placeholder="Detalhes e diferenciais do imóvel..."></textarea>
         </div>
 
         <div class="grid grid-cols-3 gap-4">
             <div>
-                <label class="block text-xs font-semibold">Tipo</label>
-                <select name="tipo" class="w-full p-2 border rounded">
+                <label class="block text-xs font-semibold mb-1">Tipo</label>
+                <select name="tipo" class="w-full p-2 border rounded text-sm">
                     <option value="apartamento">Apartamento</option>
                     <option value="cobertura">Cobertura</option>
                     <option value="casa">Casa de Condomínio</option>
@@ -27,68 +56,69 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-semibold">Valor Venda (R$)</label>
-                <input type="number" step="0.01" name="preco_venda" class="w-full p-2 border rounded">
+                <label class="block text-xs font-semibold mb-1">Valor Venda (R$)</label>
+                <input type="number" step="0.01" name="preco_venda" class="w-full p-2 border rounded text-sm" placeholder="0.00">
             </div>
             <div>
-                <label class="block text-xs font-semibold">Bairro (Público)</label>
-                <input type="text" name="bairro" required class="w-full p-2 border rounded">
+                <label class="block text-xs font-semibold mb-1">Bairro (Público)</label>
+                <input type="text" name="bairro" required class="w-full p-2 border rounded text-sm" placeholder="Ex: Jardins">
             </div>
         </div>
 
         <div class="grid grid-cols-4 gap-4">
             <div>
-                <label class="block text-xs font-semibold">Área Útil (m²)</label>
-                <input type="number" name="area_util" class="w-full p-2 border rounded">
+                <label class="block text-xs font-semibold mb-1">Área Útil (m²)</label>
+                <input type="number" name="area_util" class="w-full p-2 border rounded text-sm" placeholder="0">
             </div>
             <div>
-                <label class="block text-xs font-semibold">Suítes</label>
-                <input type="number" name="suites" class="w-full p-2 border rounded">
+                <label class="block text-xs font-semibold mb-1">Suítes</label>
+                <input type="number" name="suites" class="w-full p-2 border rounded text-sm" placeholder="0">
             </div>
             <div>
-                <label class="block text-xs font-semibold">Banheiros</label>
-                <input type="number" name="banheiros" class="w-full p-2 border rounded">
+                <label class="block text-xs font-semibold mb-1">Banheiros</label>
+                <input type="number" name="banheiros" class="w-full p-2 border rounded text-sm" placeholder="0">
             </div>
             <div>
-                <label class="block text-xs font-semibold">Vagas</label>
-                <input type="number" name="vagas" class="w-full p-2 border rounded">
+                <label class="block text-xs font-semibold mb-1">Vagas</label>
+                <input type="number" name="vagas" class="w-full p-2 border rounded text-sm" placeholder="0">
             </div>
         </div>
 
+        <!-- Campo de Upload da Imagem -->
         <div>
-            <label class="block text-xs font-semibold">Foto Principal (Caminho na pasta static)</label>
-            <input type="text" name="foto_capa" placeholder="ap0001/01-sala.webp" class="w-full p-2 border rounded text-sm">
+            <label class="block text-xs font-semibold mb-1">Foto Principal (Upload do Computador)</label>
+            <input type="file" name="foto_capa" accept="image/*" class="w-full p-2 border rounded text-sm bg-gray-50">
         </div>
 
-        <div class="flex items-center gap-2 mt-4">
+        <div class="flex items-center gap-2 pt-2">
             <input type="checkbox" name="destaque" id="destaque" class="w-4 h-4 text-amber-500 rounded border-gray-300">
             <label for="destaque" class="text-sm font-semibold text-slate-800">Colocar este imóvel em destaque na Home?</label>
         </div>
 
-        <h2 class="font-bold text-amber-600 border-b pb-2 pt-4">2. Dados Privados (Liberados Apenas Após Login)</h2>
+        <h2 class="font-bold text-amber-600 border-b pb-2 pt-4">2. Dados Privados</h2>
         <div class="grid grid-cols-3 gap-4">
             <div class="col-span-2">
-                <label class="block text-xs font-semibold">Logradouro / Rua Exata</label>
-                <input type="text" name="logradouro" required class="w-full p-2 border rounded">
+                <label class="block text-xs font-semibold mb-1">Logradouro / Rua Exata</label>
+                <input type="text" name="logradouro" required class="w-full p-2 border rounded text-sm" placeholder="Ex: Rua Oscar Freire">
             </div>
             <div>
-                <label class="block text-xs font-semibold">Número / Comp.</label>
-                <input type="text" name="numero" required class="w-full p-2 border rounded">
+                <label class="block text-xs font-semibold mb-1">Número</label>
+                <input type="text" name="numero" required class="w-full p-2 border rounded text-sm" placeholder="Ex: 1100">
             </div>
         </div>
 
         <div class="grid grid-cols-3 gap-4">
             <div>
-                <label class="block text-xs font-semibold">Andar</label>
-                <input type="number" name="andar" placeholder="14" class="w-full p-2 border rounded">
+                <label class="block text-xs font-semibold mb-1">Andar (Opcional)</label>
+                <input type="number" name="andar" placeholder="Ex: 14 (Se apto)" class="w-full p-2 border rounded text-sm">
             </div>
             <div class="col-span-2">
-                <label class="block text-xs font-semibold">Posição Solar / Iluminação</label>
-                <input type="text" name="posicao_solar" placeholder="Face Norte (Sol da Manhã)" class="w-full p-2 border rounded">
+                <label class="block text-xs font-semibold mb-1">Posição Solar / Iluminação</label>
+                <input type="text" name="posicao_solar" placeholder="Face Norte (Sol da Manhã)" class="w-full p-2 border rounded text-sm">
             </div>
         </div>
 
-        <button type="submit" class="w-full bg-slate-900 text-white py-3 rounded font-bold hover:bg-slate-800">Salvar Imóvel</button>
+        <button type="submit" class="w-full bg-slate-900 text-white py-3 rounded font-bold hover:bg-slate-800 text-sm transition">Salvar Imóvel</button>
     </form>
 </div>
 {% endblock %}
