@@ -5,13 +5,22 @@
     <p class="text-gray-600 mt-2">Encontre residências exclusivas nas melhores localizações.</p>
 </div>
 
+
+
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
     {% for imovel in imoveis %}
-    <div class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition">
-        <div class="h-48 bg-slate-200 flex items-center justify-center text-slate-500 text-sm">
-            <!-- Espaço reservado para a foto em WebP -->
-            <span>{{ imovel.codigo }} - Foto Preview</span>
-        </div>
+
+        <div class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition">
+            <div class="h-48 bg-slate-200 flex items-center justify-center text-slate-500 text-sm overflow-hidden">
+                <!-- Verifica se o imóvel tem fotos cadastradas -->
+                {% if imovel.midia and imovel.midia.fotos %}
+                <img src="{{ url_for('static', filename=imovel.midia.fotos[0].arquivo) }}" alt="{{ imovel.titulo }}"
+                    class="w-full h-full object-cover">
+                {% else %}
+                <span>{{ imovel.codigo }} - Sem Foto</span>
+                {% endif %}
+            </div>
+
         <div class="p-5">
             <span class="text-xs font-semibold text-amber-600 uppercase tracking-wider">{{ imovel.tipo }} • {{ imovel.local_publico.bairro }}</span>
             <h2 class="text-xl font-bold text-slate-800 mt-1 mb-2">{{ imovel.titulo }}</h2>
@@ -27,6 +36,7 @@
                 </span>
                 <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" class="bg-slate-900 text-white px-4 py-2 rounded text-sm hover:bg-slate-800 transition">Ver Detalhes</a>
             </div>
+
         </div>
     </div>
     {% else %}
