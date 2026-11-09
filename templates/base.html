@@ -41,7 +41,7 @@
     <h2 class="text-2xl font-bold text-slate-900">{% block panel_title %}{% endblock %}</h2>
     
     <div class="flex space-x-2">
-        <a href="{{ url_for('meu_perfil') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'perfil' %}bg-slate-300 text-slate-900 shadow-inner{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
+        <a href="{{ url_for('meu_perfil') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'perfil' %}bg-slate-900 text-slate-900 shadow-inner text-white {% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
             PERFIL
         </a>
 
@@ -56,10 +56,10 @@
         
         {% if session.get('papel') == 'admin' %}
         <a href="{{ url_for('admin_usuarios') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'usuarios' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
-            USUARIOS
+            USUÁRIOS
         </a>
         <a href="{{ url_for('admin_imoveis') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
-            IMOVEIS
+            IMÓVEIS
         </a>
         {% endif %}
     </div>
