@@ -54,9 +54,18 @@ def gerar_proximo_codigo():
 @app.route('/')
 def index():
     db = mongo.db
-    # Traz apenas imóveis ativos E que estão marcados como destaque
-    imoveis = list(db.imoveis.find({"status": "ativo", "destaque": True}).sort("criado_em", -1))
-    return render_template('index.html', imoveis=imoveis)
+    # Busca apenas os ativos e em destaque (conforme ajustamos antes)
+    imoveis_ativos = list(db.imoveis.find({"status": "ativo", "destaque": True}).sort("criado_em", -1))
+    
+    # Separa por categorias dinamicamente
+    secoes = {
+        "Apartamentos": [i for i in imoveis_ativos if i.get('tipo') == 'apartamento'],
+        "Coberturas": [i for i in imoveis_ativos if i.get('tipo') == 'cobertura'],
+        "Casas de Condomínio": [i for i in imoveis_ativos if i.get('tipo') == 'casa'],
+        "Conjuntos Comerciais": [i for i in imoveis_ativos if i.get('tipo') == 'comercial']
+    }
+    
+    return render_template('index.html', secoes=secoes)
 
 @app.route('/imovel/<slug>')
 def imovel_detalhe(slug):
