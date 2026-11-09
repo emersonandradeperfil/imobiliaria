@@ -7,43 +7,58 @@
         <p class="text-gray-600 mt-2">Encontre residências exclusivas nas melhores localizações.</p>
     </div>
 
-    <!-- Loop que cria uma linha completa para cada categoria, uma embaixo da outra -->
+    <!-- Loop que cria uma seção empilhada para cada categoria -->
     {% for categoria, lista_imoveis in secoes.items() %}
         {% if lista_imoveis %}
-        <div class="w-full space-y-4">
+        <div class="w-full space-y-4 relative">
             
-            <!-- Título da Seção (Ocupa 100% da largura) -->
+            <!-- Título da Seção -->
             <div class="flex justify-between items-center border-b pb-2">
                 <h2 class="text-xl font-bold text-slate-900 uppercase tracking-wide">{{ categoria }}</h2>
                 <!-- <span class="text-xs font-semibold bg-slate-200 text-slate-700 px-2 py-1 rounded-full">{{ lista_imoveis | length }} disponíveis</span> -->
             </div>
 
-            <!-- Grade de Imóveis da Seção (Até 4 colunas por linha) -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {% for imovel in lista_imoveis %}
-                <div class="bg-white rounded-lg shadow border overflow-hidden flex flex-col justify-between hover:shadow-lg transition">
-                    <div>
-                        {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else 'upload/default.jpg' %}
-                        <img src="{{ url_for('static', filename=capa) }}" alt="Capa" class="w-full h-48 object-cover">
-                        <div class="p-4">
-                            <span class="text-xs font-bold text-amber-600 uppercase">{{ imovel.tipo }}</span>
-                            <h3 class="font-bold text-base text-slate-900 mt-1 truncate">{{ imovel.titulo }}</h3>
-                            <p class="text-xs text-gray-500 mt-1">{{ imovel.local_publico.bairro }} - São Paulo/SP</p>
-                            <p class="text-base font-extrabold text-slate-900 mt-3">R$ {{ "{:,.2f}".format(imovel.precos.venda) }}</p>
+            <!-- Wrapper Relativo para posicionar as setas e o carrossel -->
+            <div class="relative group">
+                
+                <!-- Botão Esquerdo (<) -->
+                <button onclick="rolarCarrossel('carrossel-{{ loop.index }}', -320)" class="absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 bg-slate-900/80 hover:bg-slate-900 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100 focus:opacity-100">
+                    ❮
+                </button>
+
+                <!-- Carrossel Horizontal (Sem barra de rolagem, com scroll suave) -->
+                <div id="carrossel-{{ loop.index }}" class="flex overflow-x-auto space-x-6 pb-4 pt-2 scroll-smooth no-scrollbar" style="scrollbar-width: none; -ms-overflow-style: none;">
+                    {% for imovel in lista_imoveis %}
+                    <div class="min-w-[300px] max-w-[300px] bg-white rounded-lg shadow border overflow-hidden flex-shrink-0 flex flex-col justify-between hover:shadow-lg transition">
+                        <div>
+                            {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else 'upload/default.jpg' %}
+                            <img src="{{ url_for('static', filename=capa) }}" alt="Capa" class="w-full h-48 object-cover">
+                            <div class="p-4">
+                                <span class="text-xs font-bold text-amber-600 uppercase">{{ imovel.tipo }}</span>
+                                <h3 class="font-bold text-base text-slate-900 mt-1 truncate">{{ imovel.titulo }}</h3>
+                                <p class="text-xs text-gray-500 mt-1">{{ imovel.local_publico.bairro }} - São Paulo/SP</p>
+                                <p class="text-base font-extrabold text-slate-900 mt-3">R$ {{ "{:,.2f}".format(imovel.precos.venda) }}</p>
+                            </div>
+                        </div>
+                        <div class="p-4 bg-gray-50 border-t flex justify-between items-center">
+                            <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" class="text-slate-900 font-bold text-xs hover:underline">Ver Detalhes</a>
+                            
+                            <!-- Botão de Favoritar Rápido -->
+                            {% if session.get('user_id') and session.get('papel') == 'cliente' %}
+                            <form action="{{ url_for('favoritar_imovel', imoid=imovel._id) }}" method="POST">
+                                <button type="submit" class="text-red-500 hover:text-red-700 text-sm font-semibold" title="Favoritar">❤️</button>
+                            </form>
+                            {% endif %}
                         </div>
                     </div>
-                    <div class="p-4 bg-gray-50 border-t flex justify-between items-center">
-                        <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" class="text-slate-900 font-bold text-xs hover:underline">Ver Detalhes</a>
-                        
-                        <!-- Botão de Favoritar Rápido -->
-                        {% if session.get('user_id') and session.get('papel') == 'cliente' %}
-                        <form action="{{ url_for('favoritar_imovel', imoid=imovel._id) }}" method="POST">
-                            <button type="submit" class="text-red-500 hover:text-red-700 text-sm font-semibold" title="Favoritar">❤️</button>
-                        </form>
-                        {% endif %}
-                    </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
+
+                <!-- Botão Direito (>) -->
+                <button onclick="rolarCarrossel('carrossel-{{ loop.index }}', 320)" class="absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 bg-slate-900/80 hover:bg-slate-900 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100 focus:opacity-100">
+                    ❯
+                </button>
+
             </div>
 
         </div>
@@ -51,4 +66,28 @@
     {% endfor %}
 
 </div>
+
+<!-- Script JavaScript simples para mover o carrossel com as setas -->
+<script>
+function rolaraCarrossel(id, deslocamento) {
+    // Mantido por compatibilidade
+}
+function rolarCarrossel(id, deslocamento) {
+    const elemento = document.getElementById(id);
+    if (elemento) {
+        elemento.scrollBy({ left: deslocamento, behavior: 'smooth' });
+    }
+}
+</script>
+
+<!-- Estilo extra para garantir remoção da barra de rolagem em todos os browsers -->
+<style>
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+</style>
 {% endblock %}

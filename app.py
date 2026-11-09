@@ -54,7 +54,7 @@ def gerar_proximo_codigo():
 @app.route('/')
 def index():
     db = mongo.db
-    # Busca apenas os ativos e em destaque (conforme ajustamos antes)
+    # Busca apenas os ativos e em destaque
     imoveis_ativos = list(db.imoveis.find({"status": "ativo", "destaque": True}).sort("criado_em", -1))
     
     # Separa por categorias dinamicamente
@@ -154,18 +154,15 @@ def favoritar_imovel(imoid):
     db = mongo.db
     user_id = session.get('user_id')
     
-    # Converte o ID do imóvel para ObjectId se necessário, ou armazena como string/ObjectId
     imovel_obj_id = ObjectId(imoid)
     
     user = db.users.find_one({"_id": ObjectId(user_id)})
     favoritos = user.get("favoritos", [])
     
     if imovel_obj_id in favoritos:
-        # Se já curtiu, remove (descurte)
         db.users.update_one({"_id": ObjectId(user_id)}, {"$pull": {"favoritos": imovel_obj_id}})
         flash("Imóvel removido dos favoritos.", "info")
     else:
-        # Se não curtiu, adiciona
         db.users.update_one({"_id": ObjectId(user_id)}, {"$push": {"favoritos": imovel_obj_id}})
         flash("Imóvel adicionado aos favoritos!", "success")
         
@@ -177,7 +174,6 @@ def meus_favoritos():
     db = mongo.db
     user = db.users.find_one({"_id": ObjectId(session.get('user_id'))})
     
-    # Busca os detalhes dos imóveis favoritados pelo usuário
     fav_ids = user.get("favoritos", [])
     imoveis_favoritos = list(db.imoveis.find({"_id": {"$in": fav_ids}, "status": "ativo"}))
     
@@ -187,7 +183,6 @@ def meus_favoritos():
 @login_required
 def meus_agendamentos():
     db = mongo.db
-    # Aqui no futuro você puxará os agendamentos vinculados ao ID do cliente
     agendamentos = list(db.agendamentos.find({"cliente_id": ObjectId(session.get('user_id'))})) if 'agendamentos' in db.list_collection_names() else []
     
     return render_template('cliente/agendamentos.html', agendamentos=agendamentos, active_tab='agendamentos')
@@ -198,9 +193,15 @@ def meus_agendamentos():
 @login_required
 @admin_required
 def admin_imoveis():
-    # Lista apenas os ativos no painel de gerenciamento geral
-    imoveis = list(mongo.db.imoveis.find({"status": "ativo"}))
-    return render_template('admin/imoveis_lista.html', imoveis=imoveis)
+    db = mongo.db
+    tipo_filtro = request.args.get('tipo')
+    
+    query = {"status": "ativo"}
+    if tipo_filtro:
+        query["tipo"] = tipo_filtro
+        
+    imoveis = list(db.imoveis.find(query))
+    return render_template('admin/imoveis_lista.html', imoveis=imoveis, tipo_atual=tipo_filtro)
 
 @app.route('/admin/imoveis/novo', methods=['GET', 'POST'])
 @login_required
@@ -216,18 +217,17 @@ def admin_imovel_novo():
         corretor_id = request.form.get('corretor_id')
         
         # Processamento do Upload da Imagem
-        foto_relativa = "upload/default.jpg"
+        foto_relativa = f"upload/{codigo}/default.jpg"
         file = request.files.get('foto_capa')
+        
+        pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
+        os.makedirs(pasta_imovel, exist_ok=True)
         
         if file and file.filename != '':
             extensao = os.path.splitext(file.filename)[1]
-            pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
-            os.makedirs(pasta_imovel, exist_ok=True)
-            
             nome_arquivo = secure_filename(f"{codigo}_capa{extensao}")
             caminho_salvar = os.path.join(pasta_imovel, nome_arquivo)
             file.save(caminho_salvar)
-            
             foto_relativa = f"upload/{codigo}/{nome_arquivo}"
 
         imovel_doc = {
@@ -243,14 +243,14 @@ def admin_imovel_novo():
                 "condominio": float(request.form.get('preco_condominio') or 0),
                 "iptu": float(request.form.get('preco_iptu') or 0)
             },
-            "areas": {
+            "caracteristicas": {
                 "util": float(request.form.get('area_util') or 0),
-                "total": float(request.form.get('area_total') or 0)
+                "total": float(request.form.get('area_total') or 0),
+                "quartos": int(request.form.get('quartos') or 0),
+                "suites": int(request.form.get('suites') or 0),
+                "banheiros": int(request.form.get('banheiros') or 0),
+                "vagas": int(request.form.get('vagas') or 0)
             },
-            "quartos": int(request.form.get('quartos') or 0),
-            "suites": int(request.form.get('suites') or 0),
-            "banheiros": int(request.form.get('banheiros') or 0),
-            "vagas": int(request.form.get('vagas') or 0),
             "local_publico": {
                 "bairro": request.form.get('bairro'),
                 "cidade": request.form.get('cidade', 'São Paulo'),
@@ -298,13 +298,31 @@ def editar_imovel(codigo):
         flash("Imóvel não encontrado.", "error")
         return redirect(url_for('admin_imoveis'))
         
-    # Busca os dados privados correspondentes a este imóvel
     endereco = db.imoveis_enderecos.find_one({"imovel_id": imovel["_id"]})
     
     if request.method == 'POST':
         titulo = request.form.get('titulo')
         slug = request.form.get('slug') or titulo.lower().replace(" ", "-")
         is_destaque = True if request.form.get('destaque') == '1' else False
+        
+        # Garante a existência da pasta física do imóvel
+        pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
+        os.makedirs(pasta_imovel, exist_ok=True)
+        
+        # Processamento de nova imagem enviada na edição
+        file = request.files.get('foto_capa')
+        if file and file.filename != '':
+            extensao = os.path.splitext(file.filename)[1]
+            nome_arquivo = secure_filename(f"{codigo}_capa{extensao}")
+            caminho_salvar = os.path.join(pasta_imovel, nome_arquivo)
+            file.save(caminho_salvar)
+            foto_relativa = f"upload/{codigo}/{nome_arquivo}"
+            
+            # Atualiza a foto de capa no banco se uma nova foi enviada
+            db.imoveis.update_one(
+                {"codigo": codigo},
+                {"$set": {"midia.fotos": [{"arquivo": foto_relativa, "legenda": "Capa", "ordem": 1, "capa": True}]}}
+            )
         
         # Atualiza dados públicos na coleção 'imoveis'
         db.imoveis.update_one(
@@ -314,13 +332,13 @@ def editar_imovel(codigo):
                 "slug": slug,
                 "descricao": request.form.get('descricao'),
                 "tipo": request.form.get('tipo'),
-                "destaque": is_destaque,  # Atualiza corretamente o booleano aqui
+                "destaque": is_destaque,
                 "precos.venda": float(request.form.get('preco_venda') or 0),
-                "areas.util": float(request.form.get('area_util') or 0),
-                "quartos": int(request.form.get('quartos') or 0),
-                "suites": int(request.form.get('suites') or 0),
-                "banheiros": int(request.form.get('banheiros') or 0),
-                "vagas": int(request.form.get('vagas') or 0),
+                "caracteristicas.area_util": float(request.form.get('area_util') or 0),
+                "caracteristicas.quartos": int(request.form.get('quartos') or 0),
+                "caracteristicas.suites": int(request.form.get('suites') or 0),
+                "caracteristicas.banheiros": int(request.form.get('banheiros') or 0),
+                "caracteristicas.vagas": int(request.form.get('vagas') or 0),
                 "local_publico.bairro": request.form.get('bairro'),
                 "corretor_id": ObjectId(request.form.get('corretor_id')) if request.form.get('corretor_id') else None,
                 "condominio_id": ObjectId(request.form.get('condominio_id')) if request.form.get('condominio_id') else None
@@ -330,7 +348,6 @@ def editar_imovel(codigo):
         andar_input = request.form.get('andar')
         andar_val = int(andar_input) if andar_input and andar_input.strip() != "" else None
 
-        # Atualiza ou insere os dados privados na coleção 'imoveis_enderecos'
         db.imoveis_enderecos.update_one(
             {"imovel_id": imovel["_id"]},
             {"$set": {
@@ -398,7 +415,6 @@ def admin_usuarios():
 @admin_required
 def excluir_usuario(user_id):
     db = mongo.db
-    # Impede que o admin exclua a si mesmo acidentalmente (opcional, mas recomendado)
     if session.get('user_id') == user_id:
         flash("Você não pode excluir sua própria conta logada.", "danger")
         return redirect(url_for('admin_usuarios'))
@@ -414,7 +430,6 @@ def alterar_papel(user_id):
     novo_papel = request.form.get('papel')
     db = mongo.db
     
-    # Atualiza o papel do usuário no banco usando a chave correta 'papel'
     db.users.update_one(
         {"_id": ObjectId(user_id)},
         {"$set": {"papel": novo_papel}}
@@ -439,12 +454,11 @@ def meu_perfil():
             "telefone": telefone
         }
         
-        # Se preencheu nova senha, criptografa e atualiza
         if nova_senha and nova_senha.strip() != "":
             update_data["senha_hash"] = bcrypt.hashpw(nova_senha.encode('utf-8'), bcrypt.gensalt())
             
         db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
-        session['user_nome'] = nome # Atualiza o nome na sessão
+        session['user_nome'] = nome
         
         flash("Perfil atualizado com sucesso!", "success")
         return redirect(url_for('meu_perfil'))
