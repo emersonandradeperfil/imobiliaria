@@ -38,17 +38,21 @@
                                 <h3 class="font-bold text-base text-slate-900 mt-1 truncate">{{ imovel.titulo }}</h3>
                                 <p class="text-xs text-gray-500 mt-1">{{ imovel.local_publico.bairro }} - São Paulo/SP</p>
                                 <p class="text-base font-extrabold text-slate-900 mt-3">R$ {{ "{:,.2f}".format(imovel.precos.venda) }}</p>
-                            </div>
-                        </div>
-                        <div class="p-4 bg-gray-50 border-t flex justify-between items-center">
-                            <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" class="text-slate-900 font-bold text-xs hover:underline">Ver Detalhes</a>
-                            
-                            <!-- Botão de Favoritar Rápido -->
+
+                                <!-- Botão de Favoritar Rápido -->
                             {% if session.get('user_id') and session.get('papel') == 'cliente' %}
                             <form action="{{ url_for('favoritar_imovel', imoid=imovel._id) }}" method="POST">
                                 <button type="submit" class="text-red-500 hover:text-red-700 text-sm font-semibold" title="Favoritar">❤️</button>
                             </form>
                             {% endif %}
+
+                            </div>
+                        </div>
+                        <div class="p-4 bg-gray-50 border-t flex justify-between items-center">
+                            
+                            <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" class="w-full bg-slate-900 text-white font-semibold py-2.5 rounded-lg hover:bg-amber-400 hover:text-slate-800 transition text-center text-sm">Ver Detalhes</a>
+                            
+                            
                         </div>
                     </div>
                     {% endfor %}
