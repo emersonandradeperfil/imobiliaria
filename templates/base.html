@@ -49,7 +49,7 @@
             {% if session.get('papel') == 'admin' %}
             <!-- Abas do Administrador -->
             <div class="bg-slate-800 border-t border-slate-700">
-                <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-center md:justify-start gap-2">
+                <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-end md:justify-end gap-2">
                     <a href="{{ url_for('meu_perfil') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
                         PERFIL
                     </a>
@@ -64,7 +64,7 @@
             {% elif session.get('papel') == 'cliente' %}
             <!-- Abas do Cliente -->
             <div class="bg-slate-800 border-t border-slate-700">
-                <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-center md:justify-start gap-2">
+                <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-end md:justify-end gap-2">
                     <a href="{{ url_for('meus_favoritos') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' or active_tab == 'agendamentos' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
                         PAINEL
                     </a>
@@ -75,7 +75,6 @@
 
                 </div>
             </div>
-
             {% endif %}
         {% endif %}
     </header>
