@@ -3,91 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TBorges</title>
-    <link rel="icon" href="/static/img/icon.png">
-    <!-- Tailwind CSS via CDN -->
+    <title>TBORGES - Administração, Perícias e Avaliações</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/icon.png') }}">
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans antialiased min-h-screen flex flex-col justify-between">
+<body class="bg-slate-50 min-h-screen flex flex-col">
 
-    <div>
-        <!-- Navbar Superior -->
-        <header class="bg-slate-900 text-white shadow-md">
-            <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-                <div class="flex flex-col items-center justify-center">
-                    <h1 class="text-5xl font-bold tracking-wider uppercase">TBORGES</h1>
-                    <p class="uppercase text-[11px]">administração, perícias e avaliações</p>
-                </div>
-                <nav class="flex items-center gap-6">
-                    <a href="{{ url_for('index') }}" class="hover:text-amber-400 transition">Início</a>
-                    
-                    {% if session.get('user_id') %}
-                        
-
-                        <span class="text-gray-300 text-sm">Olá, {{ session.get('user_nome').split()[0] if session.get('user_nome') else '' }}</span>
-                        <a href="{{ url_for('logout') }}" class="bg-amber-400 text-slate-900 font-bold px-4 py-2 rounded text-sm hover:bg-amber-500 transition">Sair</a>
-                    {% else %}
-                        <a href="{{ url_for('login') }}" class="p-2 hover:bg-amber-400 rounded-full flex items-center justify-center transition" title="Entrar / Conta">
-                            <img src="{{ url_for('static', filename='img/user.png') }}" alt="Usuário" class="w-5 h-5 text-white">
-                        </a>
-                    {% endif %}
-                </nav>
+    <!-- Header Responsivo -->
+    <header class="bg-slate-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <!-- Logo e Slogan -->
+            <div class="text-center md:text-left">
+                <a href="{{ url_for('index') }}" class="text-5xl md:text-3xl font-extrabold tracking-wider">
+                    TBORGES
+                </a>
+                <p class="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest">Administração, Perícias e Avaliações</p>
             </div>
-        </header>
 
-        <!-- Barra de Abas do Painel (Aparece se estiver logado) -->
-        {% if session.get('user_id') %}
-        <div class="max-w-7xl mx-auto px-4 mt-6 flex justify-between items-center border-b pb-4">
-    <h2 class="text-2xl font-bold text-slate-900">{% block panel_title %}{% endblock %}</h2>
-    
-    <div class="flex space-x-2">
-        <a href="{{ url_for('meu_perfil') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'perfil' %}bg-slate-900 text-slate-900 shadow-inner text-white {% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
-            PERFIL
-        </a>
-
-        {% if session.get('papel') == 'cliente' %}
-        <a href="{{ url_for('meus_favoritos') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'favoritos' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
-            FAVORITOS
-        </a>
-        <a href="{{ url_for('meus_agendamentos') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'agendamentos' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
-            AGENDAMENTOS
-        </a>
-        {% endif %}
-        
-        {% if session.get('papel') == 'admin' %}
-        <a href="{{ url_for('admin_usuarios') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'usuarios' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
-            USUÁRIOS
-        </a>
-        <a href="{{ url_for('admin_imoveis') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
-            IMÓVEIS
-        </a>
-        {% endif %}
-    </div>
-</div>
-        {% endif %}
-
-        <!-- Alertas do Sistema -->
-        <div class="max-w-7xl mx-auto px-4 mt-4">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="p-4 mb-4 rounded text-sm {% if category == 'success' %}bg-green-100 text-green-800{% elif category == 'danger' %}bg-red-100 text-red-800{% else %}bg-amber-100 text-amber-800{% endif %}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
+            <!-- Menu Superior Direito -->
+            <div class="flex flex-wrap justify-center items-center gap-4 text-sm">
+                <a href="{{ url_for('index') }}" class="hover:text-amber-400 transition font-medium">Início</a>
+                
+                {% if session.get('user_id') %}
+                    <span class="text-slate-300 hidden sm:inline">|</span>
+                    <span class="text-gray-300 text-sm">Olá, {{ session.get('user_nome').split()[0] if session.get('user_nome') else '' }}</span>
+                    <a href="{{ url_for('logout') }}" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1 rounded text-xs transition shadow">
+                        Sair
+                    </a>
+                {% else %}
+                    <!-- Ícone de Bonequinho para Entrar / Login -->
+                    <a href="{{ url_for('login') }}" class="text-slate-300 hover:text-amber-400 transition p-1.5 rounded-full hover:bg-slate-800 flex items-center justify-center" title="Entrar / Acessar Conta">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </a>
                 {% endif %}
-            {% endwith %}
+            </div>
+
         </div>
 
-        <!-- Conteúdo Principal -->
-        <main class="max-w-7xl mx-auto px-4 py-8">
-            {% block content %}{% endblock %}
-        </main>
+        <!-- Abas de Navegação (Exibidas conforme o perfil do usuário logado) -->
+        {% if session.get('user_id') %}
+            {% if session.get('papel') == 'admin' %}
+            <!-- Abas do Administrador -->
+            <div class="bg-slate-800 border-t border-slate-700">
+                <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-center md:justify-start gap-2">
+                    <a href="{{ url_for('meu_perfil') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                        PERFIL
+                    </a>
+                    <a href="{{ url_for('admin_usuarios') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'usuarios' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                        USUÁRIOS
+                    </a>
+                    <a href="{{ url_for('admin_imoveis') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                        IMÓVEIS
+                    </a>
+                </div>
+            </div>
+            {% elif session.get('papel') == 'cliente' %}
+            <!-- Abas do Cliente -->
+            <div class="bg-slate-800 border-t border-slate-700">
+                <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-center md:justify-start gap-2">
+                    <a href="{{ url_for('meus_favoritos') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' or active_tab == 'agendamentos' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                        PAINEL
+                    </a>
+
+                    <a href="{{ url_for('meu_perfil') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                        PERFIL
+                    </a>
+
+                </div>
+            </div>
+
+            {% endif %}
+        {% endif %}
+    </header>
+
+    <!-- Flash Messages -->
+    <div class="max-w-7xl mx-auto px-4 w-full mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% set bg_color = 'bg-green-100 text-green-800 border-green-300' if category == 'success' else ('bg-red-100 text-red-800 border-red-300' if category == 'danger' or category == 'error' else 'bg-blue-100 text-blue-800 border-blue-300') %}
+                    <div class="p-3 mb-3 rounded-lg border text-sm font-medium {{ bg_color }} shadow-sm flex justify-between items-center">
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
     </div>
 
-    <!-- Rodapé -->
-    <footer class="bg-slate-900 text-slate-400 text-center py-6 text-sm mt-auto">
-        <p>&copy; 2026 TBORGES. Todos os direitos reservados.</p>
+    <!-- Conteúdo Principal -->
+    <main class="flex-grow">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer Simples -->
+    <footer class="bg-slate-900 text-slate-400 text-xs py-6 text-center mt-12 border-t border-slate-800">
+        <p>&copy; 2026 TBORGES - Administração, Perícias e Avaliações. Todos os direitos reservados.</p>
     </footer>
 
 </body>

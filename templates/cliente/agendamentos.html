@@ -1,17 +1,57 @@
 {% extends "base.html" %}
-{% set active_tab = 'agendamentos' %}
 {% block content %}
-{% block panel_title %}Meus agendamentos{% endblock %}
-<div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow border">
-    <h2 class="text-2xl font-bold mb-4 text-slate-900">Meus Agendamentos de Visitas 📅</h2>
-    <p class="text-sm text-gray-600 mb-6">Acompanhe aqui os horários solicitados para visitar os imóveis de seu interesse com nossos corretores.</p>
-
-    {% if agendamentos %}
-        <!-- Tabela ou lista de agendamentos futuros -->
-    {% else %}
-    <div class="p-6 bg-amber-50 border border-amber-200 rounded text-amber-800 text-sm">
-        Nenhum agendamento de visita registrado no momento. Quando você solicitar uma visita em um imóvel, ela aparecerá listada aqui.
+<div class="max-w-7xl mx-auto px-4 py-8">
+    
+    <!-- Cabeçalho do Cliente -->
+    <div class="mb-8">
+        <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900">Meu Painel</h1>
+        <p class="text-sm text-gray-600 mt-1">Gerencie seus imóveis favoritos e acompanhe suas interações.</p>
     </div>
-    {% endif %}
+
+    <!-- Abas de Navegação do Cliente -->
+    <div class="flex space-x-2 border-b border-gray-200 mb-8 overflow-x-auto pb-2">
+        <a href="{{ url_for('meus_favoritos') }}" class="px-5 py-2.5 rounded-t-lg font-bold text-sm transition {% if active_tab == 'favoritos' %}bg-slate-900 text-white shadow{% else %}bg-gray-100 text-slate-600 hover:bg-gray-200{% endif %}">
+            ❤️ Meus Favoritos
+        </a>
+        <a href="{{ url_for('meus_agendamentos') }}" class="px-5 py-2.5 rounded-t-lg font-bold text-sm transition {% if active_tab == 'agendamentos' %}bg-slate-900 text-white shadow{% else %}bg-gray-100 text-slate-600 hover:bg-gray-200{% endif %}">
+            📅 Meus Agendamentos
+        </a>
+    </div>
+
+    <!-- Lista de Agendamentos -->
+    <div class="space-y-6">
+        <h2 class="text-xl font-bold text-slate-900">Agendamentos de Visitas</h2>
+        
+        {% if agendamentos %}
+        <div class="bg-white rounded-lg shadow border overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-slate-50 border-b text-xs uppercase text-slate-600">
+                    <tr>
+                        <th class="p-4">Data/Hora</th>
+                        <th class="p-4">Imóvel</th>
+                        <th class="p-4">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 text-sm">
+                    {% for ag in agendamentos %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-semibold text-slate-900">{{ ag.data_hora }}</td>
+                        <td class="p-4 text-slate-700">Visita Agendada</td>
+                        <td class="p-4"><span class="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded font-semibold">Pendente</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-white p-8 rounded-lg shadow border text-center">
+            <p class="text-gray-500 text-sm">Você não possui visitas agendadas no momento.</p>
+            <a href="{{ url_for('index') }}" class="inline-block mt-4 bg-slate-900 text-white font-bold px-5 py-2 rounded-lg text-xs hover:bg-slate-800 transition">
+                Agendar uma Visita
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
 </div>
 {% endblock %}

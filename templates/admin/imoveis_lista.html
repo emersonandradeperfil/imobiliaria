@@ -2,18 +2,13 @@
 {% set active_tab = 'imoveis' %}
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-6">
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-2xl font-bold text-slate-900">Gerenciar Imóveis</h1>
-            <p class="text-sm text-gray-600">Lista completa dos imóveis cadastrados no sistema.</p>
-        </div>
-        <a href="{{ url_for('admin_imovel_novo') }}" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-lg text-sm shadow">
-            + Novo Imóvel
-        </a>
-    </div>
-
+    
     <!-- Botões de Filtro por Tipo -->
-    <div class="flex flex-wrap gap-2 mb-6 bg-white p-4 rounded-lg shadow border items-center">
+    <!-- Div principal com justify-between para separar os grupos -->
+<div class="flex flex-wrap gap-2 mb-6 bg-white p-4 rounded-lg shadow border items-center justify-between">
+    
+    <!-- Grupo da Esquerda (Filtros) -->
+    <div class="flex flex-wrap gap-2 items-center">
         <span class="text-sm font-bold text-slate-700 mr-2">Filtrar por tipo:</span>
         <a href="{{ url_for('admin_imoveis') }}" class="px-3 py-1.5 rounded text-xs font-bold transition {% if not tipo_atual %}bg-slate-900 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
             Todos
@@ -31,6 +26,17 @@
             Comerciais
         </a>
     </div>
+
+    <!-- Grupo da Direita (Botão Novo Imóvel alinhado no canto) -->
+    <div>
+        <a href="{{ url_for('admin_imovel_novo') }}" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-lg text-sm shadow inline-block">
+            Adicionar
+        </a>
+    </div>
+
+</div>
+
+   
 
     <!-- Tabela de Imóveis (Mantenha a sua tabela existente abaixo) -->
     <div class="bg-white rounded-lg shadow border overflow-hidden">
