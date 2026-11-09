@@ -137,6 +137,52 @@ def logout():
     flash('Você saiu da sua conta.', 'info')
     return redirect(url_for('index'))
 
+# --- ROTAS DE FAVORITOS E CLIENTE ---
+
+@app.route('/imovel/favoritar/<imoid>', methods=['POST'])
+@login_required
+def favoritar_imovel(imoid):
+    db = mongo.db
+    user_id = session.get('user_id')
+    
+    # Converte o ID do imóvel para ObjectId se necessário, ou armazena como string/ObjectId
+    imovel_obj_id = ObjectId(imoid)
+    
+    user = db.users.find_one({"_id": ObjectId(user_id)})
+    favoritos = user.get("favoritos", [])
+    
+    if imovel_obj_id in favoritos:
+        # Se já curtiu, remove (descurte)
+        db.users.update_one({"_id": ObjectId(user_id)}, {"$pull": {"favoritos": imovel_obj_id}})
+        flash("Imóvel removido dos favoritos.", "info")
+    else:
+        # Se não curtiu, adiciona
+        db.users.update_one({"_id": ObjectId(user_id)}, {"$push": {"favoritos": imovel_obj_id}})
+        flash("Imóvel adicionado aos favoritos!", "success")
+        
+    return redirect(request.referrer or url_for('index'))
+
+@app.route('/cliente/favoritos')
+@login_required
+def meus_favoritos():
+    db = mongo.db
+    user = db.users.find_one({"_id": ObjectId(session.get('user_id'))})
+    
+    # Busca os detalhes dos imóveis favoritados pelo usuário
+    fav_ids = user.get("favoritos", [])
+    imoveis_favoritos = list(db.imoveis.find({"_id": {"$in": fav_ids}, "status": "ativo"}))
+    
+    return render_template('cliente/favoritos.html', imoveis=imoveis_favoritos, active_tab='favoritos')
+
+@app.route('/cliente/agendamentos')
+@login_required
+def meus_agendamentos():
+    db = mongo.db
+    # Aqui no futuro você puxará os agendamentos vinculados ao ID do cliente
+    agendamentos = list(db.agendamentos.find({"cliente_id": ObjectId(session.get('user_id'))})) if 'agendamentos' in db.list_collection_names() else []
+    
+    return render_template('cliente/agendamentos.html', agendamentos=agendamentos, active_tab='agendamentos')
+
 # --- PAINEL ADMIN (CRUD IMOVEIS E USUÁRIOS) ---
 
 @app.route('/admin/imoveis')

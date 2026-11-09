@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+{% block panel_title %}Meus agendamentos{% endblock %}
+<div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow border">
+    <h2 class="text-2xl font-bold mb-4 text-slate-900">Meus Agendamentos de Visitas 📅</h2>
+    <p class="text-sm text-gray-600 mb-6">Acompanhe aqui os horários solicitados para visitar os imóveis de seu interesse com nossos corretores.</p>
+
+    {% if agendamentos %}
+        <!-- Tabela ou lista de agendamentos futuros -->
+    {% else %}
+    <div class="p-6 bg-amber-50 border border-amber-200 rounded text-amber-800 text-sm">
+        Nenhum agendamento de visita registrado no momento. Quando você solicitar uma visita em um imóvel, ela aparecerá listada aqui.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

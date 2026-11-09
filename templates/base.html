@@ -38,23 +38,32 @@
         <!-- Barra de Abas do Painel (Aparece se estiver logado) -->
         {% if session.get('user_id') %}
         <div class="max-w-7xl mx-auto px-4 mt-6 flex justify-between items-center border-b pb-4">
-            <h2 class="text-2xl font-bold text-slate-900" id="titulo-pagina">{% block panel_title %}Painel{% endblock %}</h2>
-            
-            <div class="flex space-x-2">
-                <a href="{{ url_for('meu_perfil') }}" class="px-6 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'perfil' %}bg-slate-300 text-slate-900 shadow-inner{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
-                    PERFIL
-                </a>
-                
-                {% if session.get('papel') == 'admin' %}
-                <a href="{{ url_for('admin_usuarios') }}" class="px-6 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'usuarios' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
-                    USUÁRIOS
-                </a>
-                <a href="{{ url_for('admin_imoveis') }}" class="px-6 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
-                    IMÓVEIS
-                </a>
-                {% endif %}
-            </div>
-        </div>
+    <h2 class="text-2xl font-bold text-slate-900">{% block panel_title %}Painel{% endblock %}</h2>
+    
+    <div class="flex space-x-2">
+        <a href="{{ url_for('meu_perfil') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'perfil' %}bg-slate-300 text-slate-900 shadow-inner{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
+            PERFIL
+        </a>
+
+        {% if session.get('papel') == 'cliente' %}
+        <a href="{{ url_for('meus_favoritos') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'favoritos' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
+            FAVORITOS
+        </a>
+        <a href="{{ url_for('meus_agendamentos') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'agendamentos' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
+            AGENDAMENTOS
+        </a>
+        {% endif %}
+        
+        {% if session.get('papel') == 'admin' %}
+        <a href="{{ url_for('admin_usuarios') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'usuarios' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
+            USUARIOS
+        </a>
+        <a href="{{ url_for('admin_imoveis') }}" class="px-5 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
+            IMOVEIS
+        </a>
+        {% endif %}
+    </div>
+</div>
         {% endif %}
 
         <!-- Alertas do Sistema -->
