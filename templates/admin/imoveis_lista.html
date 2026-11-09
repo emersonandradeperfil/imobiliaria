@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
+{% block panel_title %}Gerenciar imóveis{% endblock %}
 <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold text-slate-900">Gerenciar Imóveis</h1>
     <div>
-        <a href="{{ url_for('admin_usuarios') }}" class="bg-gray-200 text-slate-800 px-4 py-2 rounded text-sm font-semibold mr-2">Gerenciar Corretores/Usuários</a>
         <a href="{{ url_for('admin_imovel_novo') }}" class="bg-slate-900 text-white px-4 py-2 rounded text-sm font-semibold hover:bg-slate-800">+ Novo Imóvel</a>
     </div>
 </div>
@@ -28,7 +28,8 @@
                 <td class="p-4">{{ item.local_publico.bairro }}</td>
                 <td class="p-4">R$ {{ "{:,.2f}".format(item.precos.venda) }}</td>
                 <td class="p-4"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">{{ item.status }}</span></td>
-                <td class="p-4">
+                <td class="p-4 flex space-x-3">
+                    <a href="{{ url_for('editar_imovel', codigo=item.codigo) }}" class="text-indigo-600 hover:text-indigo-900 font-medium">Editar</a>
                     <a href="{{ url_for('admin_imovel_excluir', codigo=item.codigo) }}" onclick="return confirm('Excluir este imóvel?')" class="text-red-600 hover:underline">Excluir</a>
                 </td>
             </tr>

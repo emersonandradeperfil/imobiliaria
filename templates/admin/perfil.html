@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% set active_tab = 'perfil' %}
+{% block panel_title %}Gerenciar meu perfil{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto bg-white p-8 rounded-lg shadow border">
+    <h2 class="text-xl font-bold mb-6 text-slate-900">Atualizar Dados Pessoais</h2>
+    
+    <form method="POST" class="space-y-4">
+        <div>
+            <label class="block text-xs font-semibold mb-1">Nome Completo</label>
+            <input type="text" name="nome" value="{{ user.nome }}" required class="w-full p-2 border rounded text-sm">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold mb-1">E-mail (Não pode ser alterado)</label>
+            <input type="email" value="{{ user.email }}" disabled class="w-full p-2 bg-gray-100 border rounded text-sm text-gray-500 cursor-not-allowed">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold mb-1">Telefone</label>
+            <input type="text" name="telefone" value="{{ user.telefone }}" class="w-full p-2 border rounded text-sm">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold mb-1">Nova Senha (Deixe em branco se não quiser alterar)</label>
+            <input type="password" name="senha" placeholder="********" class="w-full p-2 border rounded text-sm">
+        </div>
+        <button type="submit" class="w-full bg-slate-900 text-white py-3 rounded font-bold hover:bg-slate-800 text-sm transition">Salvar Alterações</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
+{% block panel_title %}Gerenciar usuários{% endblock %}
 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+    
+    <!-- Formulário de Cadastro de Novo Usuário -->
     <div class="bg-white p-6 rounded-lg shadow border">
         <h2 class="font-bold text-lg mb-4 text-slate-900">Cadastrar Novo Usuário / Corretor</h2>
         <form method="POST" class="space-y-4">
@@ -19,9 +22,9 @@
             <div>
                 <label class="block text-xs font-semibold">Tipo de Acesso (Papel)</label>
                 <select name="papel" class="w-full p-2 border rounded text-sm">
-                    <option value="corretor">Corretor</option>
-                    <option value="admin">Administrador</option>
                     <option value="cliente">Cliente</option>
+                    <option value="corretor">Corretor</option>
+                    <option value="admin">Admin</option>
                 </select>
             </div>
             <div>
@@ -32,26 +35,44 @@
         </form>
     </div>
 
+    <!-- Tabela de Usuários Cadastrados com Edição de Papel e Exclusão -->
     <div class="md:col-span-2 bg-white p-6 rounded-lg shadow border">
         <h2 class="font-bold text-lg mb-4 text-slate-900">Usuários Cadastrados</h2>
-        <table class="w-full text-left text-sm">
-            <thead class="bg-slate-100 text-xs uppercase text-slate-600">
-                <tr>
-                    <th class="p-3">Nome</th>
-                    <th class="p-3">E-mail</th>
-                    <th class="p-3">Papel</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y">
-                {% for u in usuarios %}
-                <tr>
-                    <td class="p-3 font-semibold">{{ u.nome }}</td>
-                    <td class="p-3 text-gray-600">{{ u.email }}</td>
-                    <td class="p-3"><span class="bg-slate-200 px-2 py-1 rounded text-xs font-bold uppercase">{{ u.papel }}</span></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-slate-100 text-xs uppercase text-slate-600">
+                    <tr>
+                        <th class="p-3">Nome</th>
+                        <th class="p-3">E-mail</th>
+                        <th class="p-3">Papel / Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    {% for u in usuarios %}
+                    <tr>
+                        <td class="p-3 font-semibold">{{ u.nome }}</td>
+                        <td class="p-3 text-gray-600">{{ u.email }}</td>
+                        <td class="p-3">
+                            <div class="flex items-center space-x-3">
+                                <!-- Formulário para alterar o papel -->
+                                <form action="{{ url_for('alterar_papel', user_id=u._id) }}" method="POST" class="flex items-center space-x-2">
+                                    <select name="papel" class="bg-slate-100 border border-slate-300 rounded px-2 py-1 text-sm font-semibold text-slate-800">
+                                        <option value="admin" {% if u.papel == 'admin' %}selected{% endif %}>ADMIN</option>
+                                        <option value="corretor" {% if u.papel == 'corretor' %}selected{% endif %}>CORRETOR</option>
+                                        <option value="cliente" {% if u.papel == 'cliente' %}selected{% endif %}>CLIENTE</option>
+                                    </select>
+                                    <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-slate-900 px-3 py-1 rounded text-xs font-bold transition">Salvar</button>
+                                </form>
+
+                                <!-- Link para excluir o usuário -->
+                                <a href="{{ url_for('excluir_usuario', user_id=u._id) }}" onclick="return confirm('Tem certeza que deseja excluir este usuário?')" class="text-red-600 hover:text-red-800 font-medium text-xs">Excluir</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

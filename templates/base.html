@@ -11,39 +11,51 @@
 <body class="bg-gray-50 text-gray-900 font-sans antialiased min-h-screen flex flex-col justify-between">
 
     <div>
-        <!-- Navbar -->
+        <!-- Navbar Superior -->
         <header class="bg-slate-900 text-white shadow-md">
             <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
                 <div class="flex flex-col items-center justify-center">
-                <!-- <a href="{{ url_for('index') }}" class="text-xl font-bold tracking-wider uppercase">Teca Borges</a> -->
-                 <h1 class="text-5xl font-bold tracking-wider uppercase">TBORGES</h1>
-                <p class="uppercase text-[11px]" >administração, prerícias e avaliações</p>
+                    <h1 class="text-5xl font-bold tracking-wider uppercase">TBORGES</h1>
+                    <p class="uppercase text-[11px]">administração, perícias e avaliações</p>
                 </div>
                 <nav class="flex items-center gap-6">
                     <a href="{{ url_for('index') }}" class="hover:text-amber-400 transition">Início</a>
                     
                     {% if session.get('user_id') %}
-                        {% if session.get('papel') == 'admin' %}
-                            <a href="{{ url_for('admin_imoveis') }}" class="text-amber-400 hover:underline font-semibold text-sm">Painel Admin</a>
-                        {% elif session.get('papel') == 'corretor' %}
-                            <a href="{{ url_for('painel_corretor') }}" class="text-amber-400 hover:underline font-semibold text-sm">Painel Corretor</a>
-                        {% endif %}
+                        
 
                         <span class="text-gray-300 text-sm">Olá, {{ session.get('user_nome') }}</span>
-                        <a href="{{ url_for('logout') }}" class="bg-amber-400 px-4 py-2 rounded text-sm hover:bg-red-700 transition">Sair</a>
+                        <a href="{{ url_for('logout') }}" class="bg-amber-400 text-slate-900 font-bold px-4 py-2 rounded text-sm hover:bg-amber-500 transition">Sair</a>
                     {% else %}
-                        <a href="{{ url_for('login') }}"
-                            
-                            class="p-2  hover:bg-amber-400 rounded-full flex items-center justify-center transition"
-                            
-                            title="Entrar / Conta">
-
+                        <a href="{{ url_for('login') }}" class="p-2 hover:bg-amber-400 rounded-full flex items-center justify-center transition" title="Entrar / Conta">
                             <img src="{{ url_for('static', filename='img/user.png') }}" alt="Usuário" class="w-5 h-5 text-white">
                         </a>
                     {% endif %}
                 </nav>
             </div>
         </header>
+
+        <!-- Barra de Abas do Painel (Aparece se estiver logado) -->
+        {% if session.get('user_id') %}
+        <div class="max-w-7xl mx-auto px-4 mt-6 flex justify-between items-center border-b pb-4">
+            <h2 class="text-2xl font-bold text-slate-900" id="titulo-pagina">{% block panel_title %}Painel{% endblock %}</h2>
+            
+            <div class="flex space-x-2">
+                <a href="{{ url_for('meu_perfil') }}" class="px-6 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'perfil' %}bg-slate-300 text-slate-900 shadow-inner{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
+                    PERFIL
+                </a>
+                
+                {% if session.get('papel') == 'admin' %}
+                <a href="{{ url_for('admin_usuarios') }}" class="px-6 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'usuarios' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
+                    USUÁRIOS
+                </a>
+                <a href="{{ url_for('admin_imoveis') }}" class="px-6 py-2 rounded-lg font-bold text-sm transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md{% else %}bg-slate-200 text-slate-600 hover:bg-slate-300{% endif %}">
+                    IMÓVEIS
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Alertas do Sistema -->
         <div class="max-w-7xl mx-auto px-4 mt-4">

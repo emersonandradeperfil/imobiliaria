@@ -1,21 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow border my-6">
-    <h1 class="text-2xl font-bold mb-6 text-slate-900">Cadastrar Novo Imóvel</h1>
+    <h1 class="text-2xl font-bold mb-6 text-slate-900">
+        {% if editando %}Editar Imóvel: {{ imovel.codigo }}{% else %}Cadastrar Novo Imóvel{% endif %}
+    </h1>
     
-    <!-- enctype="multipart/form-data" obrigatório para aceitar o upload da foto -->
     <form method="POST" enctype="multipart/form-data" class="space-y-6">
         
         <h2 class="font-bold text-amber-600 border-b pb-2">1. Informações Públicas</h2>
         
         <div class="grid grid-cols-3 gap-4">
             <div>
-                <label class="block text-xs font-semibold mb-1">Código (Gerado Automático)</label>
-                <input type="text" value="{{ codigo_sugerido }}" readonly class="w-full p-2 bg-gray-100 font-bold border rounded text-sm text-gray-600 cursor-not-allowed">
+                <label class="block text-xs font-semibold mb-1">Código</label>
+                <input type="text" value="{% if editando %}{{ imovel.codigo }}{% else %}{{ codigo_sugerido }}{% endif %}" readonly class="w-full p-2 bg-gray-100 font-bold border rounded text-sm text-gray-600 cursor-not-allowed">
             </div>
             <div class="col-span-2">
                 <label class="block text-xs font-semibold mb-1">Título do Anúncio</label>
-                <input type="text" name="titulo" required class="w-full p-2 border rounded text-sm" placeholder="Ex: Apartamento Luxuoso no Itaim Bibi">
+                <input type="text" name="titulo" value="{{ imovel.titulo if editando else '' }}" required class="w-full p-2 border rounded text-sm" placeholder="Ex: Apartamento Luxuoso no Itaim Bibi">
             </div>
         </div>
 
@@ -25,7 +26,9 @@
                 <select name="corretor_id" class="w-full p-2 border rounded text-sm">
                     <option value="">Nenhum / Geral da Imobiliária</option>
                     {% for c in corretores %}
-                        <option value="{{ c._id }}">{{ c.nome }} ({{ c.papel }})</option>
+                        <option value="{{ c._id }}" {% if editando and imovel.corretor_id and imovel.corretor_id|string == c._id|string %}selected{% endif %}>
+                            {{ c.nome }} ({{ c.papel }})
+                        </option>
                     {% endfor %}
                 </select>
             </div>
@@ -34,7 +37,9 @@
                 <select name="condominio_id" class="w-full p-2 border rounded text-sm">
                     <option value="">Nenhum / Edifício Isolado</option>
                     {% for cond in condominios %}
-                        <option value="{{ cond._id }}">{{ cond.nome }}</option>
+                        <option value="{{ cond._id }}" {% if editando and imovel.condominio_id and imovel.condominio_id|string == cond._id|string %}selected{% endif %}>
+                            {{ cond.nome }}
+                        </option>
                     {% endfor %}
                 </select>
             </div>
@@ -42,83 +47,101 @@
 
         <div>
             <label class="block text-xs font-semibold mb-1">Descrição Longa</label>
-            <textarea name="descricao" rows="3" class="w-full p-2 border rounded text-sm" placeholder="Detalhes e diferenciais do imóvel..."></textarea>
+            <textarea name="descricao" rows="3" class="w-full p-2 border rounded text-sm" placeholder="Detalhes e diferenciais do imóvel...">{% if editando %}{{ imovel.descricao }}{% endif %}</textarea>
         </div>
 
         <div class="grid grid-cols-3 gap-4">
             <div>
                 <label class="block text-xs font-semibold mb-1">Tipo</label>
                 <select name="tipo" class="w-full p-2 border rounded text-sm">
-                    <option value="apartamento">Apartamento</option>
-                    <option value="cobertura">Cobertura</option>
-                    <option value="casa">Casa de Condomínio</option>
-                    <option value="comercial">Conjunto Comercial</option>
+                    <option value="apartamento" {% if editando and imovel.tipo == 'apartamento' %}selected{% endif %}>Apartamento</option>
+                    <option value="cobertura" {% if editando and imovel.tipo == 'cobertura' %}selected{% endif %}>Cobertura</option>
+                    <option value="casa" {% if editando and imovel.tipo == 'casa' %}selected{% endif %}>Casa</option>
+                    <option value="casa" {% if editando and imovel.tipo == 'casa' %}selected{% endif %}>Casa de Condomínio</option>
+                    <option value="comercial" {% if editando and imovel.tipo == 'comercial' %}selected{% endif %}>Conjunto Comercial</option>
                 </select>
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1">Valor Venda (R$)</label>
-                <input type="number" step="0.01" name="preco_venda" class="w-full p-2 border rounded text-sm" placeholder="0.00">
+                <input type="number" step="0.01" name="preco_venda" value="{{ imovel.precos.venda if editando and imovel.precos else '' }}" class="w-full p-2 border rounded text-sm" placeholder="0.00">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1">Bairro (Público)</label>
-                <input type="text" name="bairro" required class="w-full p-2 border rounded text-sm" placeholder="Ex: Jardins">
+                <input type="text" name="bairro" value="{{ imovel.local_publico.bairro if editando and imovel.local_publico else '' }}" required class="w-full p-2 border rounded text-sm" placeholder="Ex: Jardins">
             </div>
         </div>
 
         <div class="grid grid-cols-4 gap-4">
             <div>
                 <label class="block text-xs font-semibold mb-1">Área Útil (m²)</label>
-                <input type="number" name="area_util" class="w-full p-2 border rounded text-sm" placeholder="0">
+                <input type="number" name="area_util" value="{{ imovel.areas.util if editando and imovel.areas else '' }}" class="w-full p-2 border rounded text-sm" placeholder="0">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1">Suítes</label>
-                <input type="number" name="suites" class="w-full p-2 border rounded text-sm" placeholder="0">
+                <input type="number" name="suites" value="{{ imovel.suites if editando else '' }}" class="w-full p-2 border rounded text-sm" placeholder="0">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1">Banheiros</label>
-                <input type="number" name="banheiros" class="w-full p-2 border rounded text-sm" placeholder="0">
+                <input type="number" name="banheiros" value="{{ imovel.banheiros if editando else '' }}" class="w-full p-2 border rounded text-sm" placeholder="0">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1">Vagas</label>
-                <input type="number" name="vagas" class="w-full p-2 border rounded text-sm" placeholder="0">
+                <input type="number" name="vagas" value="{{ imovel.vagas if editando else '' }}" class="w-full p-2 border rounded text-sm" placeholder="0">
             </div>
         </div>
 
-        <!-- Campo de Upload da Imagem -->
+        <!-- Foto Principal -->
         <div>
             <label class="block text-xs font-semibold mb-1">Foto Principal (Upload do Computador)</label>
             <input type="file" name="foto_capa" accept="image/*" class="w-full p-2 border rounded text-sm bg-gray-50">
+            {% if editando and imovel.midia and imovel.midia.fotos %}
+                <p class="text-xs text-gray-500 mt-1">Já existe foto cadastrada. Enviar uma nova irá substituir a capa atual.</p>
+            {% endif %}
         </div>
 
         <div class="flex items-center gap-2 pt-2">
-            <input type="checkbox" name="destaque" id="destaque" class="w-4 h-4 text-amber-500 rounded border-gray-300">
+            <input type="checkbox" name="destaque" id="destaque" value="1" {% if editando and imovel.destaque %}checked{% endif %} class="w-4 h-4 text-amber-500 rounded border-gray-300">
             <label for="destaque" class="text-sm font-semibold text-slate-800">Colocar este imóvel em destaque na Home?</label>
         </div>
 
         <h2 class="font-bold text-amber-600 border-b pb-2 pt-4">2. Dados Privados</h2>
+        
         <div class="grid grid-cols-3 gap-4">
             <div class="col-span-2">
                 <label class="block text-xs font-semibold mb-1">Logradouro / Rua Exata</label>
-                <input type="text" name="logradouro" required class="w-full p-2 border rounded text-sm" placeholder="Ex: Rua Oscar Freire">
+                <input type="text" name="logradouro" value="{{ endereco.logradouro if editando and endereco else '' }}" required class="w-full p-2 border rounded text-sm" placeholder="Ex: Rua Oscar Freire">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1">Número</label>
-                <input type="text" name="numero" required class="w-full p-2 border rounded text-sm" placeholder="Ex: 1100">
+                <input type="text" name="numero" value="{{ endereco.numero if editando and endereco else '' }}" required class="w-full p-2 border rounded text-sm" placeholder="Ex: 1100">
             </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-semibold mb-1">CEP</label>
+                <input type="text" name="cep" value="{{ endereco.cep if editando and endereco else '' }}" class="w-full p-2 border rounded text-sm" placeholder="Ex: 01426-001">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold mb-1">Bloco / Complemento</label>
+                <input type="text" name="complemento" value="{{ endereco.complemento if editando and endereco else '' }}" class="w-full p-2 border rounded text-sm" placeholder="Ex: Bloco B, Apto 42">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
             <div>
                 <label class="block text-xs font-semibold mb-1">Andar (Opcional)</label>
-                <input type="number" name="andar" placeholder="Ex: 14 (Se apto)" class="w-full p-2 border rounded text-sm">
+                <input type="number" name="andar" value="{{ endereco.andar if editando and endereco and endereco.andar is not none else '' }}" placeholder="Ex: 14" class="w-full p-2 border rounded text-sm">
             </div>
-            <div class="col-span-2">
+            <div>
                 <label class="block text-xs font-semibold mb-1">Posição Solar / Iluminação</label>
-                <input type="text" name="posicao_solar" placeholder="Face Norte (Sol da Manhã)" class="w-full p-2 border rounded text-sm">
+                <input type="text" name="posicao_solar" value="{{ endereco.posicao_solar if editando and endereco else '' }}" placeholder="Face Norte (Sol da Manhã)" class="w-full p-2 border rounded text-sm">
             </div>
         </div>
 
-        <button type="submit" class="w-full bg-slate-900 text-white py-3 rounded font-bold hover:bg-slate-800 text-sm transition">Salvar Imóvel</button>
+        <button type="submit" class="w-full bg-slate-900 text-white py-3 rounded font-bold hover:bg-slate-800 text-sm transition">
+            {% if editando %}Salvar Alterações{% else %}Salvar Imóvel{% endif %}
+        </button>
     </form>
 </div>
 {% endblock %}
