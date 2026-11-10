@@ -657,5 +657,23 @@ def painel_corretor():
     
     return render_template('corretor/painel.html', leads=leads, agendamentos=agendamentos, active_tab='corretor')
 
+@app.route('/corretor/agendamento/status/<ag_id>/<novo_status>')
+@login_required
+def alterar_status_agendamento(ag_id, novo_status):
+    db = mongo.db
+    status_permitidos = ['pendente', 'agendado', 'concluido', 'cancelado']
+    
+    if novo_status not in status_permitidos:
+        flash('Status inválido.', 'danger')
+        return redirect(url_for('painel_corretor') + '#agendamentos')
+        
+    db.agendamentos.update_one(
+        {"_id": ObjectId(ag_id)},
+        {"$set": {"status": novo_status}}
+    )
+    
+    flash(f'Status atualizado para: {novo_status.capitalize()}', 'success')
+    return redirect(url_for('painel_corretor') + '#agendamentos')
+
 if __name__ == '__main__':
     app.run(debug=True)
