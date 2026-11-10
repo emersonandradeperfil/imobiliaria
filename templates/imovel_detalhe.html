@@ -3,16 +3,20 @@
 <div class="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto border border-gray-100">
     <div class="flex justify-between items-start mb-6">
         <div>
-            <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-3 py-1 rounded-full uppercase tracking-wider">{{ imovel.tipo }}</span>
+            <span
+                class="text-xs font-semibold bg-amber-100 text-amber-800 px-3 py-1 rounded-full uppercase tracking-wider">{{
+                imovel.tipo }}</span>
             <h1 class="text-3xl font-bold text-slate-900 mt-2">{{ imovel.titulo }}</h1>
-            <p class="text-gray-500 text-sm mt-1">Código: <span class="font-semibold">{{ imovel.codigo }}</span> | Bairro: {{ imovel.local_publico.bairro }} - {{ imovel.local_publico.cidade }}/{{ imovel.local_publico.estado }}</p>
+            <p class="text-gray-500 text-sm mt-1">Código: <span class="font-semibold">{{ imovel.codigo }}</span> |
+                Bairro: {{ imovel.local_publico.bairro }} - {{ imovel.local_publico.cidade }}/{{
+                imovel.local_publico.estado }}</p>
         </div>
         <div class="text-right">
             <span class="text-2xl font-extrabold text-slate-900 block">
                 {% if not imovel.ocultar_preco and imovel.precos.venda %}
-                    R$ {{ "{:,.2f}".format(imovel.precos.venda).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+                R$ {{ "{:,.2f}".format(imovel.precos.venda).replace(',', 'v').replace('.', ',').replace('v', '.') }}
                 {% else %}
-                    Sob Consulta
+                Sob Consulta
                 {% endif %}
             </span>
             <span class="text-xs text-gray-500">Condomínio: R$ {{ imovel.precos.condominio }}</span>
@@ -27,15 +31,15 @@
         </div>
         <div>
             <span class="block text-xs text-gray-500 uppercase">Suítes</span>
-            <span class="font-bold text-slate-800">{{ imovel.suites }}</span>
+            <span class="font-bold text-slate-800">{{ imovel.caracteristicas.suites }}</span>
         </div>
         <div>
             <span class="block text-xs text-gray-500 uppercase">Banheiros</span>
-            <span class="font-bold text-slate-800">{{ imovel.banheiros }}</span>
+            <span class="font-bold text-slate-800">{{ imovel.caracteristicas.banheiros }}</span>
         </div>
         <div>
             <span class="block text-xs text-gray-500 uppercase">Vagas</span>
-            <span class="font-bold text-slate-800">{{ imovel.vagas }}</span>
+            <span class="font-bold text-slate-800">{{ imovel.caracteristicas.vagas }}</span>
         </div>
     </div>
 
@@ -44,26 +48,71 @@
         <p class="text-gray-700 leading-relaxed">{{ imovel.descricao }}</p>
     </div>
 
-    <!-- SEÇÃO PROTEGIDA: Endereço, Andar e Posição Solar -->
-    <div class="border-t border-gray-200 pt-6 mt-6">
-        <h3 class="text-lg font-bold text-slate-900 mb-3">Localização Exata e Especificações</h3>
-        
-        {% if endereco_privado %}
-            <div class="bg-amber-50 border border-amber-200 rounded-lg p-5">
-                <p class="text-amber-900 font-medium mb-3">🔒 Dados liberados para clientes cadastrados:</p>
-                <ul class="space-y-2 text-sm text-slate-800">
-                    <li><strong class="text-slate-900">Endereço:</strong> {{ endereco_privado.logradouro }}, {{ endereco_privado.numero }} - {{ endereco_privado.complemento }}</li>
-                    <li><strong class="text-slate-900">CEP:</strong> {{ endereco_privado.cep }} | <strong class="text-slate-900">Bloco:</strong> {{ endereco_privado.bloco }}</li>
-                    <li><strong class="text-slate-900">Andar:</strong> {{ endereco_privado.andar }}º andar</li>
-                    <li><strong class="text-slate-900">Posição Solar / Vista:</strong> {{ endereco_privado.posicao_solar }}</li>
-                </ul>
-            </div>
-        {% else %}
-            <div class="bg-gray-100 border border-gray-200 rounded-lg p-6 text-center">
-                <p class="text-gray-600 mb-3 text-sm">O endereço completo, o número do andar e a posição solar exata são exibidos apenas para usuários cadastrados por questões de segurança e privacidade.</p>
-                <a href="{{ url_for('login') }}" class="inline-block bg-amber-500 text-slate-900 font-semibold px-6 py-2.5 rounded-lg text-sm hover:bg-amber-400 transition">Entrar ou Criar Conta para Ver</a>
-            </div>
-        {% endif %}
+    <!-- BLOCO CONDICIONAL DE SESSÃO -->
+    {% if session.get('user_id') %}
+    <!-- SEÇÃO PROTEGIDA: Endereço, Andar e Agendamento -->
+    <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-xl mt-8 space-y-6">
+        <div>
+            <h3 class="text-lg font-bold text-amber-400">🔒 Endereço Privado & Informações Exclusivas</h3>
+            {% if endereco_privado %}
+            <p class="text-sm text-gray-300 mt-2">
+                {{ endereco_privado.logradouro }}, nº {{ endereco_privado.numero }}
+                {% if endereco_privado.complemento %}- {{ endereco_privado.complemento }}{% endif %}
+                - {{ imovel.local_publico.bairro }} - CEP: {{ endereco_privado.cep }}
+            </p>
+            {% else %}
+            <p class="text-sm text-gray-300 mt-2">Endereço detalhado sob consulta direta com o corretor responsável.</p>
+            {% endif %}
+        </div>
+
+        <hr class="border-slate-800">
+
+        <div>
+            <h4 class="text-base font-bold text-white mb-3">📅 Agendar Visita Presencial</h4>
+            <form action="{{ url_for('agendar_visita', imoid=imovel._id) }}" method="POST"
+                class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1">Data Desejada</label>
+                    <input type="date" name="data" required
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1">Horário</label>
+                    <input type="time" name="hora" required
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-gray-400 mb-1">Observações / Preferências</label>
+                    <input type="text" name="observacoes"
+                        placeholder="Ex: Prefiro período da tarde, desejo falar sobre financiamento..."
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+                <div class="sm:col-span-2 pt-2">
+                    <button type="submit"
+                        class="w-full bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold py-3 rounded-xl transition text-sm shadow-md">
+                        Solicitar Agendamento Exclusivo
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
+    {% else %}
+    <!-- Caixa de convite para visitantes não logados -->
+    <div class="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm text-center mt-8 space-y-4">
+        <span class="text-3xl">🔒</span>
+        <h3 class="font-extrabold text-slate-900 text-lg">Deseja ver o endereço exato e agendar uma visita?</h3>
+        <p class="text-xs text-gray-600 max-w-lg mx-auto">Por motivos de segurança e exclusividade em residências de
+            alto padrão, o acesso aos endereços e o agendamento de visitas são restritos a clientes cadastrados.</p>
+        <div class="flex justify-center gap-3 pt-2">
+            <a href="{{ url_for('login') }}"
+                class="bg-slate-900 text-white font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-slate-800 transition shadow">Fazer
+                Login</a>
+            <a href="{{ url_for('login') }}"
+                class="bg-amber-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-amber-500 transition shadow">Criar
+                Conta Grátis</a>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}

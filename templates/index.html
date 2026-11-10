@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-6 space-y-12">
-    
+
     <div class="text-center mb-8">
         <h1 class="text-3xl font-extrabold text-slate-900">Imóveis de Alto Padrão em Destaque</h1>
         <p class="text-gray-600 mt-2">Encontre residências exclusivas nas melhores localizações.</p>
@@ -9,79 +9,211 @@
 
     <!-- Loop que cria uma seção empilhada para cada categoria -->
     {% for categoria, lista_imoveis in secoes.items() %}
-        {% if lista_imoveis %}
-        <div class="w-full space-y-4 relative">
-            
-            <!-- Título da Seção -->
-            <div class="flex justify-between items-center border-b pb-2">
-                <h2 class="text-xl font-bold text-slate-900 uppercase tracking-wide">{{ categoria }}</h2>
-                <!-- <span class="text-xs font-semibold bg-slate-200 text-slate-700 px-2 py-1 rounded-full">{{ lista_imoveis | length }} disponíveis</span> -->
-            </div>
+    {% if lista_imoveis %}
+    <div class="w-full space-y-4 relative">
 
-            <!-- Wrapper Relativo para posicionar as setas e o carrossel -->
-            <div class="relative group">
+        <!-- Título da Seção -->
+        <div class="flex justify-between items-center border-b pb-2">
+            <h2 class="text-xl font-bold text-slate-900 uppercase tracking-wide">{{ categoria }}</h2>
+        </div>
+
+        <!-- Wrapper Relativo para posicionar as setas e o carrossel -->
+        <div class="relative group">
+
+            <!-- Botão Esquerdo (<) -->
+            <button onclick="rolarCarrossel('carrossel-{{ loop.index }}', -320)"
+                class="absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 bg-slate-900/80 hover:bg-slate-900 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100 focus:opacity-100">
+                ❮
+            </button>
+
+            <!-- Carrossel Horizontal (Sem barra de rolagem, com scroll suave) -->
+            <div id="carrossel-{{ loop.index }}"
+                class="flex overflow-x-auto space-x-6 pb-4 pt-2 scroll-smooth no-scrollbar"
+                style="scrollbar-width: none; -ms-overflow-style: none;">
                 
-                <!-- Botão Esquerdo (<) -->
-                <button onclick="rolarCarrossel('carrossel-{{ loop.index }}', -320)" class="absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 bg-slate-900/80 hover:bg-slate-900 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100 focus:opacity-100">
-                    ❮
-                </button>
-
-                <!-- Carrossel Horizontal (Sem barra de rolagem, com scroll suave) -->
-                <div id="carrossel-{{ loop.index }}" class="flex overflow-x-auto space-x-6 pb-4 pt-2 scroll-smooth no-scrollbar" style="scrollbar-width: none; -ms-overflow-style: none;">
-                    {% for imovel in lista_imoveis %}
-                    <div class="min-w-[300px] max-w-[300px] bg-white rounded-lg shadow border overflow-hidden flex-shrink-0 flex flex-col justify-between hover:shadow-lg transition">
-                        <div>
-                            {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else 'upload/default.jpg' %}
-                            <img src="{{ url_for('static', filename=capa) }}" alt="Capa" class="w-full h-48 object-cover">
-                            <div class="p-4">
-                                <span class="text-xs font-bold text-amber-600 uppercase">{{ imovel.tipo }}</span>
-                                <h3 class="font-bold text-base text-slate-900 mt-1 truncate">{{ imovel.titulo }}</h3>
-                                <p class="text-xs text-gray-500 mt-1">{{ imovel.local_publico.bairro }} - São Paulo/SP</p>
-                                <p class="text-base font-extrabold text-slate-900 mt-3">R$ {{ "{:,.2f}".format(imovel.precos.venda) }}</p>
-
-                                <!-- Botão de Favoritar Rápido -->
-                            {% if session.get('user_id') and session.get('papel') == 'cliente' %}
-                            <form action="{{ url_for('favoritar_imovel', imoid=imovel._id) }}" method="POST">
-                                <button type="submit" class="text-red-500 hover:text-red-700 text-sm font-semibold" title="Favoritar">❤️</button>
-                            </form>
-                            {% endif %}
-
-                            </div>
-                        </div>
-                        <div class="p-4 bg-gray-50 border-t flex justify-between items-center">
-                            
-                            <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" class="w-full bg-slate-900 text-white font-semibold py-2.5 rounded-lg hover:bg-amber-400 hover:text-slate-800 transition text-center text-sm">Ver Detalhes</a>
-                            
-                            
+                {% for imovel in lista_imoveis %}
+                <!-- Card do Imóvel com ID único para referência -->
+                <div id="imovel-{{ imovel._id }}"
+                    class="min-w-[300px] max-w-[300px] bg-white rounded-lg shadow border overflow-hidden flex-shrink-0 flex flex-col justify-between hover:shadow-lg transition">
+                    
+                    <div>
+                        {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else 'upload/default.jpg' %}
+                        <img src="{{ url_for('static', filename=capa) }}" alt="Capa" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <span class="text-xs font-bold text-amber-600 uppercase">{{ imovel.tipo }}</span>
+                            <h3 class="font-bold text-base text-slate-900 mt-1 truncate">{{ imovel.titulo }}</h3>
+                            <p class="text-xs text-gray-500 mt-1">{{ imovel.local_publico.bairro }} - São Paulo/SP</p>
+                            <p class="text-base font-extrabold text-slate-900 mt-3">R$ {{ "{:,.2f}".format(imovel.precos.venda) }}</p>
                         </div>
                     </div>
-                    {% endfor %}
-                </div>
 
-                <!-- Botão Direito (>) -->
-                <button onclick="rolarCarrossel('carrossel-{{ loop.index }}', 320)" class="absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 bg-slate-900/80 hover:bg-slate-900 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100 focus:opacity-100">
-                    ❯
-                </button>
+                    <!-- Rodapé do Card: Ações (Ver Detalhes e Favorito) -->
+                    <div class="p-4 bg-gray-50 border-t flex justify-between items-center">
+                        <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}"
+                            class="text-slate-900 font-bold text-xs hover:underline">Ver Detalhes</a>
+
+                        <!-- Botão de Favoritar Rápido (Disponível para todos - abre modal se não logado) -->
+                        <button onclick="clicarFavorito('{{ imovel._id }}', {{ 'true' if session.get('user_id') else 'false' }})" 
+                            class="text-lg transition transform active:scale-125 focus:outline-none p-1" 
+                            title="Favoritar">
+                            <span id="coracao-{{ imovel._id }}">
+                                {% if session.get('user_id') and imovel._id in session.get('favoritos_ids', []) %}❤️{% else %}🤍{% endif %}
+                            </span>
+                        </button>
+                    </div>
+
+                </div>
+                {% endfor %}
 
             </div>
 
+            <!-- Botão Direito (>) -->
+            <button onclick="rolarCarrossel('carrossel-{{ loop.index }}', 320)"
+                class="absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 bg-slate-900/80 hover:bg-slate-900 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100 focus:opacity-100">
+                ❯
+            </button>
+
         </div>
-        {% endif %}
+
+    </div>
+    {% endif %}
     {% endfor %}
 
 </div>
 
-<!-- Script JavaScript simples para mover o carrossel com as setas -->
+<!-- MODAL DE CAPTAÇÃO DE LEAD (Aparece apenas para visitantes não logados ao clicar no like) -->
+<div id="modal-lead" class="fixed inset-0 bg-slate-950/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative transform transition-all">
+        
+        <!-- Botão Fechar -->
+        <button onclick="fecharModalLead()" class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">&times;</button>
+        
+        <div class="text-center mb-6">
+            <span class="text-3xl">❤️</span>
+            <h3 class="text-xl font-extrabold text-slate-900 mt-2">Gostou deste imóvel?</h3>
+            <p class="text-xs text-gray-500 mt-1">Preencha rapidinho para salvar nos favoritos e receber atendimento exclusivo.</p>
+        </div>
+
+        <form id="form-lead-modal" onsubmit="enviarLeadModal(event)" class="space-y-4">
+            <input type="hidden" id="modal-imovel-id">
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Seu Nome</label>
+                <input type="text" id="lead-nome" required placeholder="Como podemos te chamar?"
+                    class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">E-mail</label>
+                <input type="email" id="lead-email" required placeholder="seu@email.com"
+                    class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Telefone / WhatsApp</label>
+                <input type="text" id="lead-telefone" required placeholder="(11) 99999-9999"
+                    class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
+            </div>
+
+            <button type="submit" class="w-full bg-slate-900 hover:bg-amber-400 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md">
+                Salvar Favorito & Acessar
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Script JavaScript para o carrossel, favoritos e modal de Lead -->
+<!-- Script JavaScript para o carrossel, favoritos e modal de Lead -->
 <script>
-function rolaraCarrossel(id, deslocamento) {
-    // Mantido por compatibilidade
-}
-function rolarCarrossel(id, deslocamento) {
-    const elemento = document.getElementById(id);
-    if (elemento) {
-        elemento.scrollBy({ left: deslocamento, behavior: 'smooth' });
+    let imovelPendenteId = null;
+    // Variável que controla se o usuário acabou de logar via modal na sessão atual
+    let usuarioLogadoDesteCliente = {{ 'true' if session.get('user_id') else 'false' }};
+
+    function rolaraCarrossel(id, deslocamento) {
+        // Mantido por compatibilidade
     }
-}
+
+    function rolarCarrossel(id, deslocamento) {
+        const elemento = document.getElementById(id);
+        if (elemento) {
+            elemento.scrollBy({ left: deslocamento, behavior: 'smooth' });
+        }
+    }
+
+    function clicarFavorito(imoid) {
+        if (usuarioLogadoDesteCliente) {
+            // Se já está logado (ou acabou de logar pelo modal), curte direto via AJAX sem abrir nada
+            toggleFavorito(imoid);
+        } else {
+            // Se não está logado, guarda o ID do imóvel e abre o modal de lead
+            imovelPendenteId = imoid;
+            document.getElementById('modal-imovel-id').value = imoid;
+            document.getElementById('modal-lead').classList.remove('hidden');
+        }
+    }
+
+    function fecharModalLead() {
+        document.getElementById('modal-lead').classList.add('hidden');
+        imovelPendenteId = null;
+    }
+
+    async function toggleFavorito(imoid) {
+        try {
+            let response = await fetch(`/imovel/favoritar/${imoid}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            let data = await response.json();
+            
+            if (data.status === 'success') {
+                let span = document.getElementById(`coracao-${imoid}`);
+                if (span) {
+                    span.innerHTML = data.favoritado ? '❤️' : '🤍';
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao atualizar favorito:', error);
+        }
+    }
+
+    async function enviarLeadModal(event) {
+        event.preventDefault();
+        
+        let nome = document.getElementById('lead-nome').value;
+        let email = document.getElementById('lead-email').value;
+        let telefone = document.getElementById('lead-telefone').value;
+        let imoid = imovelPendenteId;
+
+        try {
+            let response = await fetch('/api/lead-favorito', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nome, email, telefone, imovel_id: imoid })
+            });
+            let data = await response.json();
+
+            if (data.status === 'success') {
+                // 1. Fecha o modal suavemente
+                fecharModalLead();
+                
+                // 2. Marca na memória do navegador que agora ele está logado
+                usuarioLogadoDesteCliente = true;
+
+                // 3. Deixa o coração do imóvel atual vermelho na hora
+                if (imoid) {
+                    let span = document.getElementById(`coracao-${imoid}`);
+                    if (span) {
+                        span.innerHTML = '❤️';
+                    }
+                }
+
+                // Opcional: Atualiza o nome do usuário discretamente no header se quiser, 
+                // mas o importante é que agora ele tem passe livre para dar quantos likes quiser!
+            }
+        } catch (error) {
+            console.error('Erro ao cadastrar lead:', error);
+        }
+    }
 </script>
 
 <!-- Estilo extra para garantir remoção da barra de rolagem em todos os browsers -->

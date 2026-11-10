@@ -1,12 +1,11 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from database import init_db, mongo
 import bcrypt
 from datetime import datetime
 from functools import wraps
 from werkzeug.utils import secure_filename
 from bson.objectid import ObjectId
-
 
 app = Flask(__name__)
 app.secret_key = "123456"  # Chave de sessão
@@ -153,7 +152,6 @@ def logout():
 def favoritar_imovel(imoid):
     db = mongo.db
     user_id = session.get('user_id')
-    
     imovel_obj_id = ObjectId(imoid)
     
     user = db.users.find_one({"_id": ObjectId(user_id)})
@@ -161,12 +159,105 @@ def favoritar_imovel(imoid):
     
     if imovel_obj_id in favoritos:
         db.users.update_one({"_id": ObjectId(user_id)}, {"$pull": {"favoritos": imovel_obj_id}})
-        flash("Imóvel removido dos favoritos.", "info")
+        favoritado = False
     else:
         db.users.update_one({"_id": ObjectId(user_id)}, {"$push": {"favoritos": imovel_obj_id}})
-        flash("Imóvel adicionado aos favoritos!", "success")
+        favoritado = True  # True em Python vira true em JSON puro
         
+    # Retorna um JSON para o JavaScript atualizar a tela sem refresh
+    return {"status": "success", "favoritado": favoritado}
+
+@app.route('/imovel/agendar/<imoid>', methods=['POST'])
+@login_required
+def agendar_visita(imoid):
+    db = mongo.db
+    user_id = session.get('user_id')
+    
+    data = request.form.get('data')
+    hora = request.form.get('hora')
+    observacoes = request.form.get('observacoes', '')
+    
+    if not data or not hora:
+        flash('Informe a data e o horário desejados para o agendamento.', 'danger')
+        return redirect(request.referrer or url_for('index'))
+        
+    data_hora_str = f"{data} {hora}"
+    try:
+        data_hora = datetime.strptime(data_hora_str, '%Y-%m-%d %H:%M')
+    except ValueError:
+        data_hora = datetime.utcnow()
+        
+    db.agendamentos.insert_one({
+        "cliente_id": ObjectId(user_id),
+        "imovel_id": ObjectId(imoid),
+        "data_hora": data_hora,
+        "observacoes": observacoes,
+        "status": "pendente",
+        "criado_em": datetime.utcnow()
+    })
+    
+    flash('Visita agendada com sucesso! O corretor entrará em contato para confirmação.', 'success')
     return redirect(request.referrer or url_for('index'))
+
+# Rota para capturar Lead via Modal de Favoritos (Visitantes não logados)
+@app.route('/api/lead-favorito', methods=['POST'])
+def api_lead_favorito():
+    db = mongo.db
+    data = request.get_json()
+    
+    nome = data.get('nome')
+    email = data.get('email')
+    telefone = data.get('telefone')
+    imovel_id_str = data.get('imovel_id')
+    
+    if not email or not imovel_id_str:
+        return {"status": "error", "message": "Dados incompletos."}, 400
+        
+    imovel_obj_id = ObjectId(imovel_id_str)
+    
+    # Verifica se o usuário já existe no sistema pelo e-mail
+    user = db.users.find_one({"email": email})
+    
+    if user:
+        user_id = user["_id"]
+        db.users.update_one({"_id": user_id}, {"$set": {"nome": nome, "telefone": telefone}})
+    else:
+        senha_temp = bcrypt.hashpw("123456".encode('utf-8'), bcrypt.gensalt())
+        res_user = db.users.insert_one({
+            "nome": nome,
+            "email": email,
+            "senha_hash": senha_temp,
+            "telefone": telefone,
+            "papel": "cliente",
+            "ativo": True,
+            "favoritos": [],
+            "criado_em": datetime.utcnow()
+        })
+        user_id = res_user.inserted_id
+        user = db.users.find_one({"_id": user_id})
+
+    # Adiciona o imóvel aos favoritos do usuário
+    db.users.update_one(
+        {"_id": user_id},
+        {"$addToSet": {"favoritos": imovel_obj_id}}
+    )
+    
+    # Registra o contato na coleção de Leads para o corretor acompanhar
+    db.leads.insert_one({
+        "nome": nome,
+        "email": email,
+        "telefone": telefone,
+        "imovel_id": imovel_obj_id,
+        "origem": "Modal Favorito Site",
+        "criado_em": datetime.utcnow()
+    })
+    
+    # Faz o login automático na sessão do navegador
+    session['user_id'] = str(user_id)
+    session['user_nome'] = nome
+    session['papel'] = user.get('papel', 'cliente')
+    
+    return {"status": "success", "message": "Lead capturado com sucesso!"}
 
 @app.route('/cliente/favoritos')
 @login_required
@@ -446,11 +537,20 @@ def meu_perfil():
     
     if request.method == 'POST':
         nome = request.form.get('nome')
+        email = request.form.get('email')
         telefone = request.form.get('telefone')
         nova_senha = request.form.get('senha')
         
+        # Verifica se o e-mail foi alterado e se já pertence a outro usuário
+        if email != user.get('email'):
+            existe_outro = db.users.find_one({"email": email, "_id": {"$ne": ObjectId(user_id)}})
+            if existe_outro:
+                flash("Este e-mail já está sendo utilizado por outro usuário.", "danger")
+                return redirect(url_for('meu_perfil'))
+        
         update_data = {
             "nome": nome,
+            "email": email,
             "telefone": telefone
         }
         
@@ -458,7 +558,7 @@ def meu_perfil():
             update_data["senha_hash"] = bcrypt.hashpw(nova_senha.encode('utf-8'), bcrypt.gensalt())
             
         db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
-        session['user_nome'] = nome
+        session['user_nome'] = nome  # Atualiza a sessão caso o nome mude
         
         flash("Perfil atualizado com sucesso!", "success")
         return redirect(url_for('meu_perfil'))
@@ -470,9 +570,92 @@ def meu_perfil():
 @app.route('/corretor/painel')
 @login_required
 def painel_corretor():
-    leads = list(mongo.db.leads.find().sort("criado_em", -1))
-    agendamentos = list(mongo.db.agendamentos.find().sort("data_hora", 1))
-    return render_template('corretor/painel.html', leads=leads, agendamentos=agendamentos)
+    db = mongo.db
+    
+    # Pipeline para Leads
+    pipeline_leads = [
+        {"$sort": {"criado_em": -1}},
+        {
+            "$lookup": {
+                "from": "imoveis",
+                "localField": "imovel_id",
+                "foreignField": "_id",
+                "as": "imovel_info"
+            }
+        },
+        {
+            "$unwind": {
+                "path": "$imovel_info",
+                "preserveNullAndEmptyArrays": True
+            }
+        },
+        {
+            "$lookup": {
+                "from": "imoveis_enderecos",
+                "localField": "imovel_id",
+                "foreignField": "imovel_id",
+                "as": "endereco_privado"
+            }
+        },
+        {
+            "$unwind": {
+                "path": "$endereco_privado",
+                "preserveNullAndEmptyArrays": True
+            }
+        }
+    ]
+    leads = list(db.leads.aggregate(pipeline_leads))
+    
+    # Pipeline para Agendamentos (trazendo dados do cliente e do imóvel)
+    pipeline_agendamentos = [
+        {"$sort": {"data_hora": 1}},
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "cliente_id",
+                "foreignField": "_id",
+                "as": "cliente_info"
+            }
+        },
+        {
+            "$unwind": {
+                "path": "$cliente_info",
+                "preserveNullAndEmptyArrays": True
+            }
+        },
+        {
+            "$lookup": {
+                "from": "imoveis",
+                "localField": "imovel_id",
+                "foreignField": "_id",
+                "as": "imovel_info"
+            }
+        },
+        {
+            "$unwind": {
+                "path": "$imovel_info",
+                "preserveNullAndEmptyArrays": True
+            }
+        },
+        {
+            "$lookup": {
+                "from": "imoveis_enderecos",
+                "localField": "imovel_id",
+                "foreignField": "imovel_id",
+                "as": "endereco_privado"
+            }
+        },
+        {
+            "$unwind": {
+                "path": "$endereco_privado",
+                "preserveNullAndEmptyArrays": True
+            }
+        }
+
+    ]
+    agendamentos = list(db.agendamentos.aggregate(pipeline_agendamentos)) if 'agendamentos' in db.list_collection_names() else []
+    
+    return render_template('corretor/painel.html', leads=leads, agendamentos=agendamentos, active_tab='corretor')
 
 if __name__ == '__main__':
     app.run(debug=True)

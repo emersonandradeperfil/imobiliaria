@@ -18,10 +18,10 @@
 
             <!-- Logo e Slogan -->
             <div class="text-center md:text-left">
-                <a href="{{ url_for('index') }}" class="text-5xl md:text-3xl font-extrabold tracking-wider">
-                    TBORGES
+                <a href="{{ url_for('index') }}" class="inline-block">
+                    <img src="{{ url_for('static', filename='img/icon.png') }}" alt="TBORGES" class="h-10 md:h-12 w-auto object-contain">
                 </a>
-                <p class="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest">Administração, Perícias e
+                <p class="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mt-1">Administração, Perícias e
                     Avaliações</p>
             </div>
 
@@ -73,6 +73,25 @@
                 </a>
             </div>
         </div>
+
+        {% elif session.get('papel') == 'corretor' %}
+        <!-- Abas do Corretor -->
+        <div class="bg-slate-800 border-t border-slate-700">
+            <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-end md:justify-end gap-2">
+                <a href="{{ url_for('painel_corretor') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                    PAINEL
+                </a>
+
+                <a href="{{ url_for('meu_perfil') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                    PERFIL
+                </a>
+            </div>
+        </div>
+        
+
+
         {% elif session.get('papel') == 'cliente' %}
         <!-- Abas do Cliente -->
         <div class="bg-slate-800 border-t border-slate-700">
@@ -92,23 +111,6 @@
         {% endif %}
         {% endif %}
     </header>
-
-    <!-- Flash Messages -->
-    <div class="max-w-7xl mx-auto px-4 w-full mt-4">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        {% set bg_color = 'bg-green-100 text-green-800 border-green-300' if category == 'success' else ('bg-red-100
-        text-red-800 border-red-300' if category == 'danger' or category == 'error' else 'bg-blue-100 text-blue-800
-        border-blue-300') %}
-        <div
-            class="p-3 mb-3 rounded-lg border text-sm font-medium {{ bg_color }} shadow-sm flex justify-between items-center">
-            <span>{{ message }}</span>
-        </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
-    </div>
 
     <!-- Conteúdo Principal -->
     <main class="flex-grow">

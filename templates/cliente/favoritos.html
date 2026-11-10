@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-8">
-    
+
     <!-- Cabeçalho do Cliente -->
     <div class="mb-8">
         <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900">Meu Painel</h1>
@@ -10,10 +10,12 @@
 
     <!-- Abas de Navegação do Cliente -->
     <div class="flex space-x-2 border-b border-gray-200 mb-8 overflow-x-auto pb-2">
-        <a href="{{ url_for('meus_favoritos') }}" class="px-5 py-2.5 rounded-t-lg font-bold text-sm transition {% if active_tab == 'favoritos' %}bg-slate-900 text-white shadow{% else %}bg-gray-100 text-slate-600 hover:bg-gray-200{% endif %}">
+        <a href="{{ url_for('meus_favoritos') }}"
+            class="px-5 py-2.5 rounded-t-lg font-bold text-sm transition {% if active_tab == 'favoritos' %}bg-slate-900 text-white shadow{% else %}bg-gray-100 text-slate-600 hover:bg-gray-200{% endif %}">
             ❤️ Meus Favoritos
         </a>
-        <a href="{{ url_for('meus_agendamentos') }}" class="px-5 py-2.5 rounded-t-lg font-bold text-sm transition {% if active_tab == 'agendamentos' %}bg-slate-900 text-white shadow{% else %}bg-gray-100 text-slate-600 hover:bg-gray-200{% endif %}">
+        <a href="{{ url_for('meus_agendamentos') }}"
+            class="px-5 py-2.5 rounded-t-lg font-bold text-sm transition {% if active_tab == 'agendamentos' %}bg-slate-900 text-white shadow{% else %}bg-gray-100 text-slate-600 hover:bg-gray-200{% endif %}">
             📅 Meus Agendamentos
         </a>
     </div>
@@ -21,38 +23,43 @@
     <!-- Lista de Favoritos -->
     <div class="space-y-6">
         <h2 class="text-xl font-bold text-slate-900">Imóveis Favoritados</h2>
-        
+
         {% if imoveis %}
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div id="grid-favoritos" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {% for imovel in imoveis %}
-            <div class="bg-white rounded-lg shadow border overflow-hidden flex flex-col justify-between hover:shadow-lg transition">
+            <!-- Card do Imóvel com ID único para fácil remoção via JS -->
+            <div id="card-favorito-{{ imovel._id }}"
+                class="bg-white rounded-lg shadow border overflow-hidden flex flex-col justify-between hover:shadow-lg transition">
                 <div>
-                    {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else 'upload/default.jpg' %}
+                    {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else
+                    'upload/default.jpg' %}
                     <img src="{{ url_for('static', filename=capa) }}" alt="Capa" class="w-full h-48 object-cover">
                     <div class="p-4">
                         <span class="text-xs font-bold text-amber-600 uppercase">{{ imovel.tipo }}</span>
                         <h3 class="font-bold text-base text-slate-900 mt-1 truncate">{{ imovel.titulo }}</h3>
                         <p class="text-xs text-gray-500 mt-1">{{ imovel.local_publico.bairro }} - São Paulo/SP</p>
-                        <p class="text-base font-extrabold text-slate-900 mt-3">R$ {{ "{:,.2f}".format(imovel.precos.venda) }}</p>
+                        <p class="text-base font-extrabold text-slate-900 mt-3">R$ {{
+                            "{:,.2f}".format(imovel.precos.venda) }}</p>
                     </div>
                 </div>
                 <div class="p-4 bg-gray-50 border-t flex justify-between items-center">
-                    <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" class="text-slate-900 font-bold text-xs hover:underline">Ver Detalhes</a>
-                    
-                    <!-- Botão Remover dos Favoritos -->
-                    <form action="{{ url_for('favoritar_imovel', imoid=imovel._id) }}" method="POST">
-                        <button type="submit" class="text-red-500 hover:text-red-700 text-xs font-semibold bg-white border border-red-200 px-3 py-1 rounded shadow-sm hover:bg-red-50 transition">
-                            Remover ❌
-                        </button>
-                    </form>
+                    <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}"
+                        class="text-slate-900 font-bold text-xs hover:underline">Ver Detalhes</a>
+
+                    <!-- Botão Remover via JavaScript (Sem exibir JSON na tela) -->
+                    <button onclick="removerFavorito('{{ imovel._id }}')"
+                        class="text-red-500 hover:text-red-700 text-xs font-semibold bg-white border border-red-200 px-3 py-1 rounded shadow-sm hover:bg-red-50 transition">
+                        Remover ❌
+                    </button>
                 </div>
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <div class="bg-white p-8 rounded-lg shadow border text-center">
+        <div id="sem-favoritos" class="bg-white p-8 rounded-lg shadow border text-center">
             <p class="text-gray-500 text-sm">Você ainda não adicionou nenhum imóvel aos favoritos.</p>
-            <a href="{{ url_for('index') }}" class="inline-block mt-4 bg-slate-900 text-white font-bold px-5 py-2 rounded-lg text-xs hover:bg-slate-800 transition">
+            <a href="{{ url_for('index') }}"
+                class="inline-block mt-4 bg-slate-900 text-white font-bold px-5 py-2 rounded-lg text-xs hover:bg-slate-800 transition">
                 Explorar Imóveis
             </a>
         </div>
@@ -60,4 +67,37 @@
     </div>
 
 </div>
+
+<!-- Script para remover o card instantaneamente sem refresh -->
+<script>
+    async function removerFavorito(imoid) {
+        try {
+            let response = await fetch(`/imovel/favoritar/${imoid}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            let data = await response.json();
+
+            if (data.status === 'success') {
+                // Localiza o card do imóvel na tela e o remove suavemente
+                let card = document.getElementById(`card-favorito-${imoid}`);
+                if (card) {
+                    card.style.transition = "all 0.3s ease";
+                    card.style.opacity = "0";
+                    setTimeout(() => {
+                        card.remove();
+
+                        // Se não restar nenhum card, recarrega a página para mostrar a mensagem de vazio
+                        let grid = document.getElementById('grid-favoritos');
+                        if (grid && grid.children.length === 0) {
+                            location.reload();
+                        }
+                    }, 300);
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao remover favorito:', error);
+        }
+    }
+</script>
 {% endblock %}
