@@ -23,7 +23,7 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             flash('Faça login para acessar esta página.', 'warning')
-            return redirect(url_for('login'))
+            return redirect(url_for('login', next=request.path))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -75,6 +75,7 @@ def imovel_detalhe(slug):
     
     condominio = db.condominios.find_one({"_id": imovel.get("condominio_id")})
     
+    # Busca o endereço privado SOMENTE se o usuário estiver logado
     endereco_privado = None
     if 'user_id' in session:
         endereco_privado = db.imoveis_enderecos.find_one({"imovel_id": imovel["_id"]})
@@ -88,6 +89,9 @@ def imovel_detalhe(slug):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Captura o 'next' tanto se veio via GET (?next=...) quanto se foi mantido no formulário
+    proxima_pagina = request.args.get('next') or request.form.get('next')
+
     if request.method == 'POST':
         email = request.form.get('email')
         senha = request.form.get('senha')
@@ -99,15 +103,21 @@ def login():
             session['papel'] = user['papel']
             flash('Login realizado com sucesso!', 'success')
             
+            # Se for admin ou corretor, podemos mandar para os painéis específicos (ou respeitar o next se preferir)
             if user['papel'] == 'admin':
                 return redirect(url_for('admin_imoveis'))
             elif user['papel'] == 'corretor':
                 return redirect(url_for('painel_corretor'))
+                
+            # SE HOUVER UM 'NEXT', REDIRECIONA DE VOLTA PARA O IMÓVEL!
+            if proxima_pagina:
+                return redirect(proxima_pagina)
+                
             return redirect(url_for('index'))
         else:
             flash('E-mail ou senha inválidos.', 'danger')
             
-    return render_template('login.html')
+    return render_template('login.html', next=proxima_pagina)
 
 @app.route('/cadastrar', methods=['GET', 'POST'])
 def cadastrar_cliente():
@@ -162,9 +172,8 @@ def favoritar_imovel(imoid):
         favoritado = False
     else:
         db.users.update_one({"_id": ObjectId(user_id)}, {"$push": {"favoritos": imovel_obj_id}})
-        favoritado = True  # True em Python vira true em JSON puro
+        favoritado = True  
         
-    # Retorna um JSON para o JavaScript atualizar a tela sem refresh
     return {"status": "success", "favoritado": favoritado}
 
 @app.route('/imovel/agendar/<imoid>', methods=['POST'])
@@ -215,7 +224,6 @@ def api_lead_favorito():
         
     imovel_obj_id = ObjectId(imovel_id_str)
     
-    # Verifica se o usuário já existe no sistema pelo e-mail
     user = db.users.find_one({"email": email})
     
     if user:
@@ -236,13 +244,11 @@ def api_lead_favorito():
         user_id = res_user.inserted_id
         user = db.users.find_one({"_id": user_id})
 
-    # Adiciona o imóvel aos favoritos do usuário
     db.users.update_one(
         {"_id": user_id},
         {"$addToSet": {"favoritos": imovel_obj_id}}
     )
     
-    # Registra o contato na coleção de Leads para o corretor acompanhar
     db.leads.insert_one({
         "nome": nome,
         "email": email,
@@ -252,7 +258,6 @@ def api_lead_favorito():
         "criado_em": datetime.utcnow()
     })
     
-    # Faz o login automático na sessão do navegador
     session['user_id'] = str(user_id)
     session['user_nome'] = nome
     session['papel'] = user.get('papel', 'cliente')
@@ -274,7 +279,31 @@ def meus_favoritos():
 @login_required
 def meus_agendamentos():
     db = mongo.db
-    agendamentos = list(db.agendamentos.find({"cliente_id": ObjectId(session.get('user_id'))})) if 'agendamentos' in db.list_collection_names() else []
+    
+    pipeline = [
+        {"$match": {"cliente_id": ObjectId(session.get('user_id'))}},
+        {"$sort": {"data_hora": 1}},
+        {
+            "$lookup": {
+                "from": "imoveis",
+                "localField": "imovel_id",
+                "foreignField": "_id",
+                "as": "imovel_info"
+            }
+        },
+        {"$unwind": {"path": "$imovel_info", "preserveNullAndEmptyArrays": True}},
+        {
+            "$lookup": {
+                "from": "imoveis_enderecos",
+                "localField": "imovel_id",
+                "foreignField": "imovel_id",
+                "as": "endereco_privado"
+            }
+        },
+        {"$unwind": {"path": "$endereco_privado", "preserveNullAndEmptyArrays": True}}
+    ]
+    
+    agendamentos = list(db.agendamentos.aggregate(pipeline)) if 'agendamentos' in db.list_collection_names() else []
     
     return render_template('cliente/agendamentos.html', agendamentos=agendamentos, active_tab='agendamentos')
 
@@ -307,7 +336,6 @@ def admin_imovel_novo():
         condominio_id = request.form.get('condominio_id')
         corretor_id = request.form.get('corretor_id')
         
-        # Processamento do Upload da Imagem
         foto_relativa = f"upload/{codigo}/default.jpg"
         file = request.files.get('foto_capa')
         
@@ -396,11 +424,9 @@ def editar_imovel(codigo):
         slug = request.form.get('slug') or titulo.lower().replace(" ", "-")
         is_destaque = True if request.form.get('destaque') == '1' else False
         
-        # Garante a existência da pasta física do imóvel
         pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
         os.makedirs(pasta_imovel, exist_ok=True)
         
-        # Processamento de nova imagem enviada na edição
         file = request.files.get('foto_capa')
         if file and file.filename != '':
             extensao = os.path.splitext(file.filename)[1]
@@ -409,13 +435,11 @@ def editar_imovel(codigo):
             file.save(caminho_salvar)
             foto_relativa = f"upload/{codigo}/{nome_arquivo}"
             
-            # Atualiza a foto de capa no banco se uma nova foi enviada
             db.imoveis.update_one(
                 {"codigo": codigo},
                 {"$set": {"midia.fotos": [{"arquivo": foto_relativa, "legenda": "Capa", "ordem": 1, "capa": True}]}}
             )
         
-        # Atualiza dados públicos na coleção 'imoveis'
         db.imoveis.update_one(
             {"codigo": codigo},
             {"$set": {
@@ -541,7 +565,6 @@ def meu_perfil():
         telefone = request.form.get('telefone')
         nova_senha = request.form.get('senha')
         
-        # Verifica se o e-mail foi alterado e se já pertence a outro usuário
         if email != user.get('email'):
             existe_outro = db.users.find_one({"email": email, "_id": {"$ne": ObjectId(user_id)}})
             if existe_outro:
@@ -558,7 +581,7 @@ def meu_perfil():
             update_data["senha_hash"] = bcrypt.hashpw(nova_senha.encode('utf-8'), bcrypt.gensalt())
             
         db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
-        session['user_nome'] = nome  # Atualiza a sessão caso o nome mude
+        session['user_nome'] = nome
         
         flash("Perfil atualizado com sucesso!", "success")
         return redirect(url_for('meu_perfil'))
@@ -572,7 +595,6 @@ def meu_perfil():
 def painel_corretor():
     db = mongo.db
     
-    # Pipeline para Leads
     pipeline_leads = [
         {"$sort": {"criado_em": -1}},
         {
@@ -606,7 +628,6 @@ def painel_corretor():
     ]
     leads = list(db.leads.aggregate(pipeline_leads))
     
-    # Pipeline para Agendamentos (trazendo dados do cliente e do imóvel)
     pipeline_agendamentos = [
         {"$sort": {"data_hora": 1}},
         {
@@ -651,7 +672,6 @@ def painel_corretor():
                 "preserveNullAndEmptyArrays": True
             }
         }
-
     ]
     agendamentos = list(db.agendamentos.aggregate(pipeline_agendamentos)) if 'agendamentos' in db.list_collection_names() else []
     
@@ -672,7 +692,7 @@ def alterar_status_agendamento(ag_id, novo_status):
         {"$set": {"status": novo_status}}
     )
     
-    flash(f'Status atualizado para: {novo_status.capitalize()}', 'success')
+    flash(f'Status atualizado com sucesso!', 'success')
     return redirect(url_for('painel_corretor') + '#agendamentos')
 
 if __name__ == '__main__':

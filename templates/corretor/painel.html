@@ -27,40 +27,49 @@
         {% if leads %}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {% for lead in leads %}
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
+            <div
+                class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
                 <div>
 
                     <div class="flex justify-between items-start">
                         <div>
                             <h3 class="font-bold text-slate-900 text-base">{{ lead.nome }}</h3>
-                            <p class="text-xs text-gray-500 mt-0.5">Contato: <span class="font-semibold text-slate-700">{{ lead.telefone }}</span></p>
-                            <p class="text-xs text-gray-600 mt-2">E-mail: <a href="mailto:{{ lead.email }}" class="text-blue-600 hover:underline">{{ lead.email }}</a></p>
+                            <p class="text-xs text-gray-500 mt-0.5">Contato: <span
+                                    class="font-semibold text-slate-700">{{ lead.telefone }}</span></p>
+                            <p class="text-xs text-gray-600 mt-2">E-mail: <a href="mailto:{{ lead.email }}"
+                                    class="text-blue-600 hover:underline">{{ lead.email }}</a></p>
                         </div>
                     </div>
-                    
+
                     <!-- Imóvel Curtido -->
                     {% if lead.imovel_info %}
                     <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-3">
-                        {% set foto_capa = lead.imovel_info.midia.fotos[0].arquivo if lead.imovel_info.midia and lead.imovel_info.midia.fotos else 'upload/default.jpg' %}
-                        <img src="{{ url_for('static', filename=foto_capa) }}" class="w-12 h-12 object-cover rounded-md border" alt="Imóvel">
+                        {% set foto_capa = lead.imovel_info.midia.fotos[0].arquivo if lead.imovel_info.midia and
+                        lead.imovel_info.midia.fotos else 'upload/default.jpg' %}
+                        <img src="{{ url_for('static', filename=foto_capa) }}"
+                            class="w-12 h-12 object-cover rounded-md border" alt="Imóvel">
                         <div class="overflow-hidden">
-                            <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{ lead.imovel_info.codigo }}</span>
+                            <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{
+                                lead.imovel_info.codigo }}</span>
                             <h4 class="text-xs font-bold text-slate-900 truncate">{{ lead.imovel_info.titulo }}</h4>
                             {% if lead.endereco_privado %}
-                            <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ lead.endereco_privado.logradouro }}, {{ lead.endereco_privado.numero }}</p>
+                            <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ lead.endereco_privado.logradouro }}, {{
+                                lead.endereco_privado.numero }}</p>
                             {% endif %}
-                            <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ lead.imovel_info.local_publico.bairro }}</p>
+                            <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ lead.imovel_info.local_publico.bairro
+                                }}</p>
                         </div>
                     </div>
                     {% endif %}
-                    
+
                 </div>
 
                 <div class="flex justify-between items-center pt-3 border-t border-gray-100 text-[11px] text-gray-400">
-                    <span>Cadastrado em: {{ lead.criado_em.strftime('%d/%m/%Y %H:%M') if lead.criado_em else '' }}</span>
-                    <a href="https://api.whatsapp.com/send?phone=55{{ lead.telefone | replace('(', '') | replace(')', '') | replace(' ', '') | replace('-', '') }}" 
-                       target="_blank" 
-                       class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1">
+                    <span>Cadastrado em: {{ lead.criado_em.strftime('%d/%m/%Y %H:%M') if lead.criado_em else ''
+                        }}</span>
+                    <a href="https://api.whatsapp.com/send?phone=55{{ lead.telefone | replace('(', '') | replace(')', '') | replace(' ', '') | replace('-', '') }}"
+                        target="_blank"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1">
                         WhatsApp
                     </a>
                 </div>
@@ -78,54 +87,64 @@
 
     <!-- CONTEÚDO DA ABA: AGENDAMENTOS -->
     <div id="secao-agendamentos" class="space-y-4 hidden">
-    
+
         {% if agendamentos %}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {% for ag in agendamentos %}
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
+            <!-- ID Único adicionado no card para o AJAX localizar -->
+            <div id="agendamento-{{ ag._id }}"
+                class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
                 <div>
-                    
+
                     <div class="flex justify-between items-start">
                         <div>
                             <h3 class="font-bold text-slate-900 text-base">
                                 {{ ag.cliente_info.nome if ag.cliente_info else 'Cliente' }}
                             </h3>
-                            <p class="text-xs text-gray-500 mt-0.5">Contato: <span class="font-semibold text-slate-700">{{ ag.cliente_info.telefone if ag.cliente_info else 'Não informado' }}</span></p>
-                            <p class="text-xs text-gray-600 mt-2">E-mail: <a href="mailto:{{ ag.cliente_info.email if ag.cliente_info else '' }}" class="text-blue-600 hover:underline">{{ ag.cliente_info.email if ag.cliente_info else '' }}</a></p>
+                            <p class="text-xs text-gray-500 mt-0.5">Contato: <span
+                                    class="font-semibold text-slate-700">{{ ag.cliente_info.telefone if ag.cliente_info
+                                    else 'Não informado' }}</span></p>
+                            <p class="text-xs text-gray-600 mt-2">E-mail: <a
+                                    href="mailto:{{ ag.cliente_info.email if ag.cliente_info else '' }}"
+                                    class="text-blue-600 hover:underline">{{ ag.cliente_info.email if ag.cliente_info
+                                    else '' }}</a></p>
                         </div>
-                        
-                        <!-- Badge de Status Atual -->
+
+                        <!-- Badge de Status Atual com a classe 'badge-status' pura -->
                         <div>
                             {% set st = ag.status|default('pendente') %}
-                            {% if st == 'pendente' %}
-                                <span class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 font-bold px-2.5 py-1 rounded-full uppercase">Pendente</span>
-                            {% elif st == 'agendado' %}
-                                <span class="text-[10px] bg-blue-50 text-blue-800 border border-blue-200 font-bold px-2.5 py-1 rounded-full uppercase">Agendado</span>
-                            {% elif st == 'concluido' %}
-                                <span class="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold px-2.5 py-1 rounded-full uppercase">Concluído</span>
-                            {% else %}
-                                <span class="text-[10px] bg-red-50 text-red-800 border border-red-200 font-bold px-2.5 py-1 rounded-full uppercase">Cancelado</span>
-                            {% endif %}
+                            <span class="badge-status text-[10px] font-bold px-2.5 py-1 rounded-full uppercase
+                                {% if st == 'pendente' %} bg-amber-50 text-amber-800 border border-amber-200
+                                {% elif st == 'agendado' %} bg-blue-50 text-blue-800 border border-blue-200
+                                {% elif st == 'concluido' %} bg-emerald-50 text-emerald-800 border border-emerald-200
+                                {% else %} bg-red-50 text-red-800 border border-red-200 {% endif %}">
+                                {{ 'Concluído' if st == 'concluido' else st }}
+                            </span>
                         </div>
                     </div>
-                    
+
                     <!-- Imóvel do Agendamento -->
                     {% if ag.imovel_info %}
                     <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-3">
-                        {% set foto_capa_ag = ag.imovel_info.midia.fotos[0].arquivo if ag.imovel_info.midia and ag.imovel_info.midia.fotos else 'upload/default.jpg' %}
-                        <img src="{{ url_for('static', filename=foto_capa_ag) }}" class="w-12 h-12 object-cover rounded-md border" alt="Imóvel">
+                        {% set foto_capa_ag = ag.imovel_info.midia.fotos[0].arquivo if ag.imovel_info.midia and
+                        ag.imovel_info.midia.fotos else 'upload/default.jpg' %}
+                        <img src="{{ url_for('static', filename=foto_capa_ag) }}"
+                            class="w-12 h-12 object-cover rounded-md border" alt="Imóvel">
                         <div class="overflow-hidden">
-                            <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{ ag.imovel_info.codigo }}</span>
+                            <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{
+                                ag.imovel_info.codigo }}</span>
                             <h4 class="text-xs font-bold text-slate-900 truncate">{{ ag.imovel_info.titulo }}</h4>
                             {% if ag.endereco_privado %}
-                            <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ ag.endereco_privado.logradouro }}, {{ ag.endereco_privado.numero }}</p>
+                            <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ ag.endereco_privado.logradouro }}, {{
+                                ag.endereco_privado.numero }}</p>
                             {% endif %}
-                            <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ ag.imovel_info.local_publico.bairro }}</p>
+                            <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ ag.imovel_info.local_publico.bairro
+                                }}</p>
                         </div>
                     </div>
                     {% endif %}
 
-                    {% if ag.observacoes %}                    
+                    {% if ag.observacoes %}
                     <div class="mt-3 text-xs bg-amber-50/50 border border-amber-100 p-2.5 rounded-lg text-slate-700">
                         <span class="font-bold text-slate-900 block mb-1">Observações:</span>
                         <p class="text-gray-600">{{ ag.observacoes }}</p>
@@ -139,31 +158,32 @@
                         <span class="font-extrabold text-slate-900 bg-slate-100 px-3 py-1.5 rounded-lg">
                             📅 {{ ag.data_hora.strftime('%d/%m/%Y às %H:%M') if ag.data_hora else 'A definir' }}
                         </span>
-                        <a href="https://api.whatsapp.com/send?phone=55{{ ag.cliente_info.telefone | replace('(', '') | replace(')', '') | replace(' ', '') | replace('-', '') if ag.cliente_info and ag.cliente_info.telefone else '' }}" 
-                           target="_blank" 
-                           class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1">
+                        <a href="https://api.whatsapp.com/send?phone=55{{ ag.cliente_info.telefone | replace('(', '') | replace(')', '') | replace(' ', '') | replace('-', '') if ag.cliente_info and ag.cliente_info.telefone else '' }}"
+                            target="_blank"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1">
                             WhatsApp
                         </a>
                     </div>
 
+                    <!-- Botões para Alterar Status com a classe 'botoes-status-container' -->
                     <!-- Botões para Alterar Status -->
-                    <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                    <div class="botoes-status-container flex flex-wrap items-center gap-1.5 pt-1">
                         <span class="text-[10px] font-bold text-gray-400 mr-1">Status:</span>
                         {% if st != 'agendado' %}
-                        <a href="{{ url_for('alterar_status_agendamento', ag_id=ag._id, novo_status='agendado') }}" 
-                           class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold px-2.5 py-1 rounded transition border border-blue-200">Agendado</a>
+                        <a href="{{ url_for('alterar_status_agendamento', ag_id=ag._id, novo_status='agendado') }}#agendamentos"
+                            class="btn-status bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold px-2.5 py-1 rounded transition border border-blue-200">Agendado</a>
                         {% endif %}
                         {% if st != 'concluido' %}
-                        <a href="{{ url_for('alterar_status_agendamento', ag_id=ag._id, novo_status='concluido') }}" 
-                           class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded transition border border-emerald-200">Concluido</a>
+                        <a href="{{ url_for('alterar_status_agendamento', ag_id=ag._id, novo_status='concluido') }}#agendamentos"
+                            class="btn-status bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded transition border border-emerald-200">Concluido</a>
                         {% endif %}
                         {% if st != 'cancelado' %}
-                        <a href="{{ url_for('alterar_status_agendamento', ag_id=ag._id, novo_status='cancelado') }}" 
-                           class="bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-bold px-2.5 py-1 rounded transition border border-red-200">Cancelado</a>
+                        <a href="{{ url_for('alterar_status_agendamento', ag_id=ag._id, novo_status='cancelado') }}#agendamentos"
+                            class="btn-status bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-bold px-2.5 py-1 rounded transition border border-red-200">Cancelado</a>
                         {% endif %}
                         {% if st != 'pendente' %}
-                        <a href="{{ url_for('alterar_status_agendamento', ag_id=ag._id, novo_status='pendente') }}" 
-                           class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-bold px-2.5 py-1 rounded transition border border-gray-200">Pendente</a>
+                        <a href="{{ url_for('alterar_status_agendamento', ag_id=ag._id, novo_status='pendente') }}#agendamentos"
+                            class="btn-status bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-bold px-2.5 py-1 rounded transition border border-gray-200">Pendente</a>
                         {% endif %}
                     </div>
                 </div>
@@ -180,8 +200,7 @@
 
 </div>
 
-<!-- Script simples para alternar as abas -->
-<!-- Script para alternar as abas e manter a aba ativa após o refresh -->
+<!-- Scripts de Abas e AJAX para Mudança de Status Sem Refresh -->
 <script>
     function mudarAba(aba) {
         const secaoLeads = document.getElementById('secao-leads');
@@ -192,25 +211,39 @@
         if (aba === 'leads') {
             secaoLeads.classList.remove('hidden');
             secaoAgendamentos.classList.add('hidden');
-            
             btnLeads.className = "px-5 py-2 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm";
             btnAgendamentos.className = "px-5 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900";
             history.pushState(null, null, '#leads');
         } else {
             secaoAgendamentos.classList.remove('hidden');
             secaoLeads.classList.add('hidden');
-            
             btnAgendamentos.className = "px-5 py-2 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm";
             btnLeads.className = "px-5 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900";
             history.pushState(null, null, '#agendamentos');
         }
     }
 
-    // Ao carregar a página, verifica se veio com a hash #agendamentos na URL
-    window.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener("DOMContentLoaded", () => {
+        // Se a URL veio com hash #agendamentos, ativa a aba correta
         if (window.location.hash === '#agendamentos') {
             mudarAba('agendamentos');
         }
+
+        // Restaura a posição exata da tela se houver um scroll salvo
+        const scrollSalvo = localStorage.getItem('scroll_painel_corretor');
+        if (scrollSalvo !== null) {
+            window.scrollTo(0, parseInt(scrollSalvo));
+            localStorage.removeItem('scroll_painel_corretor');
+        }
+
+        // Intercepta o clique em qualquer botão de status para salvar o scroll
+        const botoesStatus = document.querySelectorAll('.btn-status');
+        botoesStatus.forEach(botao => {
+            botao.addEventListener('click', () => {
+                localStorage.setItem('scroll_painel_corretor', window.scrollY);
+            });
+        });
     });
 </script>
+
 {% endblock %}

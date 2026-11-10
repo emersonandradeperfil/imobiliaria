@@ -1,15 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-8">
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
     
-    <!-- Cabeçalho do Cliente -->
-    <div class="mb-8">
-        <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900">Meu Painel</h1>
-        <p class="text-sm text-gray-600 mt-1">Gerencie seus imóveis favoritos e acompanhe suas interações.</p>
-    </div>
-
     <!-- Abas de Navegação do Cliente -->
-    <div class="flex space-x-2 border-b border-gray-200 mb-8 overflow-x-auto pb-2">
+    <div class="flex space-x-2 border-b border-gray-200 pb-2 overflow-x-auto">
         <a href="{{ url_for('meus_favoritos') }}" class="px-5 py-2.5 rounded-t-lg font-bold text-sm transition {% if active_tab == 'favoritos' %}bg-slate-900 text-white shadow{% else %}bg-gray-100 text-slate-600 hover:bg-gray-200{% endif %}">
             ❤️ Meus Favoritos
         </a>
@@ -19,35 +13,70 @@
     </div>
 
     <!-- Lista de Agendamentos -->
-    <div class="space-y-6">
+    <div class="space-y-4">
         <h2 class="text-xl font-bold text-slate-900">Agendamentos de Visitas</h2>
         
         {% if agendamentos %}
-        <div class="bg-white rounded-lg shadow border overflow-hidden">
-            <table class="w-full text-left border-collapse">
-                <thead class="bg-slate-50 border-b text-xs uppercase text-slate-600">
-                    <tr>
-                        <th class="p-4">Data/Hora</th>
-                        <th class="p-4">Imóvel</th>
-                        <th class="p-4">Status</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 text-sm">
-                    {% for ag in agendamentos %}
-                    <tr class="hover:bg-gray-50">
-                        <td class="p-4 font-semibold text-slate-900">{{ ag.data_hora }}</td>
-                        <td class="p-4 text-slate-700">Visita Agendada</td>
-                        <td class="p-4"><span class="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded font-semibold">Pendente</span></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for ag in agendamentos %}
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
+                
+                <div>
+
+                        <!-- Badge de Status para o Cliente -->
+                        <div class="flex justify-between items-start">
+                            {% set st = ag.status|default('pendente') %}
+                            {% if st == 'pendente' %}
+                                <span class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 font-bold px-2.5 py-1 rounded-full uppercase">Pendente</span>
+                            {% elif st == 'agendado' %}
+                                <span class="text-[10px] bg-blue-50 text-blue-800 border border-blue-200 font-bold px-2.5 py-1 rounded-full uppercase">Agendado</span>
+                            {% elif st == 'concluido' %}
+                                <span class="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold px-2.5 py-1 rounded-full uppercase">Concluído</span>
+                            {% else %}
+                                <span class="text-[10px] bg-red-50 text-red-800 border border-red-200 font-bold px-2.5 py-1 rounded-full uppercase">Cancelado</span>
+                            {% endif %}
+                        </div>
+                    
+
+                    <!-- Imóvel do Agendamento (Mesmo formato do corretor) -->
+                    {% if ag.imovel_info %}
+                    <div class="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-3">
+                        {% set foto_capa_ag = ag.imovel_info.midia.fotos[0].arquivo if ag.imovel_info.midia and ag.imovel_info.midia.fotos else 'upload/default.jpg' %}
+                        <img src="{{ url_for('static', filename=foto_capa_ag) }}" class="w-12 h-12 object-cover rounded-md border" alt="Imóvel">
+                        <div class="overflow-hidden">
+                            <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{ ag.imovel_info.codigo }}</span>
+                            <h4 class="text-xs font-bold text-slate-900 truncate">{{ ag.imovel_info.titulo }}</h4>
+                            {% if ag.endereco_privado %}
+                            <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ ag.endereco_privado.logradouro }}, {{ ag.endereco_privado.numero }}</p>
+                            {% endif %}
+                            <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ ag.imovel_info.local_publico.bairro }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if ag.observacoes %}
+                    <div class="mt-3 text-xs bg-amber-50/50 border border-amber-100 p-2.5 rounded-lg text-slate-700">
+                        <span class="font-bold text-amber-800 block mb-0.5">Suas observações:</span>
+                        {{ ag.observacoes }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="flex justify-between items-center pt-3 border-t border-gray-100 text-xs">
+                    <span class="font-extrabold text-slate-900 bg-slate-100 px-3 py-1.5 rounded-lg">
+                        📅 {{ ag.data_hora.strftime('%d/%m/%Y às %H:%M') if ag.data_hora else 'A definir' }}
+                    </span>
+                    
+                </div>
+            </div>
+            {% endfor %}
         </div>
         {% else %}
-        <div class="bg-white p-8 rounded-lg shadow border text-center">
-            <p class="text-gray-500 text-sm">Você não possui visitas agendadas no momento.</p>
+        <div class="bg-white border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-500">
+            <span class="text-3xl block mb-2">📅</span>
+            <p class="text-sm">Você não possui visitas agendadas no momento.</p>
             <a href="{{ url_for('index') }}" class="inline-block mt-4 bg-slate-900 text-white font-bold px-5 py-2 rounded-lg text-xs hover:bg-slate-800 transition">
-                Agendar uma Visita
+                Explorar Imóveis e Agendar
             </a>
         </div>
         {% endif %}
