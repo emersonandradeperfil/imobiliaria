@@ -69,24 +69,53 @@
 
         <div>
             <h4 class="text-base font-bold text-white mb-3">📅 Agendar Visita Presencial</h4>
-            <form action="{{ url_for('agendar_visita', imoid=imovel._id) }}" method="POST"
+            
+            <form action="{{ url_for('agendar_visita', imoid=imovel._id) }}" method="POST" onsubmit="return validarHorario(event)"
                 class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
                 <div>
-                    <label class="block text-xs font-semibold text-gray-400 mb-1">Data Desejada</label>
-                    <input type="date" name="data" required
-                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    <!-- <label class="block text-xs font-semibold text-gray-400 mb-1">Data Desejada</label> -->
+                    <!-- o atributo min="{{ now }}" ou gerado via python impede datas anteriores a hoje -->
+                    <input type="date" name="data" id="campo-data" required
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400">
                 </div>
+            
                 <div>
-                    <label class="block text-xs font-semibold text-gray-400 mb-1">Horário</label>
-                    <input type="time" name="hora" required
-                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    <!-- <label class="block text-xs font-semibold text-gray-400 mb-1">Horário da Visita (08:00 às 20:00)</label> -->
+                
+                    <!-- Input escondido que armazena a hora unificada "HH:MM" para o backend receber -->
+                    <input type="hidden" name="hora" id="campo-hora-final" required>
+                
+                    <div class="grid grid-cols-2 gap-2">
+                        <!-- Select de Horas (08 às 20) -->
+                        <select id="select-hora" required
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            <option value="" disabled selected >Hora</option>
+                            <option value="08">08</option>
+                            <option value="09">09</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                            <option value="19">19</option>
+                            <option value="20">20</option>
+                        </select>
+                
+                    </div>
                 </div>
+            
                 <div class="sm:col-span-2">
-                    <label class="block text-xs font-semibold text-gray-400 mb-1">Observações / Preferências</label>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1">Observações</label>
                     <input type="text" name="observacoes"
-                        placeholder="Ex: Prefiro período da tarde, desejo falar sobre financiamento..."
+                        placeholder="Digite alguma observação se tiver"
                         class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400">
                 </div>
+            
                 <div class="sm:col-span-2 pt-2">
                     <button type="submit"
                         class="w-full bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold py-3 rounded-xl transition text-sm shadow-md">
@@ -94,6 +123,7 @@
                     </button>
                 </div>
             </form>
+
         </div>
     </div>
     {% else %}
@@ -114,6 +144,18 @@
         </div>
     </div>
     {% endif %}
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Define a data mínima do input como o dia de hoje (formato YYYY-MM-DD)
+        const hoje = new Date().toISOString().split('T')[0];
+        const inputData = document.getElementById('campo-data');
+        if (inputData) {
+            inputData.min = hoje;
+        }
+    });
+
+</script>
 
 </div>
 {% endblock %}
