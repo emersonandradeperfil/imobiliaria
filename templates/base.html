@@ -32,20 +32,14 @@
                 <span class="text-gray-300 text-sm">Olá, {{ session.get('user_nome').split()[0] if
                     session.get('user_nome') else '' }}</span>
                 <a href="{{ url_for('logout') }}"
-                    class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1 rounded text-xs transition shadow">
+                    class="text-amber-400 hover:text-white transition font-medium">
                     Sair
                 </a>
                 {% else %}
                 <!-- Ícone de Bonequinho para Entrar / Login -->
                 <a href="{{ url_for('login') }}"
-                    class="text-slate-300 hover:text-amber-400 transition p-1.5 rounded-full hover:bg-slate-800 flex items-center justify-center"
-                    title="Entrar / Acessar Conta">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                </a>
+                    class="hover:text-amber-400 transition font-medium"
+                    title="Entrar / Acessar Conta">Login</a>
                 {% endif %}
             </div>
 
