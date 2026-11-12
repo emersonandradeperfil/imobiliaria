@@ -50,7 +50,7 @@
                     <!-- Rodapé do Card: Ações (Ver Detalhes e Favorito) -->
                     <div class="p-4 bg-gray-50 border-t flex justify-between items-center">
                         <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}"
-                            class="text-slate-900 font-bold text-xs hover:underline">Ver Detalhes</a>
+                            class="w-32 h-10 bg-slate-900 hover:bg-amber-600 text-white font-bold text-xs uppercase flex items-center justify-center transition rounded-lg">Ver Detalhes</a>
 
                         <!-- Botão de Favoritar Rápido (Disponível para todos - abre modal se não logado) -->
                         <button onclick="clicarFavorito('{{ imovel._id }}', {{ 'true' if session.get('user_id') else 'false' }})" 
