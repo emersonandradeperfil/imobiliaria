@@ -1,27 +1,57 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-6 space-y-8">
 
-    <!-- Cabeçalho da Home + Botão Limpo de Filtrar -->
-    <div class="text-center space-y-4">
-        <div>
-            <h1 class="text-3xl font-extrabold text-slate-900">Imóveis de Alto Padrão em Destaque</h1>
-            <p class="text-gray-600 mt-2 text-sm sm:text-base">Encontre residências exclusivas nas melhores localizações.</p>
-        </div>
+<!-- ========================================== -->
+<!-- HERO BANNER COM VÍDEO EM DESTAQUE          -->
+<!-- ========================================== -->
+<div class="relative w-full h-[360px] sm:h-[440px] bg-slate-900 overflow-hidden flex items-center justify-center">
+    
+    <!-- Vídeo de Fundo (Autoplay, Mudo, Loop e Playsinline para funcionar no iPhone/Android) -->
+    <video autoplay loop muted playsinline poster="{{ url_for('static', filename='img/banner-fallback.jpg') }}"
+        class="absolute inset-0 w-full h-full object-cover opacity-55">
+        <source src="{{ url_for('static', filename='video/banner.mp4') }}" type="video/mp4">
+    </video>
 
-        <!-- Botão Gatilho para Abrir/Fechar os Filtros -->
-        <div class="flex pt-1">
-            <button type="button" onclick="togglePainelFiltros()" id="btn-toggle-filtros"
-                class="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-900 text-slate-900 hover:text-white border border-gray-300 hover:border-slate-900 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm transition cursor-pointer">
-                <!-- <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg> -->
-                <span id="texto-btn-filtrar">Filtrar</span>
-                <!-- Bolinha âmbar que acende se algum filtro estiver ativo -->
-                <!-- <span id="badge-filtro-ativo" class="hidden w-2 h-2 rounded-full bg-amber-500"></span> -->
-            </button>
-        </div>
+    <!-- Gradiente Escuro para Contraste Elegante -->
+    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-slate-950/60"></div>
+
+    <!-- Conteúdo Central sobreposto ao Vídeo -->
+    <div class="relative z-10 max-w-4xl mx-auto px-4 text-center space-y-4">
+        <span class="inline-block text-[10px] sm:text-xs font-bold uppercase tracking-widest bg-amber-400/20 text-amber-300 border border-amber-400/30 px-3 py-1 rounded-full backdrop-blur-sm">
+            Exclusividade & Alto Padrão
+        </span>
+
+        <h1 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight drop-shadow-md">
+            Imóveis de Alto Padrão em Destaque
+        </h1>
+        
+        <p class="text-gray-200 text-sm sm:text-lg max-w-2xl mx-auto drop-shadow">
+            Encontre residências exclusivas nas melhores localizações.
+        </p>
+
+        
+        
+        
     </div>
+</div>
+
+<!-- Botão Gatilho para Abrir/Fechar os Filtros -->
+    <div class="flex pt-1">
+        <button type="button" onclick="togglePainelFiltros()" id="btn-toggle-filtros"
+            class="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-900 text-slate-900 hover:text-white border border-gray-300 hover:border-slate-900 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm transition cursor-pointer">
+            <!-- <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                            </svg> -->
+            <span id="texto-btn-filtrar">Filtrar</span>
+            <!-- Bolinha âmbar que acende se algum filtro estiver ativo -->
+            <!-- <span id="badge-filtro-ativo" class="hidden w-2 h-2 rounded-full bg-amber-500"></span> -->
+        </button>
+    </div>
+
+<div class="max-w-7xl mx-auto px-4 py-6 space-y-8"></div>
+
+    
+    
 
     <!-- ========================================== -->
     <!-- BARRA DE FILTROS RETRÁTIL (INICIA OCULTA)  -->
