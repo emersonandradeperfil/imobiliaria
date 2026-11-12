@@ -37,13 +37,39 @@
                     class="min-w-[300px] max-w-[300px] bg-white rounded-lg shadow border overflow-hidden flex-shrink-0 flex flex-col justify-between hover:shadow-lg transition">
                     
                     <div>
-                        {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else 'upload/default.jpg' %}
-                        <img src="{{ url_for('static', filename=capa) }}" alt="Capa" class="w-full h-48 object-cover">
+                        <div class="relative">
+                            {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else 'upload/default.jpg' %}
+                            <img src="{{ url_for('static', filename=capa) }}" alt="Capa" class="w-full h-48 object-cover">
+                            
+                            <!-- Selos de Finalidade sobrepostos na foto -->
+                            <div class="absolute top-2 left-2 flex flex-col gap-1">
+                                {% if imovel.precos.venda and imovel.precos.venda > 0 %}
+                                <span class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow uppercase">Venda</span>
+                                {% endif %}
+                                {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
+                                <span class="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow uppercase">Locação</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
                         <div class="p-4">
                             <span class="text-xs font-bold text-amber-600 uppercase">{{ imovel.tipo }}</span>
                             <h3 class="font-bold text-base text-slate-900 mt-1 truncate">{{ imovel.titulo }}</h3>
                             <p class="text-xs text-gray-500 mt-1">{{ imovel.local_publico.bairro }} - São Paulo/SP</p>
-                            <p class="text-base font-extrabold text-slate-900 mt-3">R$ {{ "{:,.2f}".format(imovel.precos.venda) }}</p>
+                            
+                            <!-- Valores Exibidos no Card -->
+                            <div class="mt-3 space-y-1">
+                                {% if imovel.precos.venda and imovel.precos.venda > 0 %}
+                                <p class="text-sm font-extrabold text-slate-900">
+                                    Venda: R$ {{ "{:,.2f}".format(imovel.precos.venda).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+                                </p>
+                                {% endif %}
+                                {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
+                                <p class="text-xs font-bold text-emerald-600">
+                                    Locação: R$ {{ "{:,.2f}".format(imovel.precos.locacao).replace(',', 'v').replace('.', ',').replace('v', '.') }}/mês
+                                </p>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
 
@@ -86,7 +112,7 @@
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative transform transition-all">
         
         <!-- Botão Fechar -->
-        <button onclick="fecharModalLead()" class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">&times;</button>
+        <button onclick="fecharModalLead()" class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">×</button>
         
         <div class="text-center mb-6">
             <span class="text-3xl">❤️</span>
@@ -123,15 +149,9 @@
 </div>
 
 <!-- Script JavaScript para o carrossel, favoritos e modal de Lead -->
-<!-- Script JavaScript para o carrossel, favoritos e modal de Lead -->
 <script>
     let imovelPendenteId = null;
-    // Variável que controla se o usuário acabou de logar via modal na sessão atual
     let usuarioLogadoDesteCliente = {{ 'true' if session.get('user_id') else 'false' }};
-
-    function rolaraCarrossel(id, deslocamento) {
-        // Mantido por compatibilidade
-    }
 
     function rolarCarrossel(id, deslocamento) {
         const elemento = document.getElementById(id);
@@ -142,10 +162,8 @@
 
     function clicarFavorito(imoid) {
         if (usuarioLogadoDesteCliente) {
-            // Se já está logado (ou acabou de logar pelo modal), curte direto via AJAX sem abrir nada
             toggleFavorito(imoid);
         } else {
-            // Se não está logado, guarda o ID do imóvel e abre o modal de lead
             imovelPendenteId = imoid;
             document.getElementById('modal-imovel-id').value = imoid;
             document.getElementById('modal-lead').classList.remove('hidden');
@@ -193,22 +211,14 @@
             let data = await response.json();
 
             if (data.status === 'success') {
-                // 1. Fecha o modal suavemente
                 fecharModalLead();
-                
-                // 2. Marca na memória do navegador que agora ele está logado
                 usuarioLogadoDesteCliente = true;
-
-                // 3. Deixa o coração do imóvel atual vermelho na hora
                 if (imoid) {
                     let span = document.getElementById(`coracao-${imoid}`);
                     if (span) {
                         span.innerHTML = '❤️';
                     }
                 }
-
-                // Opcional: Atualiza o nome do usuário discretamente no header se quiser, 
-                // mas o importante é que agora ele tem passe livre para dar quantos likes quiser!
             }
         } catch (error) {
             console.error('Erro ao cadastrar lead:', error);
@@ -216,7 +226,6 @@
     }
 </script>
 
-<!-- Estilo extra para garantir remoção da barra de rolagem em todos os browsers -->
 <style>
     .no-scrollbar::-webkit-scrollbar {
         display: none;
