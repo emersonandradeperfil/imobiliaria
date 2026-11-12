@@ -12,104 +12,60 @@
 
 <body class="bg-slate-50 min-h-screen flex flex-col">
 
-    <!-- Header Responsivo -->
+    <!-- 1. Topo quesome ao rolar (Apenas a Logo "Teca Borges") -->
     <header class="bg-slate-900 text-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-
+        <div class="max-w-7xl mx-auto px-4 py-4">
             <!-- Logo e Slogan -->
             <div class="text-center md:text-left">
-                <h1 class="text-6xl font-bold" >TECA BORGES</h1>
+                <h1 class="text-6xl font-bold">TECA BORGES</h1>
                 <p class="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mt-1">Avaliação de Imóveis | Perícia | Locação e Vendas</p>
             </div>
+        </div>
+    </header>
 
-            <!-- Menu Superior Direito -->
-            <div class="flex flex-wrap justify-center items-center gap-4 text-sm">
+    <!-- 2. Bloco FIXO no Topo (Barra Escura de Login + Abas de Navegação) -->
+    <div class="sticky top-0 z-50 shadow-md">
+        
+        <!-- Barra de Login / Início / Sair (Escura) -->
+        <div class="bg-slate-900 text-white shadow-md">
+            <div class="max-w-7xl mx-auto px-4 py-2.5 flex justify-end items-center gap-4 text-sm">
                 <a href="{{ url_for('index') }}" class="hover:text-amber-400 transition font-medium">Início</a>
 
                 {% if session.get('user_id') %}
                 <span class="text-slate-300 hidden sm:inline">|</span>
-                <span class="text-gray-300 text-sm">Olá, {{ session.get('user_nome').split()[0] if
-                    session.get('user_nome') else '' }}</span>
-                <a href="{{ url_for('logout') }}"
-                    class="text-amber-400 hover:text-white transition font-medium">
+                <span class="text-gray-300 text-sm">Olá, {{ session.get('user_nome').split()[0] if session.get('user_nome') else '' }}</span>
+                <a href="{{ url_for('logout') }}" class="text-amber-400 hover:text-white transition font-medium">
                     Sair
                 </a>
                 {% else %}
-                <!-- Ícone de Bonequinho para Entrar / Login -->
-                <a href="{{ url_for('login') }}"
-                    class="hover:text-amber-400 transition font-medium"
-                    title="Entrar / Acessar Conta">Login</a>
+                <a href="{{ url_for('login') }}" class="hover:text-amber-400 transition font-medium" title="Entrar / Acessar Conta">Login</a>
                 {% endif %}
             </div>
-
         </div>
 
-        <!-- Abas de Navegação (Exibidas conforme o perfil do usuário logado) -->
+        <!-- Barra de Abas (Branca) -->
         {% if session.get('user_id') %}
-        {% if session.get('papel') == 'admin' %}
-        <!-- Abas do Administrador -->
-        <div class="bg-white">
+        <div class="bg-white border-b border-slate-200">
             <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-end md:justify-end gap-2">
-                <a href="{{ url_for('meu_perfil') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
-                    PERFIL
-                </a>
-            
-                <a href="{{ url_for('admin_usuarios') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'usuarios' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
-                    USUÁRIOS
-                </a>
-            
-                <a href="{{ url_for('admin_imoveis') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
-                    IMÓVEIS
-                </a>
-            </div>
-        </div>
+                {% if session.get('papel') == 'admin' %}
+                    <a href="{{ url_for('meu_perfil') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PERFIL</a>
+                    <a href="{{ url_for('admin_usuarios') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'usuarios' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">USUÁRIOS</a>
+                    <a href="{{ url_for('admin_imoveis') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">IMÓVEIS</a>
 
-        {% elif session.get('papel') == 'corretor' %}
-        <!-- Abas do Corretor -->
-        <div class="bg-white">
-            <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-end md:justify-end gap-2">
-                
-                <a href="{{ url_for('meu_perfil') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
-                    PERFIL
-                </a>
+                {% elif session.get('papel') == 'corretor' %}
+                    <a href="{{ url_for('painel_corretor') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PAINEL</a>
+                    <a href="{{ url_for('admin_imoveis') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">IMÓVEIS</a>
+                    <a href="{{ url_for('meu_perfil') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PERFIL</a>
 
-                <a href="{{ url_for('admin_imoveis') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
-                    IMÓVEIS
-                </a>
-
-                <a href="{{ url_for('painel_corretor') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
-                    PAINEL
-                </a>
-
-            </div>
-        </div>
-        
-
-
-        {% elif session.get('papel') == 'cliente' %}
-        <!-- Abas do Cliente -->
-        <div class="bg-white">
-            <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-end md:justify-end gap-2">
-                <a href="{{ url_for('meus_favoritos') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' or active_tab == 'agendamentos' %}bg-slate-900 text-white{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
-                    PAINEL
-                </a>
-            
-                <a href="{{ url_for('meu_perfil') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
-                    PERFIL
-                </a>
+                {% elif session.get('papel') == 'cliente' %}
+                    <a href="{{ url_for('meus_favoritos') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' or active_tab == 'agendamentos' %}bg-slate-900 text-white{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PAINEL</a>
+                    <a href="{{ url_for('meu_perfil') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PERFIL</a>
+                {% endif %}
             </div>
         </div>
         {% endif %}
-        {% endif %}
-    </header>
+
+    </div>
 
     <!-- Conteúdo Principal -->
     <main class="flex-grow">
@@ -118,7 +74,7 @@
 
     <!-- Footer Simples -->
     <footer class="bg-slate-900 text-slate-400 text-xs py-6 text-center mt-12 border-t border-slate-800">
-        <p>&copy; 2026 TECA BORGES. Todos os direitos reservados.</p>
+        <p>© 2026 TECA BORGES. Todos os direitos reservados.</p>
     </footer>
 
 </body>
