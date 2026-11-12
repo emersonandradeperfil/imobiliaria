@@ -1,23 +1,37 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-6 space-y-10">
+<div class="max-w-7xl mx-auto px-4 py-6 space-y-8">
 
-    <!-- Cabeçalho da Home -->
-    <div class="text-center">
-        <h1 class="text-3xl font-extrabold text-slate-900">Imóveis de Alto Padrão em Destaque</h1>
-        <p class="text-gray-600 mt-2 text-sm sm:text-base">Encontre residências exclusivas nas melhores localizações.</p>
+    <!-- Cabeçalho da Home + Botão Limpo de Filtrar -->
+    <div class="text-center space-y-4">
+        <div>
+            <h1 class="text-3xl font-extrabold text-slate-900">Imóveis de Alto Padrão em Destaque</h1>
+            <p class="text-gray-600 mt-2 text-sm sm:text-base">Encontre residências exclusivas nas melhores localizações.</p>
+        </div>
+
+        <!-- Botão Gatilho para Abrir/Fechar os Filtros -->
+        <div class="flex pt-1">
+            <button type="button" onclick="togglePainelFiltros()" id="btn-toggle-filtros"
+                class="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-900 text-slate-900 hover:text-white border border-gray-300 hover:border-slate-900 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm transition cursor-pointer">
+                <!-- <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg> -->
+                <span id="texto-btn-filtrar">Filtrar</span>
+                <!-- Bolinha âmbar que acende se algum filtro estiver ativo -->
+                <!-- <span id="badge-filtro-ativo" class="hidden w-2 h-2 rounded-full bg-amber-500"></span> -->
+            </button>
+        </div>
     </div>
 
     <!-- ========================================== -->
-    <!-- BARRA DE FILTROS INSTANTÂNEOS (ZERO REFRESH)-->
+    <!-- BARRA DE FILTROS RETRÁTIL (INICIA OCULTA)  -->
     <!-- ========================================== -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 max-w-5xl mx-auto">
+    <div id="painel-filtros" class="hidden bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 max-w-5xl mx-auto transition-all">
         <div class="space-y-4">
             
             <!-- Linha 1: Finalidade (Todos / Comprar / Alugar) -->
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
                 <div class="flex items-center gap-2 flex-wrap">
-                    
                     <button type="button" onclick="mudarFinalidade('')" id="btn-fin-todos"
                         class="btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition bg-slate-900 text-white shadow-sm">
                         Todos
@@ -111,7 +125,6 @@
                     style="scrollbar-width: none; -ms-overflow-style: none;">
                     
                     {% for imovel in lista_imoveis %}
-                    <!-- Card do Imóvel com atributos de dados para filtragem instantânea -->
                     <div id="imovel-{{ imovel._id }}"
                         data-tipo="{{ imovel.tipo|lower }}"
                         data-venda="{{ '1' if imovel.precos.venda and imovel.precos.venda > 0 else '0' }}"
@@ -240,11 +253,25 @@
     let usuarioLogadoDesteCliente = {{ 'true' if session.get('user_id') else 'false' }};
     let finalidadeSelecionada = '';
 
+    // --- ABRIR / FECHAR PAINEL DE FILTROS ---
+    function togglePainelFiltros() {
+        const painel = document.getElementById('painel-filtros');
+        const textoBtn = document.getElementById('texto-btn-filtrar');
+        const estaOculto = painel.classList.contains('hidden');
+
+        if (estaOculto) {
+            painel.classList.remove('hidden');
+            textoBtn.textContent = 'Filtrar';
+        } else {
+            painel.classList.add('hidden');
+            textoBtn.textContent = 'Filtrar';
+        }
+    }
+
     // --- LÓGICA DE FILTRAGEM SEM REFRESH ---
     function mudarFinalidade(novaFinalidade) {
         finalidadeSelecionada = novaFinalidade;
 
-        // Atualiza visual dos botões de finalidade
         const botoes = {
             '': { el: document.getElementById('btn-fin-todos'), ativa: 'bg-slate-900 text-white shadow-sm' },
             'venda': { el: document.getElementById('btn-fin-venda'), ativa: 'bg-blue-600 text-white shadow-sm' },
@@ -278,7 +305,6 @@
                 const temLocacao = card.getAttribute('data-locacao') === '1';
                 const textoBusca = card.getAttribute('data-busca');
 
-                // Checa cada critério
                 const passaFinalidade = !finalidadeSelecionada || 
                                         (finalidadeSelecionada === 'venda' && temVenda) || 
                                         (finalidadeSelecionada === 'locacao' && temLocacao);
@@ -294,7 +320,6 @@
                 }
             });
 
-            // Esconde a seção inteira se não houver nenhum imóvel visível nela
             if (visiveisNaSecao === 0) {
                 secao.classList.add('hidden');
             } else {
@@ -306,7 +331,6 @@
             }
         });
 
-        // Exibe ou oculta a mensagem de "Nenhum imóvel encontrado"
         const msgVazio = document.getElementById('mensagem-vazio');
         if (totalVisiveisGeral === 0) {
             msgVazio.classList.remove('hidden');
@@ -314,15 +338,18 @@
             msgVazio.classList.add('hidden');
         }
 
-        // Atualiza o botão "Limpar filtros"
         const temFiltroAtivo = finalidadeSelecionada !== '' || tipoSelecionado !== '' || termoBusca !== '';
         const btnLimpar = document.getElementById('btn-limpar-filtros');
+        const badgeAtivo = document.getElementById('badge-filtro-ativo');
+
         if (temFiltroAtivo) {
             btnLimpar.classList.remove('hidden');
+            badgeAtivo.classList.remove('hidden');
             document.getElementById('contador-encontrados').textContent = totalVisiveisGeral;
             document.getElementById('plural-encontrados').textContent = totalVisiveisGeral === 1 ? '' : 's';
         } else {
             btnLimpar.classList.add('hidden');
+            badgeAtivo.classList.add('hidden');
         }
     }
 
