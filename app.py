@@ -36,6 +36,16 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Novo Decorator para liberar rotas tanto para Admin quanto para Corretor
+def corretor_ou_admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('papel') not in ['admin', 'corretor']:
+            flash('Acesso restrito a administradores e corretores.', 'danger')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # Helper para gerar o próximo código sequencial (ex: AP0002)
 def gerar_proximo_codigo():
     ultimo_imovel = mongo.db.imoveis.find_one({}, sort=[("criado_em", -1)])
@@ -103,7 +113,7 @@ def login():
             session['papel'] = user['papel']
             flash('Login realizado com sucesso!', 'success')
             
-            # Se for admin ou corretor, podemos mandar para os painéis específicos (ou respeitar o next se preferir)
+            # Se for admin ou corretor, redireciona para os painéis específicos
             if user['papel'] == 'admin':
                 return redirect(url_for('admin_imoveis'))
             elif user['papel'] == 'corretor':
@@ -307,11 +317,11 @@ def meus_agendamentos():
     
     return render_template('cliente/agendamentos.html', agendamentos=agendamentos, active_tab='agendamentos')
 
-# --- PAINEL ADMIN (CRUD IMOVEIS E USUÁRIOS) ---
+# --- PAINEL DE GESTÃO DE IMÓVEIS (ADMIN E CORRETOR) ---
 
 @app.route('/admin/imoveis')
 @login_required
-@admin_required
+@corretor_ou_admin_required
 def admin_imoveis():
     db = mongo.db
     tipo_filtro = request.args.get('tipo')
@@ -321,11 +331,11 @@ def admin_imoveis():
         query["tipo"] = tipo_filtro
         
     imoveis = list(db.imoveis.find(query))
-    return render_template('admin/imoveis_lista.html', imoveis=imoveis, tipo_atual=tipo_filtro)
+    return render_template('admin/imoveis_lista.html', imoveis=imoveis, tipo_atual=tipo_filtro, active_tab='imoveis')
 
 @app.route('/admin/imoveis/novo', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@corretor_ou_admin_required
 def admin_imovel_novo():
     db = mongo.db
     if request.method == 'POST':
@@ -404,11 +414,11 @@ def admin_imovel_novo():
     corretores = list(db.users.find({"papel": {"$in": ["corretor", "admin"]}}))
     condominios = list(db.condominios.find())
     codigo_sugerido = gerar_proximo_codigo()
-    return render_template('admin/imovel_form.html', corretores=corretores, condominios=condominios, codigo_sugerido=codigo_sugerido)
+    return render_template('admin/imovel_form.html', corretores=corretores, condominios=condominios, codigo_sugerido=codigo_sugerido, active_tab='imoveis')
 
 @app.route('/admin/imovel/editar/<codigo>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@corretor_ou_admin_required
 def editar_imovel(codigo):
     db = mongo.db
     imovel = db.imoveis.find_one({"codigo": codigo})
@@ -481,11 +491,11 @@ def editar_imovel(codigo):
         
     corretores = list(db.users.find({"papel": {"$in": ["corretor", "admin"]}}))
     condominios = list(db.condominios.find())
-    return render_template('admin/imovel_form.html', imovel=imovel, endereco=endereco, corretores=corretores, condominios=condominios, editando=True)
+    return render_template('admin/imovel_form.html', imovel=imovel, endereco=endereco, corretores=corretores, condominios=condominios, editando=True, active_tab='imoveis')
 
 @app.route('/admin/imoveis/excluir/<codigo>')
 @login_required
-@admin_required
+@corretor_ou_admin_required
 def admin_imovel_excluir(codigo):
     db = mongo.db
     resultado = db.imoveis.update_one(
@@ -523,7 +533,7 @@ def admin_usuarios():
             flash(f'Usuário {nome} ({papel}) cadastrado com sucesso!', 'success')
             
     usuarios = list(mongo.db.users.find())
-    return render_template('admin/usuarios.html', usuarios=usuarios)
+    return render_template('admin/usuarios.html', usuarios=usuarios, active_tab='usuarios')
 
 @app.route('/admin/usuario/excluir/<user_id>')
 @login_required
@@ -675,7 +685,7 @@ def painel_corretor():
     ]
     agendamentos = list(db.agendamentos.aggregate(pipeline_agendamentos)) if 'agendamentos' in db.list_collection_names() else []
     
-    return render_template('corretor/painel.html', leads=leads, agendamentos=agendamentos, active_tab='corretor')
+    return render_template('corretor/painel.html', leads=leads, agendamentos=agendamentos, active_tab='painel_corretor')
 
 @app.route('/corretor/agendamento/status/<ag_id>/<novo_status>')
 @login_required

@@ -71,15 +71,22 @@
         <!-- Abas do Corretor -->
         <div class="bg-white">
             <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-end md:justify-end gap-2">
-                <a href="{{ url_for('painel_corretor') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
-                    PAINEL
-                </a>
-        
+                
                 <a href="{{ url_for('meu_perfil') }}"
                     class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
                     PERFIL
                 </a>
+
+                <a href="{{ url_for('admin_imoveis') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
+                    IMÓVEIS
+                </a>
+
+                <a href="{{ url_for('painel_corretor') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
+                    PAINEL
+                </a>
+
             </div>
         </div>
         
