@@ -346,18 +346,44 @@ def admin_imovel_novo():
         condominio_id = request.form.get('condominio_id')
         corretor_id = request.form.get('corretor_id')
         
-        foto_relativa = f"upload/{codigo}/default.jpg"
-        file = request.files.get('foto_capa')
-        
         pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
         os.makedirs(pasta_imovel, exist_ok=True)
         
-        if file and file.filename != '':
-            extensao = os.path.splitext(file.filename)[1]
-            nome_arquivo = secure_filename(f"{codigo}_capa{extensao}")
-            caminho_salvar = os.path.join(pasta_imovel, nome_arquivo)
-            file.save(caminho_salvar)
-            foto_relativa = f"upload/{codigo}/{nome_arquivo}"
+        # Processamento de Múltiplas Fotos por Categoria / Cômodo
+        categorias = ['capa', 'sala', 'cozinha', 'quartos', 'banheiros', 'externa', 'outros']
+        lista_fotos = []
+        contador_ordem = 1
+        
+        for cat in categorias:
+            arquivos_categoria = request.files.getlist(f'fotos_{cat}')
+            for file in arquivos_categoria:
+                if file and file.filename != '':
+                    extensao = os.path.splitext(file.filename)[1]
+                    nome_arquivo = secure_filename(f"{codigo}_{cat}_{contador_ordem}{extensao}")
+                    caminho_salvar = os.path.join(pasta_imovel, nome_arquivo)
+                    file.save(caminho_salvar)
+                    
+                    foto_relativa = f"upload/{codigo}/{nome_arquivo}"
+                    is_capa = True if cat == 'capa' and contador_ordem == 1 else False
+                    
+                    lista_fotos.append({
+                        "arquivo": foto_relativa,
+                        "categoria": cat,
+                        "legenda": cat.capitalize(),
+                        "ordem": contador_ordem,
+                        "capa": is_capa
+                    })
+                    contador_ordem += 1
+
+        # Fallback caso nenhuma foto seja enviada
+        if not lista_fotos:
+            lista_fotos.append({
+                "arquivo": f"upload/{codigo}/default.jpg",
+                "categoria": "capa",
+                "legenda": "Capa",
+                "ordem": 1,
+                "capa": True
+            })
 
         imovel_doc = {
             "codigo": codigo,
@@ -369,6 +395,7 @@ def admin_imovel_novo():
             "destaque": True if request.form.get('destaque') == '1' else False,
             "precos": {
                 "venda": float(request.form.get('preco_venda') or 0),
+                "locacao": float(request.form.get('preco_locacao') or 0),
                 "condominio": float(request.form.get('preco_condominio') or 0),
                 "iptu": float(request.form.get('preco_iptu') or 0)
             },
@@ -388,7 +415,7 @@ def admin_imovel_novo():
             "condominio_id": ObjectId(condominio_id) if condominio_id else None,
             "corretor_id": ObjectId(corretor_id) if corretor_id else None,
             "midia": {
-                "fotos": [{"arquivo": foto_relativa, "legenda": "Capa", "ordem": 1, "capa": True}]
+                "fotos": lista_fotos
             },
             "criado_em": datetime.utcnow()
         }
@@ -437,18 +464,33 @@ def editar_imovel(codigo):
         pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
         os.makedirs(pasta_imovel, exist_ok=True)
         
-        file = request.files.get('foto_capa')
-        if file and file.filename != '':
-            extensao = os.path.splitext(file.filename)[1]
-            nome_arquivo = secure_filename(f"{codigo}_capa{extensao}")
-            caminho_salvar = os.path.join(pasta_imovel, nome_arquivo)
-            file.save(caminho_salvar)
-            foto_relativa = f"upload/{codigo}/{nome_arquivo}"
-            
-            db.imoveis.update_one(
-                {"codigo": codigo},
-                {"$set": {"midia.fotos": [{"arquivo": foto_relativa, "legenda": "Capa", "ordem": 1, "capa": True}]}}
-            )
+        # Mantém as fotos antigas e adiciona novas se houver upload
+        fotos_atuais = imovel.get("midia", {}).get("fotos", [])
+        contador_ordem = len(fotos_atuais) + 1
+        
+        categorias = ['capa', 'sala', 'cozinha', 'quartos', 'banheiros', 'externa', 'outros']
+        novas_fotos = []
+        
+        for cat in categorias:
+            arquivos_categoria = request.files.getlist(f'fotos_{cat}')
+            for file in arquivos_categoria:
+                if file and file.filename != '':
+                    extensao = os.path.splitext(file.filename)[1]
+                    nome_arquivo = secure_filename(f"{codigo}_{cat}_{contador_ordem}{extensao}")
+                    caminho_salvar = os.path.join(pasta_imovel, nome_arquivo)
+                    file.save(caminho_salvar)
+                    
+                    foto_relativa = f"upload/{codigo}/{nome_arquivo}"
+                    novas_fotos.append({
+                        "arquivo": foto_relativa,
+                        "categoria": cat,
+                        "legenda": cat.capitalize(),
+                        "ordem": contador_ordem,
+                        "capa": True if cat == 'capa' and not fotos_atuais else False
+                    })
+                    contador_ordem += 1
+
+        fotos_finais = fotos_atuais + novas_fotos
         
         db.imoveis.update_one(
             {"codigo": codigo},
@@ -459,14 +501,18 @@ def editar_imovel(codigo):
                 "tipo": request.form.get('tipo'),
                 "destaque": is_destaque,
                 "precos.venda": float(request.form.get('preco_venda') or 0),
-                "caracteristicas.area_util": float(request.form.get('area_util') or 0),
+                "precos.locacao": float(request.form.get('preco_locacao') or 0),
+                "precos.condominio": float(request.form.get('preco_condominio') or 0),
+                "precos.iptu": float(request.form.get('preco_iptu') or 0),
+                "caracteristicas.util": float(request.form.get('area_util') or 0),
                 "caracteristicas.quartos": int(request.form.get('quartos') or 0),
                 "caracteristicas.suites": int(request.form.get('suites') or 0),
                 "caracteristicas.banheiros": int(request.form.get('banheiros') or 0),
                 "caracteristicas.vagas": int(request.form.get('vagas') or 0),
                 "local_publico.bairro": request.form.get('bairro'),
                 "corretor_id": ObjectId(request.form.get('corretor_id')) if request.form.get('corretor_id') else None,
-                "condominio_id": ObjectId(request.form.get('condominio_id')) if request.form.get('condominio_id') else None
+                "condominio_id": ObjectId(request.form.get('condominio_id')) if request.form.get('condominio_id') else None,
+                "midia.fotos": fotos_finais
             }}
         )
         

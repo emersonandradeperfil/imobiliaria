@@ -1,37 +1,52 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto border border-gray-100">
-    <div class="flex justify-between items-start mb-6">
+<div class="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto border border-gray-100 my-6">
+    <div class="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
         <div>
-            <span
-                class="text-xs font-semibold bg-amber-100 text-amber-800 px-3 py-1 rounded-full uppercase tracking-wider">{{
-                imovel.tipo }}</span>
+            <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-3 py-1 rounded-full uppercase tracking-wider">
+                {{ imovel.tipo }}
+            </span>
             <h1 class="text-3xl font-bold text-slate-900 mt-2">{{ imovel.titulo }}</h1>
             <p class="text-gray-500 text-sm mt-1">Código: <span class="font-semibold">{{ imovel.codigo }}</span> |
-                Bairro: {{ imovel.local_publico.bairro }} - {{ imovel.local_publico.cidade }}/{{
-                imovel.local_publico.estado }}</p>
+                Bairro: {{ imovel.local_publico.bairro }} - {{ imovel.local_publico.cidade }}/{{ imovel.local_publico.estado }}</p>
         </div>
-        <div class="text-right">
-            <span class="text-2xl font-extrabold text-slate-900 block">
-                {% if not imovel.ocultar_preco and imovel.precos.venda %}
+        
+        <!-- Bloco de Preços Dinâmico (Venda e/ou Locação) -->
+        <div class="text-left md:text-right bg-slate-50 p-4 rounded-xl border border-gray-200 w-full md:w-auto">
+            {% if imovel.precos.venda and imovel.precos.venda > 0 %}
+            <span class="text-xs text-gray-500 uppercase block font-semibold">Valor de Venda</span>
+            <span class="text-2xl font-extrabold text-slate-900 block mb-1">
                 R$ {{ "{:,.2f}".format(imovel.precos.venda).replace(',', 'v').replace('.', ',').replace('v', '.') }}
-                {% else %}
-                Sob Consulta
-                {% endif %}
             </span>
-            <span class="text-xs text-gray-500">Condomínio: R$ {{ imovel.precos.condominio }}</span>
+            {% endif %}
+
+            {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
+            <span class="text-xs text-gray-500 uppercase block font-semibold">Valor de Locação</span>
+            <span class="text-xl font-bold text-amber-600 block mb-1">
+                R$ {{ "{:,.2f}".format(imovel.precos.locacao).replace(',', 'v').replace('.', ',').replace('v', '.') }} / mês
+            </span>
+            {% endif %}
+
+            <div class="text-xs text-gray-500 flex gap-3 mt-2 pt-2 border-t border-gray-200">
+                {% if imovel.precos.condominio and imovel.precos.condominio > 0 %}
+                <span>Cond: R$ {{ "{:,.2f}".format(imovel.precos.condominio) }}</span>
+                {% endif %}
+                {% if imovel.precos.iptu and imovel.precos.iptu > 0 %}
+                <span>IPTU: R$ {{ "{:,.2f}".format(imovel.precos.iptu) }}</span>
+                {% endif %}
+            </div>
         </div>
     </div>
 
-    <!-- Bloco de Informações Básicas -->
-    <div class="grid grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg text-center my-6 border border-gray-200">
+    <!-- Bloco de Informações Básicas (Características) -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg text-center my-6 border border-gray-200">
         <div>
             <span class="block text-xs text-gray-500 uppercase">Área Útil</span>
-            <span class="font-bold text-slate-800">{{ imovel.caracteristicas.area_util }} m²</span>
+            <span class="font-bold text-slate-800">{{ imovel.caracteristicas.util }} m²</span>
         </div>
         <div>
-            <span class="block text-xs text-gray-500 uppercase">Suítes</span>
-            <span class="font-bold text-slate-800">{{ imovel.caracteristicas.suites }}</span>
+            <span class="block text-xs text-gray-500 uppercase">Quartos / Suítes</span>
+            <span class="font-bold text-slate-800">{{ imovel.caracteristicas.quartos }} ({{ imovel.caracteristicas.suites }} suítes)</span>
         </div>
         <div>
             <span class="block text-xs text-gray-500 uppercase">Banheiros</span>
@@ -48,8 +63,62 @@
         <p class="text-gray-700 leading-relaxed">{{ imovel.descricao }}</p>
     </div>
 
+    <!-- FOTO OU GALERIA BÁSICA PARA VISITANTES -->
+    {% if not session.get('user_id') %}
+    <div class="my-6">
+        <h3 class="text-sm font-bold text-slate-900 mb-3">Foto Principal do Imóvel</h3>
+        <div class="rounded-xl overflow-hidden shadow-md border h-72 bg-gray-100">
+            {% if imovel.midia and imovel.midia.fotos and imovel.midia.fotos|length > 0 %}
+                <img src="{{ url_for('static', filename=imovel.midia.fotos[0].arquivo) }}" class="w-full h-full object-cover">
+            {% else %}
+                <div class="w-full h-full flex items-center justify-center text-gray-400">Sem Foto</div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- BLOCO CONDICIONAL DE SESSÃO -->
     {% if session.get('user_id') %}
+    
+    <!-- SEÇÃO PROTEGIDA: Galeria Completa por Cômodos -->
+    <div class="my-8 bg-slate-50 p-6 rounded-2xl border border-gray-200">
+        <h3 class="text-lg font-bold text-slate-900 mb-4">📸 Galeria de Fotos Completa por Cômodos</h3>
+        
+        {% if imovel.midia and imovel.midia.fotos %}
+            <!-- Agrupando visualmente por categoria -->
+            <div class="space-y-6">
+                {% set categorias = ['capa', 'sala', 'cozinha', 'quartos', 'banheiros', 'externa', 'outros'] %}
+                
+                {% for cat in categorias %}
+                    {% set fotos_cat = imovel.midia.fotos | selectattr('categoria', 'equalto', cat) | list %}
+                    {% if fotos_cat %}
+                    <div>
+                        <h4 class="text-xs font-bold uppercase text-amber-700 mb-2 tracking-wider">
+                            {% if cat == 'capa' %}Fachada / Geral
+                            {% elif cat == 'sala' %}Sala e Living
+                            {% elif cat == 'cozinha' %}Cozinha e Área de Serviço
+                            {% elif cat == 'quartos' %}Quartos
+                            {% elif cat == 'banheiros' %}Banheiros
+                            {% elif cat == 'externa' %}Área Externa e Lazer
+                            {% else %}Outros Detalhes{% endif %}
+                        </h4>
+                        
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {% for foto in fotos_cat %}
+                            <div class="rounded-xl overflow-hidden shadow-sm border bg-white h-32 group relative">
+                                <img src="{{ url_for('static', filename=foto.arquivo) }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-sm text-gray-500">Nenhuma foto detalhada cadastrada para este imóvel.</p>
+        {% endif %}
+    </div>
+
     <!-- SEÇÃO PROTEGIDA: Endereço, Andar e Agendamento -->
     <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-xl mt-8 space-y-6">
         <div>
@@ -74,38 +143,30 @@
                 class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             
                 <div>
-                    <!-- <label class="block text-xs font-semibold text-gray-400 mb-1">Data Desejada</label> -->
-                    <!-- o atributo min="{{ now }}" ou gerado via python impede datas anteriores a hoje -->
                     <input type="date" name="data" id="campo-data" required
-                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-400">
                 </div>
             
                 <div>
-                    <!-- <label class="block text-xs font-semibold text-gray-400 mb-1">Horário da Visita (08:00 às 20:00)</label> -->
-                
-                    <!-- Input escondido que armazena a hora unificada "HH:MM" para o backend receber -->
                     <input type="hidden" name="hora" id="campo-hora-final" required>
-                
                     <div class="grid grid-cols-2 gap-2">
-                        <!-- Select de Horas (08 às 20) -->
                         <select id="select-hora" required
-                            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400">
-                            <option value="" disabled selected >Hora</option>
-                            <option value="08">08</option>
-                            <option value="09">09</option>
-                            <option value="10">10</option>
-                            <option value="11">11</option>
-                            <option value="12">12</option>
-                            <option value="13">13</option>
-                            <option value="14">14</option>
-                            <option value="15">15</option>
-                            <option value="16">16</option>
-                            <option value="17">17</option>
-                            <option value="18">18</option>
-                            <option value="19">19</option>
-                            <option value="20">20</option>
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            <option value="" disabled selected>Selecione a Hora</option>
+                            <option value="08:00">08:00</option>
+                            <option value="09:00">09:00</option>
+                            <option value="10:00">10:00</option>
+                            <option value="11:00">11:00</option>
+                            <option value="12:00">12:00</option>
+                            <option value="13:00">13:00</option>
+                            <option value="14:00">14:00</option>
+                            <option value="15:00">15:00</option>
+                            <option value="16:00">16:00</option>
+                            <option value="17:00">17:00</option>
+                            <option value="18:00">18:00</option>
+                            <option value="19:00">19:00</option>
+                            <option value="20:00">20:00</option>
                         </select>
-                
                     </div>
                 </div>
             
@@ -123,39 +184,46 @@
                     </button>
                 </div>
             </form>
-
         </div>
     </div>
+
     {% else %}
     <!-- Caixa de convite para visitantes não logados -->
-    <div class="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm text-center mt-8 space-y-4">
+    <div class="bg-slate-900 text-white border border-slate-800 p-8 rounded-2xl shadow-lg text-center mt-8 space-y-4">
         <span class="text-3xl">🔒</span>
-        <h3 class="font-extrabold text-slate-900 text-lg">Deseja ver o endereço exato e agendar uma visita?</h3>
-        <p class="text-xs text-gray-600 max-w-lg mx-auto">Por motivos de segurança e exclusividade em residências de
-            alto padrão, o acesso aos endereços e o agendamento de visitas são restritos a clientes cadastrados.</p>
+        <h3 class="font-extrabold text-amber-400 text-lg">Quer ver todas as fotos por cômodos, endereço exato e agendar visitas?</h3>
+        <p class="text-xs text-gray-300 max-w-lg mx-auto">Por motivos de segurança e exclusividade em residências de alto padrão, a galeria completa e os endereços são restritos a clientes cadastrados.</p>
         <div class="flex justify-center gap-3 pt-2">
             <a href="{{ url_for('login', next=request.path) }}"
-                class="bg-slate-900 text-white font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-slate-800 transition shadow">
-                Login
+                class="bg-white text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-gray-100 transition shadow">
+                Fazer Login
             </a>
             <a href="{{ url_for('login') }}"
-                class="bg-amber-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-amber-500 transition shadow">Criar
-                Conta Grátis</a>
+                class="bg-amber-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-amber-500 transition shadow">
+                Criar Conta Grátis
+            </a>
         </div>
     </div>
     {% endif %}
 
     <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Define a data mínima do input como o dia de hoje (formato YYYY-MM-DD)
+        // Define a data mínima do input como o dia de hoje
         const hoje = new Date().toISOString().split('T')[0];
         const inputData = document.getElementById('campo-data');
         if (inputData) {
             inputData.min = hoje;
         }
+
+        // Sincroniza o select de hora com o campo hidden enviado ao backend
+        const selectHora = document.getElementById('select-hora');
+        const inputHoraFinal = document.getElementById('campo-hora-final');
+        if (selectHora && inputHoraFinal) {
+            selectHora.addEventListener('change', function() {
+                inputHoraFinal.value = this.value + ":00";
+            });
+        }
     });
-
-</script>
-
+    </script>
 </div>
 {% endblock %}
