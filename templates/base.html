@@ -48,18 +48,20 @@
         {% if session.get('user_id') %}
         {% if session.get('papel') == 'admin' %}
         <!-- Abas do Administrador -->
-        <div class="bg-slate-800 border-t border-slate-700">
+        <div class="bg-white">
             <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-end md:justify-end gap-2">
                 <a href="{{ url_for('meu_perfil') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
                     PERFIL
                 </a>
+            
                 <a href="{{ url_for('admin_usuarios') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'usuarios' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'usuarios' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
                     USUÁRIOS
                 </a>
+            
                 <a href="{{ url_for('admin_imoveis') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
                     IMÓVEIS
                 </a>
             </div>
@@ -67,15 +69,15 @@
 
         {% elif session.get('papel') == 'corretor' %}
         <!-- Abas do Corretor -->
-        <div class="bg-slate-800 border-t border-slate-700">
+        <div class="bg-white">
             <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-end md:justify-end gap-2">
                 <a href="{{ url_for('painel_corretor') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
                     PAINEL
                 </a>
-
+        
                 <a href="{{ url_for('meu_perfil') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
                     PERFIL
                 </a>
             </div>
@@ -85,18 +87,17 @@
 
         {% elif session.get('papel') == 'cliente' %}
         <!-- Abas do Cliente -->
-        <div class="bg-slate-800 border-t border-slate-700">
+        <div class="bg-white">
             <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-end md:justify-end gap-2">
                 <a href="{{ url_for('meus_favoritos') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' or active_tab == 'agendamentos' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' or active_tab == 'agendamentos' %}bg-slate-900 text-white{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
                     PAINEL
                 </a>
-
+            
                 <a href="{{ url_for('meu_perfil') }}"
-                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-700 text-slate-300 hover:bg-slate-600{% endif %}">
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">
                     PERFIL
                 </a>
-
             </div>
         </div>
         {% endif %}
