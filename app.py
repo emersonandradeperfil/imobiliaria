@@ -225,7 +225,7 @@ def cadastrar_cliente():
 @app.route('/logout')
 def logout():
     session.clear()
-    flash('Você saiu da sua conta.', 'info')
+    # flash('Você saiu da sua conta.', 'info')
     return redirect(url_for('index'))
 
 # --- ROTAS DE FAVORITOS E CLIENTE ---
