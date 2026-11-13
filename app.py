@@ -163,41 +163,41 @@ def esqueci_senha():
     email = request.form.get('email_recuperacao')
     user = mongo.db.users.find_one({"email": email})
     
-    if not user:
-        flash('E-mail não encontrado em nossa base de dados.', 'error')
-        return redirect(url_for('login'))
-    
-    # Gera uma senha temporária de 6 caracteres
-    caracteres = string.ascii_letters + string.digits
-    senha_temporaria = ''.join(random.choice(caracteres) for _ in range(6))
-    
-    # Criptografa e atualiza no MongoDB
-    senha_hash = bcrypt.hashpw(senha_temporaria.encode('utf-8'), bcrypt.gensalt())
-    mongo.db.users.update_one(
-        {"_id": user["_id"]},
-        {"$set": {"senha_hash": senha_hash}}
-    )
-    
-    # Envia por e-mail com timeout curto de 5 segundos para nunca derrubar o Render
-    remetente = app.config.get('MAIL_USERNAME')
-    senha_app = app.config.get('MAIL_PASSWORD')
-    
-    try:
-        msg = MIMEText(f"Olá, {user['nome']},\n\nRecebemos uma solicitação de recuperação de senha.\nSua nova senha temporária de acesso é: {senha_temporaria}\n\nRecomendamos alterá-la no seu perfil assim que fizer login.")
-        msg['Subject'] = 'Teca Borges - Sua nova senha temporária'
-        msg['From'] = remetente
-        msg['To'] = email
-
-        with smtplib.SMTP('smtp.gmail.com', 587, timeout=5) as server:
-            server.starttls()
-            server.login(remetente, senha_app)
-            server.send_message(msg)
-            
-        flash('Uma senha temporária foi enviada para o seu e-mail com sucesso!', 'success')
-    except Exception:
-        # Fallback instantâneo caso o Render bloqueie a porta SMTP 587
-        flash(f'Senha temporária gerada com sucesso: {senha_temporaria}', 'success')
+    # Por segurança, mesmo se o e-mail não existir, respondemos a mesma mensagem 
+    # para evitar que pessoas mal-intencionadas descubram quem tem conta cadastrada.
+    if user:
+        # Gera uma senha temporária segura de 6 caracteres
+        caracteres = string.ascii_letters + string.digits
+        senha_temporaria = ''.join(random.choice(caracteres) for _ in range(6))
         
+        # Criptografa e atualiza no MongoDB
+        senha_hash = bcrypt.hashpw(senha_temporaria.encode('utf-8'), bcrypt.gensalt())
+        mongo.db.users.update_one(
+            {"_id": user["_id"]},
+            {"$set": {"senha_hash": senha_hash}}
+        )
+        
+        # Tenta enviar por e-mail com timeout de 5 segundos
+        remetente = app.config.get('MAIL_USERNAME')
+        senha_app = app.config.get('MAIL_PASSWORD')
+        
+        try:
+            msg = MIMEText(f"Olá, {user['nome']},\n\nRecebemos uma solicitação de recuperação de senha.\nSua nova senha temporária de acesso é: {senha_temporaria}\n\nRecomendamos alterá-la no seu perfil assim que fizer login.")
+            msg['Subject'] = 'Teca Borges - Sua nova senha temporária'
+            msg['From'] = remetente
+            msg['To'] = email
+
+            with smtplib.SMTP('smtp.gmail.com', 587, timeout=5) as server:
+                server.starttls()
+                server.login(remetente, senha_app)
+                server.send_message(msg)
+        except Exception as e:
+            # Se o Render bloquear a porta SMTP ou houver falha, registramos no log 
+            # do servidor, mantendo a tela do usuário segura e sem exibir senhas.
+            print(f"Erro ao enviar e-mail SMTP: {e}")
+
+    # Mensagem padrão e segura para qualquer caso
+    flash('Se este e-mail estiver cadastrado, as instruções de recuperação foram enviadas.', 'success')
     return redirect(url_for('login'))
 
 @app.route('/cadastrar', methods=['GET', 'POST'])
