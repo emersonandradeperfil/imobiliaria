@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TBORGES - Administração, Perícias e Avaliações</title>
+    <title>TECABORGES</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/icon.png') }}">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,23 +12,15 @@
 
 <body class="bg-slate-50 min-h-screen flex flex-col">
 
-    <!-- 1. Topo quesome ao rolar (Apenas a Logo "Teca Borges") -->
-    <header class="bg-slate-900 text-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 py-4">
-            <!-- Logo e Slogan -->
-            <div class="text-center w-fit">
-                <h1 class="text-6xl font-bold">TECA BORGES</h1>
-                <p class="text-[11px] md:text-xs text-slate-400 uppercase tracking-widest mt-1">Avaliação de Imóveis | Perícia | Locação e Vendas</p>
-            </div>
-        </div>
-    </header>
-
     <!-- 2. Bloco FIXO no Topo (Barra Escura de Login + Abas de Navegação) -->
     <div class="sticky top-0 z-50 shadow-md">
         
         <!-- Barra de Login / Início / Sair (Escura) -->
         <div class="bg-slate-900 text-white shadow-md">
+
+            
             <div class="max-w-7xl mx-auto px-4 py-2.5 flex justify-end items-center gap-4 text-sm">
+
                 <a href="{{ url_for('index') }}" class="hover:text-amber-400 transition font-medium">Início</a>
 
                 {% if session.get('user_id') %}
