@@ -17,21 +17,31 @@
         
         <!-- Barra de Login / Início / Sair (Escura) -->
         <div class="bg-slate-900 text-white shadow-md">
-
-            
-            <div class="max-w-7xl mx-auto px-4 py-2.5 flex justify-end items-center gap-4 text-sm">
-
-                <a href="{{ url_for('index') }}" class="hover:text-amber-400 transition font-medium">Início</a>
-
-                {% if session.get('user_id') %}
-                <span class="text-slate-300 hidden sm:inline">|</span>
-                <span class="text-gray-300 text-sm">Olá, {{ session.get('user_nome').split()[0] if session.get('user_nome') else '' }}</span>
-                <a href="{{ url_for('logout') }}" class="text-amber-400 hover:text-white transition font-medium">
-                    Sair
+            <div class="max-w-7xl mx-auto px-4 py-2.5 flex justify-between items-center text-sm">
+        
+                <!-- Lado Esquerdo: Início + Login / Nome + Sair -->
+                <a href="{{ url_for('index') }}"
+                    class="font-extrabold tracking-widest uppercase text-white hover:text-amber-400 transition text-sm sm:text-base">
+                    TECA BORGES
                 </a>
-                {% else %}
-                <a href="{{ url_for('login') }}" class="hover:text-amber-400 transition font-medium" title="Entrar / Acessar Conta">Login</a>
-                {% endif %}
+        
+                <!-- Lado Direito: TECA BORGES -->
+                <div class="flex items-center gap-4">
+                    <a href="{{ url_for('index') }}" class="hover:text-amber-400 transition font-medium">Início</a>
+        
+                    {% if session.get('user_id') %}
+                    <span class="text-slate-300 hidden sm:inline">|</span>
+                    <span class="text-gray-300 text-sm">Olá, {{ session.get('user_nome').split()[0] if session.get('user_nome')
+                        else '' }}</span>
+                    <a href="{{ url_for('logout') }}" class="text-amber-400 hover:text-white transition font-medium">
+                        | Sair
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="hover:text-amber-400 transition font-medium"
+                        title="Entrar / Acessar Conta">Login</a>
+                    {% endif %}
+                </div>                
+        
             </div>
         </div>
 
