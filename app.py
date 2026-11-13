@@ -58,6 +58,12 @@ def gerar_proximo_codigo():
             pass
     return "AP0001"
 
+# --- Ping pro Cron ---
+
+@app.route('/ping')
+def ping():
+    return "OK", 200
+
 # --- ROTAS PÚBLICAS E CLIENTE ---
 
 @app.route('/')
