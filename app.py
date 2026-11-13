@@ -9,6 +9,9 @@ from functools import wraps
 from werkzeug.utils import secure_filename
 from bson.objectid import ObjectId
 from flask_mail import Mail, Message
+import smtplib
+from email.mime.text import MIMEText
+
 
 app = Flask(__name__)
 app.secret_key = "123456"  # Chave de sessão
@@ -175,19 +178,24 @@ def esqueci_senha():
         {"$set": {"senha_hash": senha_hash}}
     )
     
-    # Envia por e-mail
+    # Envia por e-mail com timeout curto de 5 segundos para nunca derrubar o Render
+    remetente = app.config.get('MAIL_USERNAME')
+    senha_app = app.config.get('MAIL_PASSWORD')
+    
     try:
-        msg = Message(
-            subject='Teca Borges - Sua nova senha temporária',
-            sender=app.config.get('MAIL_USERNAME', 'noreply@tecaborges.com'),
-            recipients=[email]
-        )
-        msg.body = f"Olá, {user['nome']},\n\nRecebemos uma solicitação de recuperação de senha.\nSua nova senha temporária de acesso é: {senha_temporaria}\n\nRecomendamos alterá-la no seu perfil assim que fizer login."
-        mail.send(msg)
-        
+        msg = MIMEText(f"Olá, {user['nome']},\n\nRecebemos uma solicitação de recuperação de senha.\nSua nova senha temporária de acesso é: {senha_temporaria}\n\nRecomendamos alterá-la no seu perfil assim que fizer login.")
+        msg['Subject'] = 'Teca Borges - Sua nova senha temporária'
+        msg['From'] = remetente
+        msg['To'] = email
+
+        with smtplib.SMTP('smtp.gmail.com', 587, timeout=5) as server:
+            server.starttls()
+            server.login(remetente, senha_app)
+            server.send_message(msg)
+            
         flash('Uma senha temporária foi enviada para o seu e-mail com sucesso!', 'success')
-    except Exception as e:
-        # Fallback de segurança caso ocorra algum erro no servidor de e-mail configurado
+    except Exception:
+        # Fallback instantâneo caso o Render bloqueie a porta SMTP 587
         flash(f'Senha temporária gerada com sucesso: {senha_temporaria}', 'success')
         
     return redirect(url_for('login'))
