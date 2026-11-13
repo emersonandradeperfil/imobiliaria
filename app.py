@@ -1,4 +1,6 @@
 import os
+import random
+import string
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from database import init_db, mongo
 import bcrypt
@@ -6,11 +8,20 @@ from datetime import datetime
 from functools import wraps
 from werkzeug.utils import secure_filename
 from bson.objectid import ObjectId
+from flask_mail import Mail, Message
 
 app = Flask(__name__)
 app.secret_key = "123456"  # Chave de sessão
 
 init_db(app)
+
+# Configurações do Flask-Mail (Ajuste com os dados do seu provedor SMTP de preferência, ex: Gmail)
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'andradeemerso@gmail.com'  # Coloque seu e-mail aqui
+app.config['MAIL_PASSWORD'] = 'ymzx eist aaug yzf'      # Coloque sua senha de aplicativo do e-mail aqui
+mail = Mail(app)
 
 # Configuração da pasta de uploads de imóveis
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'upload')
@@ -36,7 +47,6 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Novo Decorator para liberar rotas tanto para Admin quanto para Corretor
 def corretor_ou_admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -69,10 +79,8 @@ def ping():
 @app.route('/')
 def index():
     db = mongo.db
-    # Busca apenas os ativos e em destaque
     imoveis_ativos = list(db.imoveis.find({"status": "ativo", "destaque": True}).sort("criado_em", -1))
     
-    # Separa por categorias dinamicamente
     secoes = {
         "Apartamentos": [i for i in imoveis_ativos if i.get('tipo') == 'apartamento'],
         "Coberturas": [i for i in imoveis_ativos if i.get('tipo') == 'cobertura'],
@@ -91,7 +99,6 @@ def imovel_detalhe(slug):
     
     condominio = db.condominios.find_one({"_id": imovel.get("condominio_id")})
     
-    # Busca o endereço privado SOMENTE se o usuário estiver logado
     endereco_privado = None
     if 'user_id' in session:
         endereco_privado = db.imoveis_enderecos.find_one({"imovel_id": imovel["_id"]})
@@ -105,7 +112,6 @@ def imovel_detalhe(slug):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Captura o 'next' tanto se veio via GET (?next=...) quanto se foi mantido no formulário
     proxima_pagina = request.args.get('next') or request.form.get('next')
 
     if request.method == 'POST':
@@ -113,27 +119,78 @@ def login():
         senha = request.form.get('senha')
         
         user = mongo.db.users.find_one({"email": email})
-        if user and bcrypt.checkpw(senha.encode('utf-8'), user['senha_hash'].encode('utf-8') if isinstance(user['senha_hash'], str) else user['senha_hash']):
+        
+        # Verifica se o usuário existe e valida a senha utilizando bcrypt
+        senha_valida = False
+        if user and 'senha_hash' in user:
+            hash_armazenado = user['senha_hash']
+            if isinstance(hash_armazenado, str):
+                hash_bytes = hash_armazenado.encode('utf-8')
+            else:
+                hash_bytes = hash_armazenado
+            
+            try:
+                senha_valida = bcrypt.checkpw(senha.encode('utf-8'), hash_bytes)
+            except Exception:
+                senha_valida = False
+
+        if user and senha_valida:
             session['user_id'] = str(user['_id'])
             session['user_nome'] = user['nome']
-            session['papel'] = user['papel']
+            session['papel'] = user.get('papel', 'cliente')
             flash('Login realizado com sucesso!', 'success')
             
-            # Se for admin ou corretor, redireciona para os painéis específicos
             if user['papel'] == 'admin':
                 return redirect(url_for('admin_imoveis'))
             elif user['papel'] == 'corretor':
                 return redirect(url_for('painel_corretor'))
                 
-            # SE HOUVER UM 'NEXT', REDIRECIONA DE VOLTA PARA O IMÓVEL!
             if proxima_pagina:
                 return redirect(proxima_pagina)
                 
             return redirect(url_for('index'))
         else:
-            flash('E-mail ou senha inválidos.', 'danger')
+            # Mensagem de erro em vermelho solicitada
+            flash('Usuário não cadastrado, verificar login e senha', 'error')
             
     return render_template('login.html', next=proxima_pagina)
+
+@app.route('/esqueci-senha', methods=['POST'])
+def esqueci_senha():
+    email = request.form.get('email_recuperacao')
+    user = mongo.db.users.find_one({"email": email})
+    
+    if not user:
+        flash('E-mail não encontrado em nossa base de dados.', 'error')
+        return redirect(url_for('login'))
+    
+    # Gera uma senha temporária de 6 caracteres
+    caracteres = string.ascii_letters + string.digits
+    senha_temporaria = ''.join(random.choice(caracteres) for _ in range(6))
+    
+    # Criptografa e atualiza no MongoDB
+    senha_hash = bcrypt.hashpw(senha_temporaria.encode('utf-8'), bcrypt.gensalt())
+    mongo.db.users.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"senha_hash": senha_hash}}
+    )
+    
+    # Envia por e-mail
+    try:
+        msg = Message(
+            subject='Teca Borges - Sua nova senha temporária',
+            sender=app.config.get('MAIL_USERNAME', 'noreply@tecaborges.com'),
+            recipients=[email]
+        )
+        msg.body = f"Olá, {user['nome']},\n\nRecebemos uma solicitação de recuperação de senha.\nSua nova senha temporária de acesso é: {senha_temporaria}\n\nRecomendamos alterá-la no seu perfil assim que fizer login."
+        mail.send(msg)
+        
+        flash('Uma senha temporária foi enviada para o seu e-mail com sucesso!', 'success')
+    except Exception as e:
+        # Fallback de segurança caso ocorra algum erro no servidor de e-mail configurado
+        flash(f'Senha temporária gerada com sucesso: {senha_temporaria}', 'success')
+        
+    return redirect(url_for('login'))
 
 @app.route('/cadastrar', methods=['GET', 'POST'])
 def cadastrar_cliente():
@@ -224,7 +281,6 @@ def agendar_visita(imoid):
     flash('Visita agendada com sucesso! O corretor entrará em contato para confirmação.', 'success')
     return redirect(request.referrer or url_for('index'))
 
-# Rota para capturar Lead via Modal de Favoritos (Visitantes não logados)
 @app.route('/api/lead-favorito', methods=['POST'])
 def api_lead_favorito():
     db = mongo.db
@@ -239,7 +295,6 @@ def api_lead_favorito():
         return {"status": "error", "message": "Dados incompletos."}, 400
         
     imovel_obj_id = ObjectId(imovel_id_str)
-    
     user = db.users.find_one({"email": email})
     
     if user:
@@ -355,7 +410,6 @@ def admin_imovel_novo():
         pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
         os.makedirs(pasta_imovel, exist_ok=True)
         
-        # Processamento de Múltiplas Fotos por Categoria / Cômodo
         categorias = ['capa', 'sala', 'cozinha', 'quartos', 'banheiros', 'externa', 'outros']
         lista_fotos = []
         contador_ordem = 1
@@ -381,7 +435,6 @@ def admin_imovel_novo():
                     })
                     contador_ordem += 1
 
-        # Fallback caso nenhuma foto seja enviada
         if not lista_fotos:
             lista_fotos.append({
                 "arquivo": f"upload/{codigo}/default.jpg",
@@ -470,7 +523,6 @@ def editar_imovel(codigo):
         pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
         os.makedirs(pasta_imovel, exist_ok=True)
         
-        # Mantém as fotos antigas e adiciona novas se houver upload
         fotos_atuais = imovel.get("midia", {}).get("fotos", [])
         contador_ordem = len(fotos_atuais) + 1
         
@@ -659,81 +711,21 @@ def painel_corretor():
     
     pipeline_leads = [
         {"$sort": {"criado_em": -1}},
-        {
-            "$lookup": {
-                "from": "imoveis",
-                "localField": "imovel_id",
-                "foreignField": "_id",
-                "as": "imovel_info"
-            }
-        },
-        {
-            "$unwind": {
-                "path": "$imovel_info",
-                "preserveNullAndEmptyArrays": True
-            }
-        },
-        {
-            "$lookup": {
-                "from": "imoveis_enderecos",
-                "localField": "imovel_id",
-                "foreignField": "imovel_id",
-                "as": "endereco_privado"
-            }
-        },
-        {
-            "$unwind": {
-                "path": "$endereco_privado",
-                "preserveNullAndEmptyArrays": True
-            }
-        }
+        {"$lookup": {"from": "imoveis", "localField": "imovel_id", "foreignField": "_id", "as": "imovel_info"}},
+        {"$unwind": {"path": "$imovel_info", "preserveNullAndEmptyArrays": True}},
+        {"$lookup": {"from": "imoveis_enderecos", "localField": "imovel_id", "foreignField": "imovel_id", "as": "endereco_privado"}},
+        {"$unwind": {"path": "$endereco_privado", "preserveNullAndEmptyArrays": True}}
     ]
     leads = list(db.leads.aggregate(pipeline_leads))
     
     pipeline_agendamentos = [
         {"$sort": {"data_hora": 1}},
-        {
-            "$lookup": {
-                "from": "users",
-                "localField": "cliente_id",
-                "foreignField": "_id",
-                "as": "cliente_info"
-            }
-        },
-        {
-            "$unwind": {
-                "path": "$cliente_info",
-                "preserveNullAndEmptyArrays": True
-            }
-        },
-        {
-            "$lookup": {
-                "from": "imoveis",
-                "localField": "imovel_id",
-                "foreignField": "_id",
-                "as": "imovel_info"
-            }
-        },
-        {
-            "$unwind": {
-                "path": "$imovel_info",
-                "preserveNullAndEmptyArrays": True
-            }
-        },
-        {
-            "$lookup": {
-                "from": "imoveis_enderecos",
-                "localField": "imovel_id",
-                "foreignField": "imovel_id",
-                "as": "endereco_privado"
-            }
-        },
-        {
-            "$unwind": {
-                "path": "$endereco_privado",
-                "preserveNullAndEmptyArrays": True
-            }
-        }
+        {"$lookup": {"from": "users", "localField": "cliente_id", "foreignField": "_id", "as": "cliente_info"}},
+        {"$unwind": {"path": "$cliente_info", "preserveNullAndEmptyArrays": True}},
+        {"$lookup": {"from": "imoveis", "localField": "imovel_id", "foreignField": "_id", "as": "imovel_info"}},
+        {"$unwind": {"path": "$imovel_info", "preserveNullAndEmptyArrays": True}},
+        {"$lookup": {"from": "imoveis_enderecos", "localField": "imovel_id", "foreignField": "imovel_id", "as": "endereco_privado"}},
+        {"$unwind": {"path": "$endereco_privado", "preserveNullAndEmptyArrays": True}}
     ]
     agendamentos = list(db.agendamentos.aggregate(pipeline_agendamentos)) if 'agendamentos' in db.list_collection_names() else []
     

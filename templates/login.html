@@ -11,9 +11,19 @@
         </button>
     </div>
 
+    <!-- Exibição de Mensagens de Erro ou Sucesso (Flask Flash) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="mb-4 p-3 rounded-lg text-xs font-semibold text-center {% if category == 'error' %}  text-red-600  {% else %} text-green-600  {% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
     <!-- FORMULÁRIO DE LOGIN -->
     <form id="form-login" method="POST" action="{{ url_for('login', next=next) }}" class="space-y-4">
-        <!-- Campo oculto para preservar o next caso venha via GET -->
         {% if next %}
         <input type="hidden" name="next" value="{{ next }}">
         {% endif %}
@@ -26,8 +36,8 @@
         <div>
             <div class="flex justify-between items-center mb-1">
                 <label class="block text-sm font-medium text-gray-700">Senha</label>
-                <!-- Link Esqueci a Senha -->
-                <a href="#" onclick="alert('Instruções de recuperação enviadas para o e-mail cadastrado (Funcionalidade simulada para protótipo).')" class="text-xs text-slate-900 hover:text-amber-600  hover:underline">Esqueci a senha?</a>
+                <!-- Link Esqueci a Senha que abre o modal ou vai para rota -->
+                <a href="#" onclick="abrirModalRecuperacao(event)" class="text-xs text-red-600 hover:text-amber-600 font-semibold hover:underline">Esqueci a senha?</a>
             </div>
             <input type="password" name="senha" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm" placeholder="******">
         </div>
@@ -65,6 +75,23 @@
     </form>
 </div>
 
+<!-- MODAL SIMPLES PARA PEDIR O E-MAIL DO ESQUECI A SENHA -->
+<div id="modal-recuperacao" class="fixed inset-0 bg-slate-950/60 hidden flex items-center justify-center z-50 px-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl">
+        <h3 class="text-base font-bold text-slate-900">Recuperar Senha</h3>
+        <p class="text-xs text-gray-600">Digite seu e-mail cadastrado. Enviaremos uma nova senha temporária para você acessar a plataforma.</p>
+        
+        <form action="{{ url_for('esqueci_senha') }}" method="POST" class="space-y-3">
+            <input type="email" name="email_recuperacao" required placeholder="seu@email.com" 
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <div class="flex gap-2 pt-2">
+                <button type="button" onclick="fecharModalRecuperacao()" class="w-1/2 bg-gray-200 hover:bg-gray-300 text-slate-800 font-semibold py-2 rounded-lg text-xs transition">Cancelar</button>
+                <button type="submit" class="w-1/2 bg-slate-900 hover:bg-amber-400 hover:text-slate-950 text-white font-semibold py-2 rounded-lg text-xs transition">Enviar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 function switchTab(type) {
     const formLogin = document.getElementById('form-login');
@@ -83,6 +110,15 @@ function switchTab(type) {
         tabCadastro.className = "w-1/2 py-2 text-center font-bold text-amber-600 border-b-2 border-amber-500 focus:outline-none";
         tabLogin.className = "w-1/2 py-2 text-center font-bold text-gray-400 hover:text-slate-800 focus:outline-none";
     }
+}
+
+function abrirModalRecuperacao(event) {
+    event.preventDefault();
+    document.getElementById('modal-recuperacao').classList.remove('hidden');
+}
+
+function fecharModalRecuperacao() {
+    document.getElementById('modal-recuperacao').classList.add('hidden');
 }
 </script>
 {% endblock %}
