@@ -8,23 +8,16 @@ from datetime import datetime
 from functools import wraps
 from werkzeug.utils import secure_filename
 from bson.objectid import ObjectId
-from flask_mail import Mail, Message
-import smtplib
-from email.mime.text import MIMEText
+import requests
+from dotenv import load_dotenv
 
+# Carrega as variáveis de ambiente do arquivo .env local
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "123456"  # Chave de sessão
+app.secret_key = os.getenv("SECRET_KEY", "123456")  # Chave de sessão segura pelo .env
 
 init_db(app)
-
-# Configurações do Flask-Mail (Ajuste com os dados do seu provedor SMTP de preferência, ex: Gmail)
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'andradeemerso@gmail.com'  # Coloque seu e-mail aqui
-app.config['MAIL_PASSWORD'] = 'ymzx eist aaug yzf'      # Coloque sua senha de aplicativo do e-mail aqui
-mail = Mail(app)
 
 # Configuração da pasta de uploads de imóveis
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'upload')
@@ -153,7 +146,6 @@ def login():
                 
             return redirect(url_for('index'))
         else:
-            # Mensagem de erro em vermelho solicitada
             flash('Usuário não cadastrado, verificar login e senha', 'error')
             
     return render_template('login.html', next=proxima_pagina)
@@ -163,8 +155,7 @@ def esqueci_senha():
     email = request.form.get('email_recuperacao')
     user = mongo.db.users.find_one({"email": email})
     
-    # Por segurança, mesmo se o e-mail não existir, respondemos a mesma mensagem 
-    # para evitar que pessoas mal-intencionadas descubram quem tem conta cadastrada.
+    # Por segurança, mesmo se o e-mail não existir, respondemos com a mesma mensagem genérica
     if user:
         # Gera uma senha temporária segura de 6 caracteres
         caracteres = string.ascii_letters + string.digits
@@ -177,26 +168,25 @@ def esqueci_senha():
             {"$set": {"senha_hash": senha_hash}}
         )
         
-        # Tenta enviar por e-mail com timeout de 5 segundos
-        remetente = app.config.get('MAIL_USERNAME')
-        senha_app = app.config.get('MAIL_PASSWORD')
+        # Envio via API HTTP do Mailgun (Lê direto das variáveis de ambiente / .env)
+        api_key = os.getenv('MAILGUN_API_KEY')
+        domain = os.getenv('MAILGUN_DOMAIN')
         
         try:
-            msg = MIMEText(f"Olá, {user['nome']},\n\nRecebemos uma solicitação de recuperação de senha.\nSua nova senha temporária de acesso é: {senha_temporaria}\n\nRecomendamos alterá-la no seu perfil assim que fizer login.")
-            msg['Subject'] = 'Teca Borges - Sua nova senha temporária'
-            msg['From'] = remetente
-            msg['To'] = email
-
-            with smtplib.SMTP('smtp.gmail.com', 587, timeout=5) as server:
-                server.starttls()
-                server.login(remetente, senha_app)
-                server.send_message(msg)
+            requests.post(
+                f"https://api.mailgun.net/v3/{domain}/messages",
+                auth=("api", api_key),
+                data={
+                    "from": f"Teca Borges Imóveis <postmaster@{domain}>",
+                    "to": [email],
+                    "subject": "Teca Borges - Sua nova senha temporária",
+                    "text": f"Olá, {user['nome']},\n\nRecebemos uma solicitação de recuperação de senha.\nSua nova senha temporária de acesso é: {senha_temporaria}\n\nRecomendamos alterá-la no seu perfil assim que fizer login."
+                },
+                timeout=5
+            )
         except Exception as e:
-            # Se o Render bloquear a porta SMTP ou houver falha, registramos no log 
-            # do servidor, mantendo a tela do usuário segura e sem exibir senhas.
-            print(f"Erro ao enviar e-mail SMTP: {e}")
+            print(f"Erro ao enviar via Mailgun: {e}")
 
-    # Mensagem padrão e segura para qualquer caso
     flash('Se este e-mail estiver cadastrado, as instruções de recuperação foram enviadas.', 'success')
     return redirect(url_for('login'))
 
@@ -233,7 +223,6 @@ def cadastrar_cliente():
 @app.route('/logout')
 def logout():
     session.clear()
-    # flash('Você saiu da sua conta.', 'info')
     return redirect(url_for('index'))
 
 # --- ROTAS DE FAVORITOS E CLIENTE ---
