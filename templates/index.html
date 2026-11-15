@@ -536,7 +536,6 @@
         event.preventDefault();
         let codigo = document.getElementById('input-codigo-otp-fav').value;
         let email = document.getElementById('span-email-fav').textContent;
-        let imoid = imovelPendenteId;
 
         try {
             let response = await fetch('/api/verificar-otp-e-salvar-favorito', {
@@ -548,12 +547,8 @@
 
             if (data.status === 'success') {
                 fecharModalOtpFavorito();
-                usuarioLogadoDesteCliente = true;
-                if (imoid) {
-                    let span = document.getElementById(`coracao-${imoid}`);
-                    if (span) span.innerHTML = '❤️';
-                }
-                alert('Imóvel favoritado com sucesso!');
+                // Redireciona direto para a página de favoritos do cliente
+                window.location.href = data.redirect_url || "{{ url_for('meus_favoritos') }}";
             } else {
                 alert(data.message || 'Código incorreto!');
             }

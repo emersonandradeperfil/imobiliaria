@@ -151,7 +151,9 @@ def enviar_otp_imovel():
                 "from": f"Teca Borges Imóveis <postmaster@{domain}>",
                 "to": [email],
                 "subject": "Teca Borges - Código de verificação para ver imóvel",
-                "text": f"Olá {nome}!\n\nSeu código de verificação para liberar as fotos e o endereço completo é: {codigo}"
+                "text": f"Olá {nome}!\n\nSeu código de verificação é: {codigo}\n"
+                f"Sua senha provisória de acesso é: 123456\n\n"
+                f"Você pode alterá-la a qualquer momento acessando o seu painel de perfil no site."
             },
             timeout=5
         )
@@ -324,7 +326,7 @@ def enviar_otp_cadastro():
                 "from": f"Teca Borges Imóveis <postmaster@{domain}>",
                 "to": [email],
                 "subject": "Teca Borges - Confirmação de Cadastro",
-                "text": f"Olá!\nSeu código de verificação para concluir o cadastro é: {codigo}"
+                "text": f"Olá!\n\nSeu código de verificação é: {codigo}\n"
             },
             timeout=5
         )
@@ -486,7 +488,9 @@ def enviar_otp_favorito():
                 "from": f"Teca Borges Imóveis <postmaster@{domain}>",
                 "to": [email],
                 "subject": "Teca Borges - Código de verificação para favoritar imóvel",
-                "text": f"Olá {nome}!\nSeu código de verificação é: {codigo}"
+                "text": f"Olá {nome}!\n\nSeu código de verificação é: {codigo}\n"
+                f"Sua senha provisória de acesso é: 123456\n\n"
+                f"Você pode alterá-la a qualquer momento acessando o seu painel de perfil no site."
             },
             timeout=5
         )
@@ -541,7 +545,7 @@ def verificar_otp_e_salvar_favorito():
         session['papel'] = "cliente"
         
         del codigos_otp_temp[email]
-        return jsonify({"status": "success"})
+        return jsonify({"status": "success", "redirect_url": url_for('meus_favoritos')})
     return jsonify({"status": "error", "message": "Código incorreto!"}), 400
 
 @app.route('/imovel/agendar/<imoid>', methods=['POST'])
