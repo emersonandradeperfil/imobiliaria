@@ -83,7 +83,7 @@
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Bairro (Público)</label>
-                <input type="text" name="bairro" value="{{ imovel.local_publico.bairro if editando and imovel.local_publico else '' }}" required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Ex: Jardins">
+                <input type="text" id="campo-bairro" name="bairro" value="{{ imovel.local_publico.bairro if editando and imovel.local_publico else '' }}" required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-gray-50" placeholder="Preenchido pelo CEP">
             </div>
         </div>
 
@@ -180,10 +180,10 @@
         <!-- ========================================== -->
         <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">3. Dados Privados (Endereço Completo)</h2>
         
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="sm:col-span-2">
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Logradouro / Rua Exata</label>
-                <input type="text" name="logradouro" value="{{ endereco.logradouro if editando and endereco else '' }}" required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Ex: Rua Oscar Freire">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">CEP (Digite para buscar automático)</label>
+                <input type="text" id="campo-cep" name="cep" value="{{ endereco.cep if editando and endereco else '' }}" maxlength="9" placeholder="Ex: 01426-001" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-bold text-slate-900">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Número</label>
@@ -192,9 +192,9 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">CEP</label>
-                <input type="text" name="cep" value="{{ endereco.cep if editando and endereco else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Ex: 01426-001">
+            <div class="sm:col-span-1">
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Logradouro / Rua Exata</label>
+                <input type="text" id="campo-logradouro" name="logradouro" value="{{ endereco.logradouro if editando and endereco else '' }}" required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-gray-50" placeholder="Preenchido pelo CEP">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Bloco / Complemento</label>
@@ -218,4 +218,24 @@
         </button>
     </form>
 </div>
+
+<!-- Script de Consulta de CEP (ViaCEP) -->
+<script>
+    document.getElementById('campo-cep').addEventListener('blur', function() {
+        let cep = this.value.replace(/\D/g, '');
+        if (cep.length === 8) {
+            fetch(`https://viacep.com.br/ws/${cep}/json/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.erro) {
+                        document.getElementById('campo-logradouro').value = data.logradouro;
+                        document.getElementById('campo-bairro').value = data.bairro;
+                    } else {
+                        alert('CEP não encontrado.');
+                    }
+                })
+                .catch(err => console.error('Erro ao buscar CEP:', err));
+        }
+    });
+</script>
 {% endblock %}
