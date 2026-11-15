@@ -34,13 +34,25 @@ def sanitizar_texto(texto):
         return ""
     return html.escape(str(texto).strip())
 
-# Decorators de Segurança e Permissões
+# --- DECORATOR DE SEGURANÇA ATUALIZADO ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             flash('Faça login para acessar esta página.', 'warning')
             return redirect(url_for('login', next=request.path))
+        
+        # BLINDAGEM: Verifica se o usuário realmente ainda existe no banco de dados
+        try:
+            user_existe = mongo.db.users.find_one({"_id": ObjectId(session['user_id'])})
+            if not user_existe:
+                session.clear() # Limpa a sessão fantasma do navegador
+                flash('Sua conta foi removida ou não existe mais. Faça login novamente.', 'danger')
+                return redirect(url_for('login'))
+        except Exception:
+            session.clear()
+            return redirect(url_for('login'))
+            
         return f(*args, **kwargs)
     return decorated_function
 
@@ -108,7 +120,15 @@ def imovel_detalhe(slug):
     
     endereco_privado = None
     if 'user_id' in session:
-        endereco_privado = db.imoveis_enderecos.find_one({"imovel_id": imovel["_id"]})
+        try:
+            # Garante que só exibe o endereço se o usuário realmente existir no banco
+            user_check = db.users.find_one({"_id": ObjectId(session.get('user_id'))})
+            if user_check:
+                endereco_privado = db.imoveis_enderecos.find_one({"imovel_id": imovel["_id"]})
+            else:
+                session.clear() # Se o usuário foi deletado, limpa a sessão fantasma
+        except Exception:
+            session.clear()
         
     return render_template(
         'imovel_detalhe.html', 
