@@ -2,77 +2,103 @@
 {% set active_tab = 'usuarios' %}
 {% block content %}
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-    
-    <!-- Formulário de Cadastro de Novo Usuário -->
-    <div class="bg-white p-6 rounded-lg shadow border">
-        <h2 class="font-bold text-lg mb-4 text-slate-900">Cadastrar Novo Usuário / Corretor</h2>
-        <form method="POST" class="space-y-4">
-            <div>
-                <label class="block text-xs font-semibold">Nome</label>
-                <input type="text" name="nome" required class="w-full p-2 border rounded text-sm">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold">E-mail</label>
-                <input type="email" name="email" required class="w-full p-2 border rounded text-sm">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold">Telefone</label>
-                <input type="text" name="telefone" class="w-full p-2 border rounded text-sm">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold">Tipo de Acesso (Papel)</label>
-                <select name="papel" class="w-full p-2 border rounded text-sm">
-                    <option value="cliente">Cliente</option>
-                    <option value="corretor">Corretor</option>
-                    <option value="admin">Admin</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold">Senha</label>
-                <input type="password" name="senha" required class="w-full p-2 border rounded text-sm">
-            </div>
-            <button type="submit" class="w-full bg-amber-500 text-slate-900 font-bold p-2 rounded text-sm hover:bg-amber-400">Cadastrar Usuário</button>
-        </form>
-    </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-    <!-- Tabela de Usuários Cadastrados com Edição de Papel e Exclusão -->
-    <div class="md:col-span-2 bg-white p-6 rounded-lg shadow border">
-        <h2 class="font-bold text-lg mb-4 text-slate-900">Usuários Cadastrados</h2>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-                <thead class="bg-slate-100 text-xs uppercase text-slate-600">
-                    <tr>
-                        <th class="p-3">Nome</th>
-                        <th class="p-3">E-mail</th>
-                        <th class="p-3">Papel / Ações</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y">
-                    {% for u in usuarios %}
-                    <tr>
-                        <td class="p-3 font-semibold">{{ u.nome }}</td>
-                        <td class="p-3 text-gray-600">{{ u.email }}</td>
-                        <td class="p-3">
-                            <div class="flex items-center space-x-3">
-                                <!-- Formulário para alterar o papel -->
-                                <form action="{{ url_for('alterar_papel', user_id=u._id) }}" method="POST" class="flex items-center space-x-2">
-                                    <select name="papel" class="bg-slate-100 border border-slate-300 rounded px-2 py-1 text-sm font-semibold text-slate-800">
-                                        <option value="admin" {% if u.papel == 'admin' %}selected{% endif %}>ADMIN</option>
-                                        <option value="corretor" {% if u.papel == 'corretor' %}selected{% endif %}>CORRETOR</option>
-                                        <option value="cliente" {% if u.papel == 'cliente' %}selected{% endif %}>CLIENTE</option>
-                                    </select>
-                                    <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-slate-900 px-3 py-1 rounded text-xs font-bold transition">Salvar</button>
-                                </form>
+    <!-- Bloco para exibir mensagens Flash (Erros ou Sucessos) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="space-y-2">
+                {% for category, message in messages %}
+                    <div class="p-4 rounded-xl text-sm font-semibold shadow-sm 
+                        {% if category == 'danger' or category == 'error' %} bg-red-100 text-red-700 border border-red-200
+                        {% elif category == 'success' %} bg-emerald-100 text-emerald-700 border border-emerald-200
+                        {% else %} bg-amber-100 text-amber-800 border border-amber-200 {% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 
-                                <!-- Link para excluir o usuário -->
-                                <a href="{{ url_for('excluir_usuario', user_id=u._id) }}" onclick="return confirm('Tem certeza que deseja excluir este usuário?')" class="text-red-600 hover:text-red-800 font-medium text-xs">Excluir</a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <!-- Formulário de Cadastro de Novo Usuário -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+            <h2 class="font-bold text-lg mb-4 text-slate-900">Cadastrar Novo Usuário</h2>
+            <form method="POST" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nome</label>
+                    <input type="text" name="nome" required class="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">E-mail</label>
+                    <input type="email" name="email" required class="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">WhatsApp / Telefone</label>
+                    <input type="tel" name="telefone" required placeholder="11999999999" maxlength="11"
+                        oninput="this.value = this.value.replace(/\D/g, '')"
+                        class="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tipo de Acesso (Papel)</label>
+                    <select name="papel" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 font-semibold">
+                        <option value="cliente">Cliente</option>
+                        <option value="corretor">Corretor</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Senha</label>
+                    <input type="password" name="senha" required class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900">
+                </div>
+                <button type="submit" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md cursor-pointer">
+                    Cadastrar Usuário
+                </button>
+            </form>
+        </div>
+
+        <!-- Tabela de Usuários Cadastrados com Edição de Papel e Exclusão -->
+        <div class="md:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+            <h2 class="font-bold text-lg mb-4 text-slate-900">Usuários Cadastrados</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-100 text-xs uppercase text-slate-600">
+                        <tr>
+                            <th class="p-3">Nome / WhatsApp</th>
+                            <th class="p-3">E-mail</th>
+                            <th class="p-3">Papel / Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        {% for u in usuarios %}
+                        <tr>
+                            <td class="p-3">
+                                <span class="font-bold text-slate-900 block">{{ u.nome }}</span>
+                                <span class="text-xs text-gray-500">{{ u.telefone or 'Não informado' }}</span>
+                            </td>
+                            <td class="p-3 text-gray-600">{{ u.email }}</td>
+                            <td class="p-3">
+                                <div class="flex items-center space-x-3">
+                                    <!-- Formulário para alterar o papel -->
+                                    <form action="{{ url_for('alterar_papel', user_id=u._id) }}" method="POST" class="flex items-center space-x-2">
+                                        <select name="papel" class="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900">
+                                            <option value="admin" {% if u.papel == 'admin' %}selected{% endif %}>ADMIN</option>
+                                            <option value="corretor" {% if u.papel == 'corretor' %}selected{% endif %}>CORRETOR</option>
+                                            <option value="cliente" {% if u.papel == 'cliente' %}selected{% endif %}>CLIENTE</option>
+                                        </select>
+                                        <button type="submit" class="bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">Salvar</button>
+                                    </form>
+
+                                    <!-- Link para excluir o usuário -->
+                                    <a href="{{ url_for('excluir_usuario', user_id=u._id) }}" onclick="return confirm('Tem certeza que deseja excluir este usuário?')" class="text-red-600 hover:text-red-800 font-bold text-xs">Excluir</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

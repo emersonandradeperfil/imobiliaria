@@ -93,6 +93,10 @@ def index():
     
     return render_template('index.html', secoes=secoes)
 
+@app.route('/cadastrar')
+def cadastrar_cliente():
+    return render_template('cadastrar.html')
+
 @app.route('/imovel/<slug>')
 def imovel_detalhe(slug):
     db = mongo.db
@@ -124,6 +128,9 @@ def enviar_otp_imovel():
     
     if not email:
         return jsonify({"status": "error", "message": "E-mail obrigatório."}), 400
+        
+    if mongo.db.users.find_one({"email": email}):
+        return jsonify({"status": "error", "message": "Este e-mail já está cadastrado no sistema. Faça login para continuar."}), 400
         
     codigo = str(random.randint(1000, 9999))
     codigos_otp_temp[email] = {
@@ -174,7 +181,7 @@ def verificar_otp_e_liberar_imovel():
                 "email": email,
                 "senha_hash": senha_temp,
                 "telefone": whatsapp,
-                "papel": "cliente",  # FORÇADO SEMPRE A CLIENTE EM ROTAS PÚBLICAS
+                "papel": "cliente",
                 "ativo": True,
                 "favoritos": [],
                 "criado_em": datetime.utcnow()
@@ -193,11 +200,10 @@ def verificar_otp_e_liberar_imovel():
             "criado_em": datetime.utcnow()
         })
         
-        # SEGURANÇA: Formulários públicos NUNCA dão acesso admin/corretor
         session['user_id'] = str(user_id)
         session['user_nome'] = nome
         session['user_whatsapp'] = whatsapp
-        session['papel'] = "cliente" 
+        session['papel'] = "cliente"
         
         del codigos_otp_temp[email]
         
@@ -215,6 +221,9 @@ def enviar_otp_busca():
     
     if not email:
         return jsonify({"status": "error", "message": "E-mail obrigatório."}), 400
+        
+    if mongo.db.users.find_one({"email": email}):
+        return jsonify({"status": "error", "message": "Este e-mail já está cadastrado no sistema. Faça login para continuar."}), 400
         
     codigo = str(random.randint(1000, 9999))
     codigos_otp_temp[email] = {"codigo": codigo}
@@ -376,7 +385,7 @@ def login():
             session['user_id'] = str(user['_id'])
             session['user_nome'] = user['nome']
             session['papel'] = user.get('papel', 'cliente')
-            flash('Login realizado com sucesso!', 'success')
+            # flash('Login realizado com sucesso!', 'success')
             
             if user['papel'] == 'admin':
                 return redirect(url_for('admin_imoveis'))
@@ -456,6 +465,9 @@ def enviar_otp_favorito():
     if not email:
         return jsonify({"status": "error", "message": "E-mail obrigatório."}), 400
         
+    if mongo.db.users.find_one({"email": email}):
+        return jsonify({"status": "error", "message": "Este e-mail já está cadastrado no sistema. Faça login para continuar."}), 400
+        
     codigo = str(random.randint(1000, 9999))
     codigos_otp_temp[email] = {
         "codigo": codigo,
@@ -507,7 +519,7 @@ def verificar_otp_e_salvar_favorito():
                 "email": email,
                 "senha_hash": senha_temp,
                 "telefone": telefone,
-                "papel": "cliente",  # FORÇADO SEMPRE A CLIENTE
+                "papel": "cliente",
                 "ativo": True,
                 "favoritos": [],
                 "criado_em": datetime.utcnow()
@@ -526,7 +538,7 @@ def verificar_otp_e_salvar_favorito():
         
         session['user_id'] = str(user_id)
         session['user_nome'] = nome
-        session['papel'] = "cliente"  # SEGURANÇA BLINDADA
+        session['papel'] = "cliente"
         
         del codigos_otp_temp[email]
         return jsonify({"status": "success"})
@@ -581,7 +593,6 @@ def meus_agendamentos():
     agendamentos = list(db.agendamentos.aggregate(pipeline)) if 'agendamentos' in db.list_collection_names() else []
     return render_template('cliente/agendamentos.html', agendamentos=agendamentos, active_tab='agendamentos')
 
-# --- ROTA DE PERFIL DO UTILIZADOR ---
 @app.route('/perfil', methods=['GET', 'POST'])
 @login_required
 def meu_perfil():
@@ -595,10 +606,11 @@ def meu_perfil():
         telefone = sanitizar_texto(request.form.get('telefone'))
         nova_senha = request.form.get('senha')
         
+        # VERIFICAÇÃO: Se o e-mail foi alterado, checa se já existe em outro usuário
         if email != user.get('email'):
             existe_outro = db.users.find_one({"email": email, "_id": {"$ne": ObjectId(user_id)}})
             if existe_outro:
-                flash("Este e-mail já está a ser utilizado por outro utilizador.", "danger")
+                flash("Este e-mail já está cadastrado.", "danger")
                 return redirect(url_for('meu_perfil'))
         
         update_data = {
@@ -613,12 +625,10 @@ def meu_perfil():
         db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
         session['user_nome'] = nome
         
-        flash("Perfil atualizado com sucesso!", "success")
+        # flash("Perfil atualizado com sucesso!", "success")
         return redirect(url_for('meu_perfil'))
         
     return render_template('admin/perfil.html', user=user, active_tab='perfil')
-
-# --- PAINEL DE GESTÃO DE IMÓVEIS (ADMIN E CORRETOR) ---
 
 @app.route('/admin/imoveis')
 @login_required
@@ -727,6 +737,52 @@ def admin_imovel_novo():
     codigo_sugerido = gerar_proximo_codigo()
     return render_template('admin/imovel_form.html', corretores=corretores, condominios=condominios, codigo_sugerido=codigo_sugerido, active_tab='imoveis')
 
+@app.route('/admin/imoveis/editar/<codigo>', methods=['GET', 'POST'])
+@login_required
+@corretor_ou_admin_required
+def editar_imovel(codigo):
+    db = mongo.db
+    imovel = db.imoveis.find_one({"codigo": codigo})
+    if not imovel:
+        flash("Imóvel não encontrado.", "danger")
+        return redirect(url_for('admin_imoveis'))
+        
+    if request.method == 'POST':
+        titulo = sanitizar_texto(request.form.get('titulo'))
+        descricao = sanitizar_texto(request.form.get('descricao'))
+        tipo = sanitizar_texto(request.form.get('tipo'))
+        
+        db.imoveis.update_one(
+            {"codigo": codigo},
+            {
+                "$set": {
+                    "titulo": titulo,
+                    "descricao": descricao,
+                    "tipo": tipo,
+                    "precos.venda": float(request.form.get('preco_venda') or 0),
+                    "precos.locacao": float(request.form.get('preco_locacao') or 0),
+                    "precos.condominio": float(request.form.get('preco_condominio') or 0),
+                    "precos.iptu": float(request.form.get('preco_iptu') or 0)
+                }
+            }
+        )
+        flash(f'Imóvel {codigo} atualizado com sucesso!', 'success')
+        return redirect(url_for('admin_imoveis'))
+        
+    corretores = list(db.users.find({"papel": {"$in": ["corretor", "admin"]}}))
+    condominios = list(db.condominios.find())
+    endereco = db.imoveis_enderecos.find_one({"imovel_id": imovel["_id"]})
+    
+    return render_template(
+        'admin/imovel_form.html', 
+        imovel=imovel, 
+        endereco=endereco,
+        corretores=corretores, 
+        condominios=condominios, 
+        codigo_sugerido=codigo, 
+        active_tab='imoveis'
+    )
+
 @app.route('/admin/imoveis/excluir/<codigo>')
 @login_required
 @corretor_ou_admin_required
@@ -740,6 +796,7 @@ def admin_imovel_excluir(codigo):
 @login_required
 @admin_required
 def admin_usuarios():
+    db = mongo.db
     if request.method == 'POST':
         nome = sanitizar_texto(request.form.get('nome'))
         email = sanitizar_texto(request.form.get('email'))
@@ -747,14 +804,51 @@ def admin_usuarios():
         papel = sanitizar_texto(request.form.get('papel'))
         telefone = sanitizar_texto(request.form.get('telefone'))
         
-        if mongo.db.users.find_one({"email": email}):
-            flash('Este e-mail já existe.', 'danger')
+        if db.users.find_one({"email": email}):
+            flash('Este e-mail já está cadastrado no sistema!', 'danger')
         else:
             senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt())
-            mongo.db.users.insert_one({"nome": nome, "email": email, "senha_hash": senha_hash, "telefone": telefone, "papel": papel, "ativo": True, "criado_em": datetime.utcnow()})
-            flash('Utilizador cadastrado!', 'success')
-    usuarios = list(mongo.db.users.find())
+            db.users.insert_one({
+                "nome": nome, 
+                "email": email, 
+                "senha_hash": senha_hash, 
+                "telefone": telefone, 
+                "papel": papel, 
+                "ativo": True, 
+                "criado_em": datetime.utcnow()
+            })
+            flash('Cadastrado com sucesso!', 'success')
+            return redirect(url_for('admin_usuarios'))
+            
+    usuarios = list(db.users.find())
     return render_template('admin/usuarios.html', usuarios=usuarios, active_tab='usuarios')
+
+@app.route('/admin/usuarios/alterar-papel/<user_id>', methods=['POST'])
+@login_required
+@admin_required
+def alterar_papel(user_id):
+    db = mongo.db
+    novo_papel = sanitizar_texto(request.form.get('papel'))
+    
+    if novo_papel in ['admin', 'corretor', 'cliente']:
+        db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {"papel": novo_papel}}
+        )
+    #     flash('Papel do utilizador atualizado com sucesso!', 'success')
+    # else:
+    #     flash('Papel inválido.', 'danger')
+        
+    return redirect(url_for('admin_usuarios'))
+
+@app.route('/admin/usuarios/excluir/<user_id>')
+@login_required
+@admin_required
+def excluir_usuario(user_id):
+    db = mongo.db
+    db.users.delete_one({"_id": ObjectId(user_id)})
+    # flash('Utilizador excluído com sucesso!', 'success')
+    return redirect(url_for('admin_usuarios'))
 
 @app.route('/corretor/painel')
 @login_required
