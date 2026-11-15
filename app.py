@@ -106,6 +106,23 @@ def imovel_detalhe(slug):
         endereco_privado=endereco_privado
     )
 
+@app.route('/imovel/<imoid>/liberar-dados', methods=['POST'])
+def liberar_por_dados(imoid):
+    nome = request.form.get('nome')
+    email = request.form.get('email')
+    whatsapp = request.form.get('whatsapp')
+    
+    # Aqui você pode salvar o lead na sua collection de leads/clientes no MongoDB se desejar
+    # db.leads.insert_one({"nome": nome, "email": email, "whatsapp": whatsapp, "imovel_interesse": imoid})
+    
+    # Autentica o visitante temporariamente na sessão para liberar a visualização
+    session['user_id'] = email  # ou um ID gerado para o lead
+    session['user_name'] = nome
+    session['user_whatsapp'] = whatsapp
+    
+    flash("Dados confirmados com sucesso! Informações liberadas.", "success")
+    return redirect(url_for('detalhe_imovel', imoid=imoid)) # Ajuste para o nome da sua rota de detalhes do imóvel
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     proxima_pagina = request.args.get('next') or request.form.get('next')
@@ -606,6 +623,8 @@ def admin_imovel_excluir(codigo):
     if resultado.modified_count > 0:
         flash(f'Imóvel {codigo} removido da vitrine do site (mantido no histórico interno do banco).', 'info')
     return redirect(url_for('admin_imoveis'))
+
+# --- PAINEL DE GESTÃO DE USUARIOS (ADMIN) ---
 
 @app.route('/admin/usuarios', methods=['GET', 'POST'])
 @login_required
