@@ -775,7 +775,10 @@ def editar_imovel(codigo):
         titulo = sanitizar_texto(request.form.get('titulo'))
         descricao = sanitizar_texto(request.form.get('descricao'))
         tipo = sanitizar_texto(request.form.get('tipo'))
+        condominio_id = request.form.get('condominio_id')
+        corretor_id = request.form.get('corretor_id')
         
+        # Atualização dos dados principais do imóvel
         db.imoveis.update_one(
             {"codigo": codigo},
             {
@@ -783,13 +786,43 @@ def editar_imovel(codigo):
                     "titulo": titulo,
                     "descricao": descricao,
                     "tipo": tipo,
+                    "destaque": True if request.form.get('destaque') == '1' else False,
                     "precos.venda": float(request.form.get('preco_venda') or 0),
                     "precos.locacao": float(request.form.get('preco_locacao') or 0),
                     "precos.condominio": float(request.form.get('preco_condominio') or 0),
-                    "precos.iptu": float(request.form.get('preco_iptu') or 0)
+                    "precos.iptu": float(request.form.get('preco_iptu') or 0),
+                    "caracteristicas.util": float(request.form.get('area_util') or 0),
+                    "caracteristicas.total": float(request.form.get('area_total') or 0),
+                    "caracteristicas.quartos": int(request.form.get('quartos') or 0),
+                    "caracteristicas.suites": int(request.form.get('suites') or 0),
+                    "caracteristicas.banheiros": int(request.form.get('banheiros') or 0),
+                    "caracteristicas.vagas": int(request.form.get('vagas') or 0),
+                    "local_publico.bairro": sanitizar_texto(request.form.get('bairro')),
+                    "condominio_id": ObjectId(condominio_id) if condominio_id else None,
+                    "corretor_id": ObjectId(corretor_id) if corretor_id else None
                 }
             }
         )
+        
+        # Atualização ou Inserção do Endereço Privado
+        andar_input = request.form.get('andar')
+        andar_val = int(andar_input) if andar_input and andar_input.strip() != "" else None
+        
+        db.imoveis_enderecos.update_one(
+            {"imovel_id": imovel["_id"]},
+            {
+                "$set": {
+                    "logradouro": sanitizar_texto(request.form.get('logradouro')),
+                    "numero": sanitizar_texto(request.form.get('numero')),
+                    "complemento": sanitizar_texto(request.form.get('complemento', '')),
+                    "cep": sanitizar_texto(request.form.get('cep', '')),
+                    "andar": andar_val,
+                    "posicao_solar": sanitizar_texto(request.form.get('posicao_solar', ''))
+                }
+            },
+            upsert=True
+        )
+        
         flash(f'Imóvel {codigo} atualizado com sucesso!', 'success')
         return redirect(url_for('admin_imoveis'))
         
@@ -804,6 +837,7 @@ def editar_imovel(codigo):
         corretores=corretores, 
         condominios=condominios, 
         codigo_sugerido=codigo, 
+        editando=True,
         active_tab='imoveis'
     )
 

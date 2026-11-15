@@ -93,15 +93,15 @@
                 <input type="number" name="area_util" value="{{ imovel.caracteristicas.util if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
             <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Quartos</label>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Quartos / Q. 2</label>
                 <input type="number" name="quartos" value="{{ imovel.caracteristicas.quartos if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
             <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Suítes</label>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Suítes / Suíte 2</label>
                 <input type="number" name="suites" value="{{ imovel.caracteristicas.suites if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
             <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Banheiros</label>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Banheiros / Banh. 2</label>
                 <input type="number" name="banheiros" value="{{ imovel.caracteristicas.banheiros if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
         </div>
@@ -120,44 +120,32 @@
         <!-- ========================================== -->
         <!-- SEÇÃO 2: UPLOAD DE FOTOS POR CÔMODOS        -->
         <!-- ========================================== -->
-        <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">2. Galeria de Fotos por Cômodo (Múltiplas / Arraste)</h2>
-        <p class="text-xs text-gray-500 -mt-3">Você pode selecionar várias fotos de uma vez ou arrastá-las para os campos abaixo.</p>
-
+        <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">2. Galeria de Fotos por Cômodo</h2>
+        
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <!-- Capa -->
-            <div class="border-2 border-dashed border-gray-300 p-4 rounded-xl bg-gray-50 text-center hover:bg-gray-100 transition">
+            <div class="border-2 border-dashed border-gray-300 p-4 rounded-xl bg-gray-50 text-center">
                 <label class="block text-xs font-bold text-slate-800 mb-1">📸 Foto de Capa / Fachada</label>
-                <input type="file" name="fotos_capa" accept="image/*" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer">
+                <input type="file" name="fotos_capa" accept="image/*" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-slate-900 file:text-white cursor-pointer">
             </div>
-
-            <!-- Sala -->
-            <div class="border-2 border-dashed border-gray-300 p-4 rounded-xl bg-gray-50 text-center hover:bg-gray-100 transition">
+            <div class="border-2 border-dashed border-gray-300 p-4 rounded-xl bg-gray-50 text-center">
                 <label class="block text-xs font-bold text-slate-800 mb-1">🛋️ Sala / Living</label>
-                <input type="file" name="fotos_sala" accept="image/*" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer">
+                <input type="file" name="fotos_sala" accept="image/*" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-slate-900 file:text-white cursor-pointer">
             </div>
-
-            <!-- Cozinha -->
-            <div class="border-2 border-dashed border-gray-300 p-4 rounded-xl bg-gray-50 text-center hover:bg-gray-100 transition">
-                <label class="block text-xs font-bold text-slate-800 mb-1">🍳 Cozinha / Área de Serviço</label>
-                <input type="file" name="fotos_cozinha" accept="image/*" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer">
+            <div class="border-2 border-dashed border-gray-300 p-4 rounded-xl bg-gray-50 text-center">
+                <label class="block text-xs font-bold text-slate-800 mb-1">🍳 Cozinha</label>
+                <input type="file" name="fotos_cozinha" accept="image/*" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-slate-900 file:text-white cursor-pointer">
             </div>
-
-            <!-- Quartos -->
-            <div class="border-2 border-dashed border-gray-300 p-4 rounded-xl bg-gray-50 text-center hover:bg-gray-100 transition">
+            <div class="border-2 border-dashed border-gray-300 p-4 rounded-xl bg-gray-50 text-center">
                 <label class="block text-xs font-bold text-slate-800 mb-1">🛏️ Quartos / Suítes</label>
-                <input type="file" name="fotos_quartos" accept="image/*" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer">
+                <input type="file" name="fotos_quartos" accept="image/*" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-slate-900 file:text-white cursor-pointer">
             </div>
-
-            <!-- Banheiros -->
-            <div class="border-2 border-dashed border-gray-300 p-4 rounded-xl bg-gray-50 text-center hover:bg-gray-100 transition">
-                <label class="block text-xs font-bold text-slate-800 mb-1">🚿 Banheiros / Lavabos</label>
-                <input type="file" name="fotos_banheiros" accept="image/*" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer">
+            <div class="border-2 border-dashed border-gray-300 p-4 rounded-xl bg-gray-50 text-center">
+                <label class="block text-xs font-bold text-slate-800 mb-1">🚿 Banheiros</label>
+                <input type="file" name="fotos_banheiros" accept="image/*" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-slate-900 file:text-white cursor-pointer">
             </div>
-
-            <!-- Área Externa / Lazer -->
-            <div class="border-2 border-dashed border-gray-300 p-4 rounded-xl bg-gray-50 text-center hover:bg-gray-100 transition">
-                <label class="block text-xs font-bold text-slate-800 mb-1">🌳 Área Externa / Lazer / Condomínio</label>
-                <input type="file" name="fotos_externa" accept="image/*" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer">
+            <div class="border-2 border-dashed border-gray-300 p-4 rounded-xl bg-gray-50 text-center">
+                <label class="block text-xs font-bold text-slate-800 mb-1">🌳 Área Externa / Lazer</label>
+                <input type="file" name="fotos_externa" accept="image/*" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-slate-900 file:text-white cursor-pointer">
             </div>
         </div>
 
@@ -182,7 +170,7 @@
         
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">CEP (Digite para buscar automático)</label>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">CEP</label>
                 <input type="text" id="campo-cep" name="cep" value="{{ endereco.cep if editando and endereco else '' }}" maxlength="9" placeholder="Ex: 01426-001" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-bold text-slate-900">
             </div>
             <div>
@@ -192,24 +180,13 @@
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="sm:col-span-1">
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Logradouro / Rua Exata</label>
-                <input type="text" id="campo-logradouro" name="logradouro" value="{{ endereco.logradouro if editando and endereco else '' }}" required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-gray-50" placeholder="Preenchido pelo CEP">
+            <div>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Logradouro / Rua</label>
+                <input type="text" id="campo-logradouro" name="logradouro" value="{{ endereco.logradouro if editando and endereco else '' }}" required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-gray-50">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Bloco / Complemento</label>
                 <input type="text" name="complemento" value="{{ endereco.complemento if editando and endereco else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Ex: Bloco B, Apto 42">
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Andar (Opcional)</label>
-                <input type="number" name="andar" value="{{ endereco.andar if editando and endereco and endereco.andar is not none else '' }}" placeholder="Ex: 14" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Posição Solar / Iluminação</label>
-                <input type="text" name="posicao_solar" value="{{ endereco.posicao_solar if editando and endereco else '' }}" placeholder="Face Norte (Sol da Manhã)" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm">
             </div>
         </div>
 
@@ -219,7 +196,6 @@
     </form>
 </div>
 
-<!-- Script de Consulta de CEP (ViaCEP) -->
 <script>
     document.getElementById('campo-cep').addEventListener('blur', function() {
         let cep = this.value.replace(/\D/g, '');
