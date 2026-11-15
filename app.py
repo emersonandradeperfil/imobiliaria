@@ -32,7 +32,6 @@ codigos_otp_temp = {}
 def sanitizar_texto(texto):
     if not texto:
         return ""
-    # Converte caracteres especiais em entidades HTML seguras, neutralizando scripts injetados
     return html.escape(str(texto).strip())
 
 # Decorators de Segurança e Permissões
@@ -175,13 +174,12 @@ def verificar_otp_e_liberar_imovel():
                 "email": email,
                 "senha_hash": senha_temp,
                 "telefone": whatsapp,
-                "papel": "cliente",
+                "papel": "cliente",  # FORÇADO SEMPRE A CLIENTE EM ROTAS PÚBLICAS
                 "ativo": True,
                 "favoritos": [],
                 "criado_em": datetime.utcnow()
             })
             user_id = res_user.inserted_id
-            user = db.users.find_one({"_id": user_id})
         else:
             user_id = user["_id"]
             db.users.update_one({"_id": user_id}, {"$set": {"nome": nome, "telefone": whatsapp}})
@@ -195,9 +193,11 @@ def verificar_otp_e_liberar_imovel():
             "criado_em": datetime.utcnow()
         })
         
+        # SEGURANÇA: Formulários públicos NUNCA dão acesso admin/corretor
         session['user_id'] = str(user_id)
         session['user_nome'] = nome
         session['user_whatsapp'] = whatsapp
+        session['papel'] = "cliente" 
         
         del codigos_otp_temp[email]
         
@@ -206,7 +206,6 @@ def verificar_otp_e_liberar_imovel():
         return jsonify({"status": "success", "slug": slug_destino})
         
     return jsonify({"status": "error", "message": "Código incorreto ou expirado!"}), 400
-
 
 # --- OTP PARA BUSCA PERSONALIZADA ---
 @app.route('/api/enviar-otp-busca', methods=['POST'])
@@ -285,7 +284,6 @@ def verificar_otp_e_salvar_busca():
     
     return jsonify({"status": "error", "message": "Código incorreto ou expirado!"}), 400
 
-
 # --- OTP PARA CADASTRO DE CLIENTE ---
 @app.route('/api/enviar-otp-cadastro', methods=['POST'])
 def enviar_otp_cadastro():
@@ -356,7 +354,6 @@ def verificar_otp_e_cadastrar():
         return jsonify({"status": "success"})
         
     return jsonify({"status": "error", "message": "Código incorreto ou expirado!"}), 400
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -429,7 +426,7 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-# --- RESTANTE DAS ROTAS DE FAVORITOS E ADMIN CONTINUAM IGUAIS ---
+# --- ROTAS DE FAVORITOS E CLIENTE ---
 
 @app.route('/imovel/favoritar/<imoid>', methods=['POST'])
 @login_required
@@ -510,13 +507,12 @@ def verificar_otp_e_salvar_favorito():
                 "email": email,
                 "senha_hash": senha_temp,
                 "telefone": telefone,
-                "papel": "cliente",
+                "papel": "cliente",  # FORÇADO SEMPRE A CLIENTE
                 "ativo": True,
                 "favoritos": [],
                 "criado_em": datetime.utcnow()
             })
             user_id = res_user.inserted_id
-            user = db.users.find_one({"_id": user_id})
 
         db.users.update_one({"_id": user_id}, {"$addToSet": {"favoritos": imovel_obj_id}})
         db.leads.insert_one({
@@ -530,7 +526,8 @@ def verificar_otp_e_salvar_favorito():
         
         session['user_id'] = str(user_id)
         session['user_nome'] = nome
-        session['papel'] = user.get('papel', 'cliente')
+        session['papel'] = "cliente"  # SEGURANÇA BLINDADA
+        
         del codigos_otp_temp[email]
         return jsonify({"status": "success"})
     return jsonify({"status": "error", "message": "Código incorreto!"}), 400
@@ -583,6 +580,45 @@ def meus_agendamentos():
     ]
     agendamentos = list(db.agendamentos.aggregate(pipeline)) if 'agendamentos' in db.list_collection_names() else []
     return render_template('cliente/agendamentos.html', agendamentos=agendamentos, active_tab='agendamentos')
+
+# --- ROTA DE PERFIL DO UTILIZADOR ---
+@app.route('/perfil', methods=['GET', 'POST'])
+@login_required
+def meu_perfil():
+    db = mongo.db
+    user_id = session.get('user_id')
+    user = db.users.find_one({"_id": ObjectId(user_id)})
+    
+    if request.method == 'POST':
+        nome = sanitizar_texto(request.form.get('nome'))
+        email = sanitizar_texto(request.form.get('email'))
+        telefone = sanitizar_texto(request.form.get('telefone'))
+        nova_senha = request.form.get('senha')
+        
+        if email != user.get('email'):
+            existe_outro = db.users.find_one({"email": email, "_id": {"$ne": ObjectId(user_id)}})
+            if existe_outro:
+                flash("Este e-mail já está a ser utilizado por outro utilizador.", "danger")
+                return redirect(url_for('meu_perfil'))
+        
+        update_data = {
+            "nome": nome,
+            "email": email,
+            "telefone": telefone
+        }
+        
+        if nova_senha and nova_senha.strip() != "":
+            update_data["senha_hash"] = bcrypt.hashpw(nova_senha.encode('utf-8'), bcrypt.gensalt())
+            
+        db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
+        session['user_nome'] = nome
+        
+        flash("Perfil atualizado com sucesso!", "success")
+        return redirect(url_for('meu_perfil'))
+        
+    return render_template('admin/perfil.html', user=user, active_tab='perfil')
+
+# --- PAINEL DE GESTÃO DE IMÓVEIS (ADMIN E CORRETOR) ---
 
 @app.route('/admin/imoveis')
 @login_required
@@ -716,7 +752,7 @@ def admin_usuarios():
         else:
             senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt())
             mongo.db.users.insert_one({"nome": nome, "email": email, "senha_hash": senha_hash, "telefone": telefone, "papel": papel, "ativo": True, "criado_em": datetime.utcnow()})
-            flash('Usuário cadastrado!', 'success')
+            flash('Utilizador cadastrado!', 'success')
     usuarios = list(mongo.db.users.find())
     return render_template('admin/usuarios.html', usuarios=usuarios, active_tab='usuarios')
 
