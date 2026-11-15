@@ -24,6 +24,9 @@ UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'upload')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+# Dicionário temporário para guardar os códigos OTP gerados para a busca personalizada
+codigos_otp_temp = {}
+
 # Decorators de Segurança e Permissões
 def login_required(f):
     @wraps(f)
@@ -112,16 +115,124 @@ def liberar_por_dados(imoid):
     email = request.form.get('email')
     whatsapp = request.form.get('whatsapp')
     
-    # Aqui você pode salvar o lead na sua collection de leads/clientes no MongoDB se desejar
-    # db.leads.insert_one({"nome": nome, "email": email, "whatsapp": whatsapp, "imovel_interesse": imoid})
+    db = mongo.db
+    
+    # Salva ou atualiza o lead na collection de leads e usuários
+    user = db.users.find_one({"email": email})
+    if not user:
+        senha_temp = bcrypt.hashpw("123456".encode('utf-8'), bcrypt.gensalt())
+        res_user = db.users.insert_one({
+            "nome": nome,
+            "email": email,
+            "senha_hash": senha_temp,
+            "telefone": whatsapp,
+            "papel": "cliente",
+            "ativo": True,
+            "favoritos": [],
+            "criado_em": datetime.utcnow()
+        })
+        user_id = res_user.inserted_id
+    else:
+        user_id = user["_id"]
+        db.users.update_one({"_id": user_id}, {"$set": {"nome": nome, "telefone": whatsapp}})
+
+    db.leads.insert_one({
+        "nome": nome,
+        "email": email,
+        "telefone": whatsapp,
+        "imovel_id": ObjectId(imoid),
+        "origem": "Liberação Dados Imóvel",
+        "criado_em": datetime.utcnow()
+    })
     
     # Autentica o visitante temporariamente na sessão para liberar a visualização
-    session['user_id'] = email  # ou um ID gerado para o lead
-    session['user_name'] = nome
+    session['user_id'] = str(user_id)
+    session['user_nome'] = nome
     session['user_whatsapp'] = whatsapp
     
     flash("Dados confirmados com sucesso! Informações liberadas.", "success")
-    return redirect(url_for('detalhe_imovel', imoid=imoid)) # Ajuste para o nome da sua rota de detalhes do imóvel
+    
+    # Busca o slug do imóvel para redirecionar corretamente
+    imovel_doc = db.imoveis.find_one({"_id": ObjectId(imoid)})
+    slug_destino = imovel_doc.get("slug") if imovel_doc else ""
+    return redirect(url_for('imovel_detalhe', slug=slug_destino))
+
+# --- ROTAS DE BUSCA PERSONALIZADA COM OTP ---
+
+@app.route('/api/enviar-otp-busca', methods=['POST'])
+def enviar_otp_busca():
+    dados = request.json
+    email = dados.get('email')
+    
+    if not email:
+        return jsonify({"status": "error", "message": "E-mail obrigatório."}), 400
+        
+    codigo = str(random.randint(1000, 9999))
+    codigos_otp_temp[email] = codigo
+    
+    api_key = os.getenv('MAILGUN_API_KEY')
+    domain = os.getenv('MAILGUN_DOMAIN')
+    
+    try:
+        requests.post(
+            f"https://api.mailgun.net/v3/{domain}/messages",
+            auth=("api", api_key),
+            data={
+                "from": f"Teca Borges Imóveis <postmaster@{domain}>",
+                "to": [email],
+                "subject": "Teca Borges - Código de verificação para sua busca",
+                "text": f"Olá!\n\nRecebemos sua solicitação de busca personalizada.\nSeu código de verificação é: {codigo}\n\nDigite este código no site para concluir seu pedido."
+            },
+            timeout=5
+        )
+    except Exception as e:
+        print(f"Erro ao enviar OTP via Mailgun: {e}")
+        
+    return jsonify({"status": "success"})
+
+@app.route('/api/verificar-otp-e-salvar-busca', methods=['POST'])
+def verificar_otp_e_salvar_busca():
+    dados = request.json
+    email = dados.get('email')
+    codigo_informado = dados.get('codigo')
+    
+    if email in codigos_otp_temp and codigos_otp_temp[email] == codigo_informado:
+        db = mongo.db
+        
+        lead_data = {
+            "nome": dados.get('nome'),
+            "email": email,
+            "whatsapp": dados.get('whatsapp'),
+            "tipo_imovel": dados.get('tipo'),
+            "bairro": dados.get('bairro'),
+            "observacoes": dados.get('observacoes'),
+            "origem": "Busca Personalizada Site",
+            "verificado": True,
+            "criado_em": datetime.utcnow()
+        }
+        
+        db.leads.insert_one(lead_data)
+        
+        # Cria ou vincula o usuário no sistema também se não existir
+        user = db.users.find_one({"email": email})
+        if not user:
+            senha_temp = bcrypt.hashpw("123456".encode('utf-8'), bcrypt.gensalt())
+            db.users.insert_one({
+                "nome": dados.get('nome'),
+                "email": email,
+                "senha_hash": senha_temp,
+                "telefone": dados.get('whatsapp'),
+                "papel": "cliente",
+                "ativo": True,
+                "favoritos": [],
+                "criado_em": datetime.utcnow()
+            })
+            
+        del codigos_otp_temp[email]
+        return jsonify({"status": "success"})
+    
+    return jsonify({"status": "error", "message": "Código incorreto ou expirado!"}), 400
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -133,7 +244,6 @@ def login():
         
         user = mongo.db.users.find_one({"email": email})
         
-        # Verifica se o usuário existe e valida a senha utilizando bcrypt
         senha_valida = False
         if user and 'senha_hash' in user:
             hash_armazenado = user['senha_hash']
@@ -172,20 +282,16 @@ def esqueci_senha():
     email = request.form.get('email_recuperacao')
     user = mongo.db.users.find_one({"email": email})
     
-    # Por segurança, mesmo se o e-mail não existir, respondemos com a mesma mensagem genérica
     if user:
-        # Gera uma senha temporária segura de 6 caracteres
         caracteres = string.ascii_letters + string.digits
         senha_temporaria = ''.join(random.choice(caracteres) for _ in range(6))
         
-        # Criptografa e atualiza no MongoDB
         senha_hash = bcrypt.hashpw(senha_temporaria.encode('utf-8'), bcrypt.gensalt())
         mongo.db.users.update_one(
             {"_id": user["_id"]},
             {"$set": {"senha_hash": senha_hash}}
         )
         
-        # Envio via API HTTP do Mailgun (Lê direto das variáveis de ambiente / .env)
         api_key = os.getenv('MAILGUN_API_KEY')
         domain = os.getenv('MAILGUN_DOMAIN')
         

@@ -16,24 +16,21 @@
     <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-slate-950/60"></div>
 
     <!-- Conteúdo Central sobreposto ao Vídeo -->
-    <div class="relative z-10 max-w-4xl mx-auto px-4 text-center space-y-4">
-        
-
+    <div class="relative z-10 max-w-4xl mx-auto px-4 text-center space-y-3">
         <h1 class="text-5xl sm:text-5xl font-extrabold text-white tracking-tight drop-shadow-md">
             TECA BORGES
         </h1>
-        
-        <h2 class="text-gray-200 text-[12px] uppercase">
-            Avaliação de Imóveis - Perícia - Locação e Vendas
-        </h2>
-
-        
-        
-        
+        <div class="text-gray-200 text-xs sm:text-sm uppercase tracking-wider space-y-1 drop-shadow">
+            <p class="font-semibold text-amber-400">
+                Venda • Locação • Avaliação e Perícia Judicial
+            </p>
+            <p class="text-[11px] font-bold sm:text-xs text-gray-200">
+                Administração de Bens Imóveis e Condomínios
+            </p>
+        </div>
     </div>
+
 </div>
-
-
 
 <div class="max-w-7xl mx-auto px-6 sm:px-8 py-6 space-y-8">
 
@@ -41,16 +38,10 @@
     <div class="flex pt-1">
         <button type="button" onclick="togglePainelFiltros()" id="btn-toggle-filtros"
             class="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-900 text-slate-900 hover:text-white border border-gray-300 hover:border-slate-900 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm transition cursor-pointer">
-            <!-- <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                            </svg> -->
             <span id="texto-btn-filtrar">Filtrar</span>
-            <!-- Bolinha âmbar que acende se algum filtro estiver ativo -->
-            <!-- <span id="badge-filtro-ativo" class="hidden w-2 h-2 rounded-full bg-amber-500"></span> -->
         </button>
     </div>
     
-
     <!-- ========================================== -->
     <!-- BARRA DE FILTROS RETRÁTIL (INICIA OCULTA)  -->
     <!-- ========================================== -->
@@ -64,29 +55,19 @@
                         class="btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition bg-slate-900 text-white shadow-sm">
                         Todos
                     </button>
-                    
                     <button type="button" onclick="mudarFinalidade('venda')" id="btn-fin-venda"
                         class="btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition bg-gray-100 text-gray-700 hover:bg-gray-200">
                         Comprar
                     </button>
-                    
                     <button type="button" onclick="mudarFinalidade('locacao')" id="btn-fin-locacao"
                         class="btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition bg-gray-100 text-gray-700 hover:bg-gray-200">
                         Alugar
                     </button>
                 </div>
-
-                <!-- Botão Limpar Filtros (Aparece dinamicamente via JS) -->
-                <!-- <button type="button" onclick="limparFiltros()" id="btn-limpar-filtros"
-                    class="hidden text-xs font-bold text-red-600 hover:underline flex items-center gap-1 cursor-pointer">
-                    ✕ Limpar filtros (<span id="contador-encontrados">0</span> encontrado<span id="plural-encontrados">s</span>)
-                </button> -->
             </div>
 
             <!-- Linha 2: Tipo de Imóvel + Busca em Tempo Real -->
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                
-                <!-- Tipo de Imóvel -->
                 <div class="sm:col-span-5">
                     <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Tipo de Imóvel</label>
                     <select id="select-tipo" onchange="aplicarFiltros()"
@@ -99,7 +80,6 @@
                     </select>
                 </div>
 
-                <!-- Busca Instantânea por Bairro, Código ou Título -->
                 <div class="sm:col-span-7">
                     <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Bairro, Código ou Palavra-chave</label>
                     <input type="text" id="input-busca" oninput="aplicarFiltros()" 
@@ -140,8 +120,6 @@
 
             <!-- Wrapper Relativo para posicionar as setas e o carrossel -->
             <div class="relative group">
-
-                <!-- Botão Esquerdo (<) -->
                 <button onclick="rolarCarrossel('carrossel-{{ loop.index }}', -320)"
                     class="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 bg-slate-900/80 hover:bg-slate-900 text-white w-10 h-10 rounded-full items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100 focus:opacity-100">
                     ❮
@@ -165,7 +143,6 @@
                                 {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else 'upload/default.jpg' %}
                                 <img src="{{ url_for('static', filename=capa) }}" alt="Capa" class="w-full h-48 object-cover">
                                 
-                                <!-- Selos de Finalidade sobrepostos na foto -->
                                 <div class="absolute top-2.5 left-2.5 flex flex-col gap-1">
                                     {% if imovel.precos.venda and imovel.precos.venda > 0 %}
                                     <span class="bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded shadow uppercase">Venda</span>
@@ -175,7 +152,6 @@
                                     {% endif %}
                                 </div>
 
-                                <!-- Código discreto no canto superior direito -->
                                 <span class="absolute top-2.5 right-2.5 bg-slate-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm">
                                     {{ imovel.codigo }}
                                 </span>
@@ -186,7 +162,6 @@
                                 <h3 class="font-bold text-base text-slate-900 mt-1 truncate">{{ imovel.titulo }}</h3>
                                 <p class="text-xs text-gray-500 mt-1">{{ imovel.local_publico.bairro }} - São Paulo/SP</p>
                                 
-                                <!-- Valores Exibidos no Card -->
                                 <div class="mt-3 space-y-1">
                                     {% if imovel.precos.venda and imovel.precos.venda > 0 %}
                                     <p class="text-sm font-extrabold text-slate-900">
@@ -202,7 +177,6 @@
                             </div>
                         </div>
 
-                        <!-- Rodapé do Card: Ações -->
                         <div class="p-4 bg-gray-50 border-t flex justify-between items-center">
                             <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}"
                                 class="w-32 h-10 bg-slate-900 hover:bg-amber-600 text-white font-bold text-xs uppercase flex items-center justify-center transition rounded-lg">Ver Detalhes</a>
@@ -215,30 +189,88 @@
                                 </span>
                             </button>
                         </div>
-
                     </div>
                     {% endfor %}
-
                 </div>
 
-                <!-- Botão Direito (>) -->
                 <button onclick="rolarCarrossel('carrossel-{{ loop.index }}', 320)"
                     class="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 bg-slate-900/80 hover:bg-slate-900 text-white w-10 h-10 rounded-full items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100 focus:opacity-100">
                     ❯
                 </button>
-
             </div>
-
         </div>
         {% endif %}
         {% endfor %}
     </div>
 
+    <!-- ========================================== -->
+    <!-- FORMULÁRIO: NÃO ENCONTROU O QUE PROCURAVA? -->
+    <!-- ========================================== -->
+    <div
+        class="w-full max-w-5xl mx-auto px-4 sm:px-8 py-8 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col justify-between hover:shadow-md transition">
+        <div class="w-full max-w-3xl mx-auto relative z-10 space-y-6">
+            <div class="text-center space-y-2">
+                <h3 class="text-xl sm:text-2xl font-bold text-amber-600 uppercase">Não encontrou o que procurava?</h3>
+                <p class="font-bold text-sm sm:text-base text-slate-900 mt-1">
+                    Descreva o tipo de imóvel e região que procuramos para você as melhores ofertas.
+                </p>
+            </div>
+    
+            <form id="form-busca-personalizada" onsubmit="iniciarBuscaPersonalizada(event)" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm sm:text-base font-medium text-slate-900 mb-1">Tipo de Imóvel</label>
+                        <input type="text" id="busca-tipo" required placeholder="Ex: Apartamento 3 quartos, Cobertura..."
+                            class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    </div>
+                    <div>
+                        <label class="block text-sm sm:text-base font-medium text-slate-900 mb-1">Bairro / Região</label>
+                        <input type="text" id="busca-bairro" required placeholder="Ex: Mooca, Tatuapé, Jardins..."
+                            class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    </div>
+                </div>
+    
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm sm:text-base font-medium text-slate-900 mb-1">Seu Nome</label>
+                        <input type="text" id="busca-nome" required placeholder="Nome completo"
+                            class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    </div>
+                    <div>
+                        <label class="block text-sm sm:text-base font-medium text-slate-900 mb-1">E-mail</label>
+                        <input type="email" id="busca-email" required placeholder="seu@email.com"
+                            class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    </div>
+                    <div>
+                        <label class="block text-sm sm:text-base font-medium text-slate-900 mb-1">WhatsApp</label>
+                        <input type="text" id="busca-whatsapp" required placeholder="(11) 99999-9999"
+                            class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    </div>
+                </div>
+    
+                <div>
+                    <label class="block text-sm sm:text-base font-medium text-slate-900 mb-1">Observações / Detalhes
+                        Adicionais</label>
+                    <textarea id="busca-obs" rows="3"
+                        placeholder="Ex: Precisa ter varanda gourmet, aceita pet, valor até R$ 800 mil..."
+                        class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400"></textarea>
+                </div>
+    
+                <div class="pt-2 text-center">
+                    <button type="submit"
+                        class="w-full sm:w-auto px-8 py-3.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold text-sm uppercase rounded-xl transition shadow-lg cursor-pointer">
+                        Procurar para mim
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </div>
 
-<!-- MODAL DE CAPTAÇÃO DE LEAD -->
+<!-- MODAL DE CAPTAÇÃO DE LEAD (Favoritos) -->
 <div id="modal-lead" class="fixed inset-0 bg-slate-950/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative transform transition-all">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative transform transition-all text-slate-900">
         <button onclick="fecharModalLead()" class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">×</button>
         
         <div class="text-center mb-6">
@@ -247,27 +279,23 @@
             <p class="text-xs text-gray-500 mt-1">Preencha rapidinho para salvar nos favoritos e receber atendimento exclusivo.</p>
         </div>
 
-        <form id="form-lead-modal" onsubmit="enviarLeadModal(event)" class="space-y-4">
+        <form id="form-lead-modal" onsubmit="enviarLeadModal(event)" class="space-y-4 text-left">
             <input type="hidden" id="modal-imovel-id">
-            
             <div>
                 <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Seu Nome</label>
                 <input type="text" id="lead-nome" required placeholder="Como podemos te chamar?"
                     class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
             </div>
-
             <div>
                 <label class="block text-xs font-bold text-slate-700 uppercase mb-1">E-mail</label>
                 <input type="email" id="lead-email" required placeholder="seu@email.com"
                     class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
             </div>
-
             <div>
                 <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Telefone / WhatsApp</label>
                 <input type="text" id="lead-telefone" required placeholder="(11) 99999-9999"
                     class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
             </div>
-
             <button type="submit" class="w-full bg-slate-900 hover:bg-amber-400 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md">
                 Salvar Favorito
             </button>
@@ -275,7 +303,31 @@
     </div>
 </div>
 
-<!-- Scripts de Filtragem Instantânea, Carrossel e Favoritos -->
+<!-- MODAL DE VERIFICAÇÃO DE E-MAIL (OTP) PARA BUSCA PERSONALIZADA -->
+<div id="modal-otp-busca" class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-slate-900 relative">
+        <button onclick="fecharModalOtp()" class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">×</button>
+        
+        <div class="text-center mb-6">
+            <span class="text-3xl">✉️</span>
+            <h3 class="text-xl font-extrabold text-slate-900 mt-2">Confirme seu E-mail</h3>
+            <p class="text-xs text-gray-500 mt-1">Enviamos um código de verificação para <span id="span-email-destino" class="font-bold text-slate-800"></span>.</p>
+        </div>
+
+        <form onsubmit="confirmarCodigoOtp(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1 text-center">Digite o Código de Verificação</label>
+                <input type="text" id="input-codigo-otp" required placeholder="Ex: 1234" maxlength="6"
+                    class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-center text-xl font-bold tracking-widest text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900">
+            </div>
+            <button type="submit" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md">
+                Confirmar e Enviar Pedido
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Scripts de Filtragem, Carrossel, Favoritos e Busca Personalizada com OTP -->
 <script>
     let imovelPendenteId = null;
     let usuarioLogadoDesteCliente = {{ 'true' if session.get('user_id') else 'false' }};
@@ -365,20 +417,6 @@
         } else {
             msgVazio.classList.add('hidden');
         }
-
-        const temFiltroAtivo = finalidadeSelecionada !== '' || tipoSelecionado !== '' || termoBusca !== '';
-        const btnLimpar = document.getElementById('btn-limpar-filtros');
-        const badgeAtivo = document.getElementById('badge-filtro-ativo');
-
-        if (temFiltroAtivo) {
-            btnLimpar.classList.remove('hidden');
-            badgeAtivo.classList.remove('hidden');
-            document.getElementById('contador-encontrados').textContent = totalVisiveisGeral;
-            document.getElementById('plural-encontrados').textContent = totalVisiveisGeral === 1 ? '' : 's';
-        } else {
-            btnLimpar.classList.add('hidden');
-            badgeAtivo.classList.add('hidden');
-        }
     }
 
     function limparFiltros() {
@@ -431,7 +469,6 @@
 
     async function enviarLeadModal(event) {
         event.preventDefault();
-        
         let nome = document.getElementById('lead-nome').value;
         let email = document.getElementById('lead-email').value;
         let telefone = document.getElementById('lead-telefone').value;
@@ -450,24 +487,78 @@
                 usuarioLogadoDesteCliente = true;
                 if (imoid) {
                     let span = document.getElementById(`coracao-${imoid}`);
-                    if (span) {
-                        span.innerHTML = '❤️';
-                    }
+                    if (span) span.innerHTML = '❤️';
                 }
             }
         } catch (error) {
             console.error('Erro ao cadastrar lead:', error);
         }
     }
+
+    // --- FLUXO DE BUSCA PERSONALIZADA COM VERIFICAÇÃO OTP ---
+    async function iniciarBuscaPersonalizada(event) {
+        event.preventDefault();
+        let email = document.getElementById('busca-email').value;
+
+        // Dispara a requisição para enviar o código OTP para o e-mail informado
+        try {
+            let response = await fetch('/api/enviar-otp-busca', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email })
+            });
+            let data = await response.json();
+
+            if (data.status === 'success' || data.success) {
+                document.getElementById('span-email-destino').textContent = email;
+                document.getElementById('modal-otp-busca').classList.remove('hidden');
+            } else {
+                alert('Erro ao enviar código de verificação. Tente novamente.');
+            }
+        } catch (err) {
+            console.error('Erro:', err);
+            alert('Ocorreu um erro de conexão.');
+        }
+    }
+
+    function fecharModalOtp() {
+        document.getElementById('modal-otp-busca').classList.add('hidden');
+    }
+
+    async function confirmarCodigoOtp(event) {
+        event.preventDefault();
+        let codigo = document.getElementById('input-codigo-otp').value;
+        let email = document.getElementById('busca-email').value;
+        let nome = document.getElementById('busca-nome').value;
+        let whatsapp = document.getElementById('busca-whatsapp').value;
+        let tipo = document.getElementById('busca-tipo').value;
+        let bairro = document.getElementById('busca-bairro').value;
+        let observacoes = document.getElementById('busca-obs').value;
+
+        try {
+            let response = await fetch('/api/verificar-otp-e-salvar-busca', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codigo, email, nome, whatsapp, tipo, bairro, observacoes })
+            });
+            let data = await response.json();
+
+            if (data.status === 'success' || data.success) {
+                alert('Solicitação enviada com sucesso! Entraremos em contato em breve.');
+                fecharModalOtp();
+                document.getElementById('form-busca-personalizada').reset();
+            } else {
+                alert(data.message || 'Código inválido ou expirado.');
+            }
+        } catch (err) {
+            console.error('Erro:', err);
+            alert('Erro ao validar código.');
+        }
+    }
 </script>
 
 <style>
-    .no-scrollbar::-webkit-scrollbar {
-        display: none;
-    }
-    .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
 {% endblock %}
