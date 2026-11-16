@@ -375,6 +375,38 @@
         atualizarExibicaoLightbox();
     }
 
+        // --- SUPORTE A SWIPE (DESLIZAR COM O DEDO) NO LIGHTBOX ---
+    document.addEventListener("DOMContentLoaded", () => {
+        let touchstartX = 0;
+        let touchendX = 0;
+
+        // Elemento onde o lightbox/modal é exibido (ajuste o seletor se o ID do seu modal for diferente)
+        const lightboxContainer = document.getElementById('lightbox-modal') || document.body;
+
+        function processarSwipe() {
+            const distanciaMinima = 50; // Pixels mínimos para considerar um swipe válido
+
+            if (touchendX < touchstartX - distanciaMinima) {
+                // Deslizou para a ESQUERDA -> Avança para a próxima foto (+1)
+                mudarFotoLightbox(1);
+            }
+            
+            if (touchendX > touchstartX + distanciaMinima) {
+                // Deslizou para a DIREITA -> Volta para a foto anterior (-1)
+                mudarFotoLightbox(-1);
+            }
+        }
+
+        lightboxContainer.addEventListener('touchstart', e => {
+            touchstartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        lightboxContainer.addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            processarSwipe();
+        }, { passive: true });
+    });
+
     function atualizarExibicaoLightbox() {
         if (listaFotosAtual.length > 0) {
             let caminhoRelativo = listaFotosAtual[indiceFotoAtual];
