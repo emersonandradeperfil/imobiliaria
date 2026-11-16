@@ -18,6 +18,10 @@
                 class="px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
                 Agenda ({{ agendamentos|length }})
             </button>
+            <button onclick="mudarAba('buscas')" id="btn-aba-buscas"
+                class="px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
+                Busca ({{ buscas_corretor|length }})
+            </button>
             <button onclick="mudarAba('curtidas')" id="btn-aba-curtidas"
                 class="px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
                 Curtidas ({{ imoveis_curtidos|length }})
@@ -277,6 +281,55 @@
         {% endif %}
     </div>
 
+    <!-- CONTEÚDO DA ABA: BUSCA (Solicitações de Busca Personalizada Encaminhadas) -->
+    <div id="secao-buscas" class="space-y-4 hidden">
+        {% if buscas_corretor %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for busca in buscas_corretor %}
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
+                <div>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-base">{{ busca.nome }}</h3>
+                            <p class="text-xs text-gray-500 mt-0.5"><span class="font-semibold text-slate-700">{{ busca.whatsapp or busca.telefone }}</span></p>
+                            <p class="text-xs text-gray-600 mt-1"><a href="mailto:{{ busca.email }}" class="text-blue-600 hover:underline">{{ busca.email }}</a></p>
+                        </div>
+                        <span class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase bg-purple-50 text-purple-800 border border-purple-200 whitespace-nowrap">
+                            Busca
+                        </span>
+                    </div>
+
+                    <!-- Detalhes do que o cliente procura -->
+                    <div class="mt-4 p-3 bg-amber-50/50 border border-amber-100 rounded-lg text-xs space-y-1.5">
+                        <p><strong>Tipo Desejado:</strong> {{ busca.tipo_imovel or 'Não especificado' }}</p>
+                        <p><strong>Bairro/Região:</strong> {{ busca.bairro or 'Não especificado' }}</p>
+                        {% if busca.observacoes %}
+                        <p><strong>Observações:</strong></p>
+                        <p>{{ busca.observacoes }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Botão de Ação rápida para o WhatsApp do cliente -->
+                <div class="pt-3 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400">
+                    <span>Recebido em: {{ busca.criado_em.strftime('%d/%m/%Y %H:%M') if busca.criado_em else '' }}</span>
+                    <a href="https://api.whatsapp.com/send?phone=55{{ (busca.whatsapp or busca.telefone) | replace('(', '') | replace(')', '') | replace(' ', '') | replace('-', '') }}"
+                        target="_blank"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1">
+                        WhatsApp
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-500">
+            <span class="text-3xl block mb-2">🔍</span>
+            Nenhuma busca personalizada atribuída a você no momento.
+        </div>
+        {% endif %}
+    </div>
+
     <!-- CONTEÚDO DA ABA: CURTIDAS (Imóveis com 1 ou mais curtidas) -->
     <div id="secao-curtidas" class="space-y-4 hidden">
         {% if imoveis_curtidos %}
@@ -339,7 +392,7 @@
 <!-- Scripts de Abas e AJAX para Mudança de Status Sem Refresh -->
 <script>
     function mudarAba(aba) {
-        const secoes = ['leads', 'agendamentos', 'curtidas'];
+        const secoes = ['leads', 'agendamentos', 'buscas', 'curtidas'];
         secoes.forEach(s => {
             const elSecao = document.getElementById(`secao-${s}`);
             const elBtn = document.getElementById(`btn-aba-${s}`);
@@ -356,7 +409,7 @@
 
     document.addEventListener("DOMContentLoaded", () => {
         const hash = window.location.hash.replace('#', '');
-        if (['leads', 'agendamentos', 'curtidas'].includes(hash)) {
+        if (['leads', 'agendamentos', 'buscas', 'curtidas'].includes(hash)) {
             mudarAba(hash);
         }
 

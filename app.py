@@ -1166,17 +1166,17 @@ def painel_corretor():
     
     hoje_str = date.today().isoformat()
 
-    # 2. REGRA DE VISIBILIDADE DOS LEADS
-    query_leads_filtro = {}
+    # 2. REGRA DE VISIBILIDADE DOS LEADS (Excluindo as buscas personalizadas da aba de leads padrão)
+    query_leads_filtro = {
+        "origem": {"$ne": "Busca Personalizada Site (OTP)"}
+    }
     if papel != 'admin':
-        query_leads_filtro = {
-            "$or": [
-                {"corretor_responsavel_id": {"$exists": False}},
-                {"corretor_responsavel_id": None},
-                {"status": "pendente"},
-                {"corretor_responsavel_id": corretor_id}
-            ]
-        }
+        query_leads_filtro["$or"] = [
+            {"corretor_responsavel_id": {"$exists": False}},
+            {"corretor_responsavel_id": None},
+            {"status": "pendente"},
+            {"corretor_responsavel_id": corretor_id}
+        ]
 
     pipeline_leads = [
         {"$match": query_leads_filtro},
@@ -1208,10 +1208,22 @@ def painel_corretor():
                 "total_curtidas": item["total_curtidas"]
             })
 
+    # 4. BUSCAS PERSONALIZADAS DIRECIONADAS A ESTE CORRETOR
+    query_buscas_filtro = {
+        "origem": "Busca Personalizada Site (OTP)",
+        "corretor_responsavel_id": corretor_id
+    }
+    pipeline_buscas_corretor = [
+        {"$match": query_buscas_filtro},
+        {"$sort": {"criado_em": -1}}
+    ]
+    buscas_corretor = list(db.leads.aggregate(pipeline_buscas_corretor))
+
     return render_template('corretor/painel.html', 
                            leads=leads, 
                            agendamentos=agendamentos, 
                            imoveis_curtidos=imoveis_curtidos,
+                           buscas_corretor=buscas_corretor,
                            today=hoje_str, 
                            active_tab='painel_corretor')
 
