@@ -1141,7 +1141,7 @@ def painel_corretor():
     corretor_id = ObjectId(session.get('user_id'))
     papel = session.get('papel')
     
-    # REGRA DE VISIBILIDADE DOS AGENDAMENTOS
+    # 1. REGRA DE VISIBILIDADE DOS AGENDAMENTOS
     query_agendamentos_filtro = {}
     if papel != 'admin':
         query_agendamentos_filtro = {
@@ -1166,7 +1166,7 @@ def painel_corretor():
     
     hoje_str = date.today().isoformat()
 
-    # REGRA DE VISIBILIDADE DOS LEADS
+    # 2. REGRA DE VISIBILIDADE DOS LEADS
     query_leads_filtro = {}
     if papel != 'admin':
         query_leads_filtro = {
@@ -1188,9 +1188,30 @@ def painel_corretor():
     ]
     leads = list(db.leads.aggregate(pipeline_leads))
     
+    # 3. LISTA DE IMÓVEIS CURTIDOS (Com 1 ou mais curtidas)
+    curtidas_pipeline = [
+        {"$unwind": "$favoritos"},
+        {"$group": {"_id": "$favoritos", "total_curtidas": {"$sum": 1}}},
+        {"$match": {"total_curtidas": {"$gte": 1}}},
+        {"$sort": {"total_curtidas": -1}}
+    ]
+    ranking_curtidas = list(db.users.aggregate(curtidas_pipeline))
+    
+    imoveis_curtidos = []
+    for item in ranking_curtidas:
+        imovel_doc = db.imoveis.find_one({"_id": item["_id"], "status": "ativo"})
+        if imovel_doc:
+            endereco_doc = db.imoveis_enderecos.find_one({"imovel_id": imovel_doc["_id"]})
+            imoveis_curtidos.append({
+                "imovel": imovel_doc,
+                "endereco": endereco_doc,
+                "total_curtidas": item["total_curtidas"]
+            })
+
     return render_template('corretor/painel.html', 
                            leads=leads, 
                            agendamentos=agendamentos, 
+                           imoveis_curtidos=imoveis_curtidos,
                            today=hoje_str, 
                            active_tab='painel_corretor')
 
