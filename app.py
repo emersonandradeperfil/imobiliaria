@@ -5,7 +5,7 @@ import html
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from database import init_db, mongo
 import bcrypt
-from datetime import datetime
+from datetime import datetime, date
 from functools import wraps
 from werkzeug.utils import secure_filename
 from bson.objectid import ObjectId
@@ -144,7 +144,6 @@ def index():
         "Conjuntos Comerciais": [i for i in imoveis_ativos if i.get('tipo') == 'comercial']
     }
     
-    # Busca os IDs dos favoritos do usuário logado (convertidos para string)
     favoritos_ids = []
     if 'user_id' in session:
         user = db.users.find_one({"_id": ObjectId(session['user_id'])})
@@ -698,9 +697,11 @@ def meu_perfil():
         
     return render_template('admin/perfil.html', user=user, active_tab='perfil')
 
+# --- ROTAS DE GESTÃO DE IMÓVEIS (RESTRITAS EXCLUSIVAMENTE AO ADMIN) ---
+
 @app.route('/admin/imoveis')
 @login_required
-@corretor_ou_admin_required
+@admin_required
 def admin_imoveis():
     db = mongo.db
     tipo_filtro = request.args.get('tipo')
@@ -712,7 +713,7 @@ def admin_imoveis():
 
 @app.route('/admin/imoveis/novo', methods=['GET', 'POST'])
 @login_required
-@corretor_ou_admin_required
+@admin_required
 def admin_imovel_novo():
     db = mongo.db
     if request.method == 'POST':
@@ -785,7 +786,7 @@ def admin_imovel_novo():
 
 @app.route('/admin/imoveis/editar/<codigo>', methods=['GET', 'POST'])
 @login_required
-@corretor_ou_admin_required
+@admin_required
 def editar_imovel(codigo):
     db = mongo.db
     imovel = db.imoveis.find_one({"codigo": codigo})
@@ -870,22 +871,19 @@ def editar_imovel(codigo):
 
 @app.route('/admin/imoveis/remover-foto/<codigo>', methods=['POST'])
 @login_required
-@corretor_ou_admin_required
+@admin_required
 def remover_foto_imovel(codigo):
     db = mongo.db
     dados = request.json
-    caminho_foto = dados.get('arquivo') # Ex: "upload/AP0001/sala_1.jpg"
+    caminho_foto = dados.get('arquivo')
     
     imovel = db.imoveis.find_one({"codigo": codigo})
     if not imovel:
         return jsonify({"status": "error", "message": "Imóvel não encontrado."}), 404
         
     fotos = imovel.get("midia", {}).get("fotos", [])
-    
-    # Filtra removendo a foto selecionada
     novas_fotos = [f for f in fotos if f.get("arquivo") != caminho_foto]
     
-    # Remove o arquivo físico do servidor se existir
     if caminho_foto:
         caminho_fisico = os.path.join(app.root_path, 'static', caminho_foto)
         if os.path.exists(caminho_fisico):
@@ -894,7 +892,6 @@ def remover_foto_imovel(codigo):
             except Exception as e:
                 print(f"Erro ao deletar arquivo físico: {e}")
                 
-    # Atualiza no MongoDB
     db.imoveis.update_one(
         {"codigo": codigo},
         {"$set": {"midia.fotos": novas_fotos}}
@@ -904,12 +901,14 @@ def remover_foto_imovel(codigo):
 
 @app.route('/admin/imoveis/excluir/<codigo>')
 @login_required
-@corretor_ou_admin_required
+@admin_required
 def admin_imovel_excluir(codigo):
     db = mongo.db
     db.imoveis.update_one({"codigo": codigo}, {"$set": {"status": "inativo", "desativado_em": datetime.utcnow()}})
     flash(f'Imóvel {codigo} desativado.', 'info')
     return redirect(url_for('admin_imoveis'))
+
+# --- GESTÃO DE USUÁRIOS (ADMIN) ---
 
 @app.route('/admin/usuarios', methods=['GET', 'POST'])
 @login_required
@@ -965,7 +964,7 @@ def excluir_usuario(user_id):
     db.users.delete_one({"_id": ObjectId(user_id)})
     return redirect(url_for('admin_usuarios'))
 
-from datetime import datetime, date
+# --- PAINEL DO CORRETOR ---
 
 @app.route('/corretor/painel')
 @login_required
@@ -974,18 +973,7 @@ def painel_corretor():
     corretor_id = ObjectId(session.get('user_id'))
     papel = session.get('papel')
     
-    # Pipeline para Leads
-    pipeline_leads = [
-        {"$sort": {"criado_em": -1}},
-        {"$lookup": {"from": "imoveis", "localField": "imovel_id", "foreignField": "_id", "as": "imovel_info"}},
-        {"$unwind": {"path": "$imovel_info", "preserveNullAndEmptyArrays": True}},
-        {"$lookup": {"from": "imoveis_enderecos", "localField": "imovel_id", "foreignField": "imovel_id", "as": "endereco_privado"}},
-        {"$unwind": {"path": "$endereco_privado", "preserveNullAndEmptyArrays": True}}
-    ]
-    leads = list(db.leads.aggregate(pipeline_leads))
-    
-    # REGRA DE VISIBILIDADE DOS AGENDAMENTOS:
-    # Se for admin, vê tudo. Se for corretor, vê os PENDENTES (sem dono) OU os que ELE MESMO assumiu.
+    # REGRA DE VISIBILIDADE DOS AGENDAMENTOS
     query_agendamentos_filtro = {}
     if papel != 'admin':
         query_agendamentos_filtro = {
@@ -1010,8 +998,7 @@ def painel_corretor():
     
     hoje_str = date.today().isoformat()
 
-    # REGRA DE VISIBILIDADE DOS LEADS:
-    # Admin vê tudo. Corretor vê os que não têm dono OU os que ELE MESMO assumiu.
+    # REGRA DE VISIBILIDADE DOS LEADS
     query_leads_filtro = {}
     if papel != 'admin':
         query_leads_filtro = {
@@ -1047,7 +1034,6 @@ def atender_lead(lead_id):
     db = mongo.db
     corretor_id = ObjectId(session.get('user_id'))
     
-    # Atualização atômica: Só assume se ainda não tiver corretor ou estiver pendente/disponível
     resultado = db.leads.find_one_and_update(
         {
             "_id": ObjectId(lead_id),
