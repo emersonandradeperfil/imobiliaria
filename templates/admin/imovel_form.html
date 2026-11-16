@@ -123,8 +123,6 @@
         <div class="border-t pt-4 space-y-4">
             <div class="flex items-center justify-between border-b pb-2 pt-4">
 
-                
-
                 <div>
                     <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider">Fotos</h2>
                 </div>
@@ -138,13 +136,27 @@
         </div>
 
         {% if editando and imovel.midia and imovel.midia.fotos %}
-        <div class="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <p class="text-xs font-bold text-slate-800 mb-2">Fotos já cadastradas ({{ imovel.midia.fotos|length }} fotos):</p>
-            <div class="flex flex-wrap gap-2">
-                {% for f in imovel.midia.fotos %}
-                <div class="w-16 h-16 rounded-lg overflow-hidden border bg-white relative">
-                    <img src="{{ url_for('static', filename=f.arquivo) }}" class="w-full h-full object-cover">
-                    <span class="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[8px] text-center uppercase truncate px-1">{{ f.categoria }}</span>
+        <div class="mb-6">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Fotos cadastradas ({{
+                imovel.midia.fotos|length }} fotos):</label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                {% for foto in imovel.midia.fotos %}
+                <div id="foto-item-{{ loop.index0 }}"
+                    class="relative rounded-xl overflow-hidden shadow-sm border bg-white h-32 group">
+                    <img src="{{ url_for('static', filename=foto.arquivo) }}" class="w-full h-full object-cover">
+        
+                    <div
+                        class="absolute bottom-0 inset-x-0 bg-slate-950/70 text-white text-[10px] font-bold text-center py-0.5 uppercase">
+                        {{ foto.legenda or foto.categoria }}
+                    </div>
+        
+                    <!-- Botão de Remover Foto -->
+                    <button type="button"
+                        onclick="removerFotoCadastrada('{{ imovel.codigo }}', '{{ foto.arquivo }}', 'foto-item-{{ loop.index0 }}')"
+                        class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition opacity-0 group-hover:opacity-100 cursor-pointer"
+                        title="Remover foto">
+                        ✕
+                    </button>
                 </div>
                 {% endfor %}
             </div>
@@ -290,5 +302,33 @@
                 .catch(err => console.error('Erro ao buscar CEP:', err));
         }
     });
+
+    async function removerFotoCadastrada(codigoImovel, caminhoArquivo, elementoId) {
+        if (!confirm("Deseja realmente remover esta foto?")) return;
+
+        try {
+            let response = await fetch(`/admin/imoveis/remover-foto/${codigoImovel}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ arquivo: caminhoArquivo })
+            });
+            let data = await response.json();
+
+            if (data.status === 'success') {
+                let el = document.getElementById(elementoId);
+                if (el) {
+                    el.style.transition = "all 0.3s ease";
+                    el.style.opacity = "0";
+                    setTimeout(() => el.remove(), 300);
+                }
+            } else {
+                alert(data.message || "Erro ao remover foto.");
+            }
+        } catch (err) {
+            console.error("Erro:", err);
+            alert("Erro de conexão ao remover foto.");
+        }
+    }
+
 </script>
 {% endblock %}

@@ -868,6 +868,40 @@ def editar_imovel(codigo):
         active_tab='imoveis'
     )
 
+@app.route('/admin/imoveis/remover-foto/<codigo>', methods=['POST'])
+@login_required
+@corretor_ou_admin_required
+def remover_foto_imovel(codigo):
+    db = mongo.db
+    dados = request.json
+    caminho_foto = dados.get('arquivo') # Ex: "upload/AP0001/sala_1.jpg"
+    
+    imovel = db.imoveis.find_one({"codigo": codigo})
+    if not imovel:
+        return jsonify({"status": "error", "message": "Imóvel não encontrado."}), 404
+        
+    fotos = imovel.get("midia", {}).get("fotos", [])
+    
+    # Filtra removendo a foto selecionada
+    novas_fotos = [f for f in fotos if f.get("arquivo") != caminho_foto]
+    
+    # Remove o arquivo físico do servidor se existir
+    if caminho_foto:
+        caminho_fisico = os.path.join(app.root_path, 'static', caminho_foto)
+        if os.path.exists(caminho_fisico):
+            try:
+                os.remove(caminho_fisico)
+            except Exception as e:
+                print(f"Erro ao deletar arquivo físico: {e}")
+                
+    # Atualiza no MongoDB
+    db.imoveis.update_one(
+        {"codigo": codigo},
+        {"$set": {"midia.fotos": novas_fotos}}
+    )
+    
+    return jsonify({"status": "success"})
+
 @app.route('/admin/imoveis/excluir/<codigo>')
 @login_required
 @corretor_ou_admin_required
