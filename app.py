@@ -80,6 +80,15 @@ def corretor_ou_admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def proprietario_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('papel') != 'proprietario':
+            flash('Acesso restrito a proprietários.', 'danger')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 def gerar_proximo_codigo():
     ultimo_imovel = mongo.db.imoveis.find_one({}, sort=[("criado_em", -1)])
     if ultimo_imovel and "codigo" in ultimo_imovel:
@@ -504,6 +513,8 @@ def login():
                 return redirect(url_for('admin_imoveis'))
             elif user['papel'] == 'corretor':
                 return redirect(url_for('painel_corretor'))
+            elif user['papel'] == 'proprietario':
+                return redirect(url_for('painel_proprietario'))
             if proxima_pagina:
                 return redirect(proxima_pagina)
             return redirect(url_for('index'))
@@ -769,6 +780,68 @@ def meu_perfil():
         
     return render_template('admin/perfil.html', user=user, active_tab='perfil')
 
+# --- PAINEL DO PROPRIETÁRIO ---
+@app.route('/proprietario/painel')
+@login_required
+@proprietario_required
+def painel_proprietario():
+    db = mongo.db
+    proprietario_id = ObjectId(session.get('user_id'))
+    
+    # 1. Imóveis cadastrados no nome deste proprietário
+    imoveis_prop = list(db.imoveis.find({"proprietario_id": proprietario_id, "status": "ativo"}))
+    imovel_ids = [imv["_id"] for imv in imoveis_prop]
+    
+    imoveis_com_metricas = []
+    for imv in imoveis_prop:
+        imv_id = imv["_id"]
+        total_curtidas = db.users.count_documents({"favoritos": imv_id, "ativo": {"$ne": False}})
+        total_agendamentos = db.agendamentos.count_documents({"imovel_id": imv_id}) if 'agendamentos' in db.list_collection_names() else 0
+        total_leads = db.leads.count_documents({"imovel_id": imv_id}) if 'leads' in db.list_collection_names() else 0
+        
+        imoveis_com_metricas.append({
+            "imovel": imv,
+            "curtidas": total_curtidas,
+            "agendamentos": total_agendamentos,
+            "leads": total_leads
+        })
+        
+    # 2. Agendamentos de visitas para os imóveis deste proprietário
+    agendamentos = []
+    if 'agendamentos' in db.list_collection_names() and imovel_ids:
+        pipeline_ag = [
+            {"$match": {"imovel_id": {"$in": imovel_ids}}},
+            {"$sort": {"data_hora": 1}},
+            {"$lookup": {"from": "users", "localField": "cliente_id", "foreignField": "_id", "as": "cliente_info"}},
+            {"$unwind": {"path": "$cliente_info", "preserveNullAndEmptyArrays": True}},
+            {"$lookup": {"from": "imoveis", "localField": "imovel_id", "foreignField": "_id", "as": "imovel_info"}},
+            {"$unwind": {"path": "$imovel_info", "preserveNullAndEmptyArrays": True}}
+        ]
+        agendamentos = list(db.agendamentos.aggregate(pipeline_ag))
+        
+    # 3. Favoritos / Interessados (Clientes que curtiram os imóveis do proprietário)
+    interessados_curtidas = []
+    if imovel_ids:
+        usuarios_fav = list(db.users.find({"ativo": {"$ne": False}, "favoritos": {"$in": imovel_ids}}))
+        for u in usuarios_fav:
+            favs = u.get("favoritos", [])
+            for fid in favs:
+                if fid in imovel_ids:
+                    imv_doc = db.imoveis.find_one({"_id": fid})
+                    if imv_doc:
+                        interessados_curtidas.append({
+                            "cliente": u,
+                            "imovel": imv_doc
+                        })
+        
+    return render_template(
+        'proprietario/painel.html', 
+        imoveis=imoveis_com_metricas, 
+        agendamentos=agendamentos,
+        curtidas=interessados_curtidas,
+        active_tab='proprietario_painel'
+    )
+
 # --- ROTAS DE GESTÃO DE IMÓVEIS (RESTRITAS EXCLUSIVAMENTE AO ADMIN) ---
 
 @app.route('/admin/painel')
@@ -935,7 +1008,7 @@ def admin_reagendar_visita(ag_id):
 # --- LISTAGEM DE IMÓVEIS COM PAGINAÇÃO E DADOS DE PROPRIETÁRIO/CRIADOR ---
 @app.route('/admin/imoveis')
 @login_required
-@corretor_ou_admin_required  # <-- Alterado de admin_required para aceitar corretor também
+@corretor_ou_admin_required
 def admin_imoveis():
     db = mongo.db
     tipo_filtro = request.args.get('tipo')

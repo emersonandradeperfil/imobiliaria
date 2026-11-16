@@ -45,6 +45,7 @@
                     <select name="papel" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 font-semibold">
                         <option value="cliente">Cliente</option>
                         <option value="corretor">Corretor</option>
+                        <option value="proprietario">Proprietário</option>
                         <option value="admin">Admin</option>
                     </select>
                 </div>
@@ -76,6 +77,9 @@
                             <td class="p-3">
                                 <span class="font-bold text-slate-900 block">{{ u.nome }}</span>
                                 <span class="text-xs text-gray-500">{{ u.telefone or 'Não informado' }}</span>
+                                {% if u.codigo %}
+                                <span class="text-[10px] bg-slate-900 text-white px-2 py-0.5 rounded font-bold uppercase inline-block mt-0.5">{{ u.codigo }}</span>
+                                {% endif %}
                             </td>
                             <td class="p-3 text-gray-600">{{ u.email }}</td>
                             <td class="p-3">
@@ -85,6 +89,7 @@
                                         <select name="papel" class="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900">
                                             <option value="admin" {% if u.papel == 'admin' %}selected{% endif %}>ADMIN</option>
                                             <option value="corretor" {% if u.papel == 'corretor' %}selected{% endif %}>CORRETOR</option>
+                                            <option value="proprietario" {% if u.papel == 'proprietario' %}selected{% endif %}>PROPRIETÁRIO</option>
                                             <option value="cliente" {% if u.papel == 'cliente' %}selected{% endif %}>CLIENTE</option>
                                         </select>
                                         <button type="submit" class="bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">Salvar</button>

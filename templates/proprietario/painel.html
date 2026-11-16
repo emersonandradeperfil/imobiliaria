@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% set active_tab = 'proprietario_painel' %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+    
+    <!-- Cabeçalho do Painel -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Painel do Proprietário</h1>
+            <p class="text-xs text-gray-500 mt-0.5">Acompanhe o desempenho, métricas e valores dos seus imóveis cadastrados.</p>
+        </div>
+        <div class="flex gap-2">
+            <span class="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider">
+                {{ imoveis|length }}
+            </span>
+        </div>
+    </div>
+
+    <!-- SEÇÃO: MEUS IMÓVEIS, VALORES E NÚMEROS -->
+    <div class="space-y-4">
+        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <span>🏠</span> Meus Imóveis e Desempenho
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for item in imoveis %}
+            {% set imovel = item.imovel %}
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col justify-between">
+                <div>
+                    <!-- Foto de Capa -->
+                    <div class="h-48 w-full bg-slate-100 relative overflow-hidden">
+                        {% if imovel.midia and imovel.midia.fotos and imovel.midia.fotos|length > 0 %}
+                            <img src="{{ url_for('static', filename=imovel.midia.fotos[0].arquivo) }}" alt="{{ imovel.titulo }}" class="w-full h-full object-cover">
+                        {% else %}
+                            <div class="w-full h-full flex items-center justify-center text-gray-400 font-bold text-xs">SEM FOTO</div>
+                        {% endif %}
+                        <span class="absolute top-3 left-3 bg-slate-900 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-lg uppercase tracking-wider shadow">
+                            Cód: {{ imovel.codigo }}
+                        </span>
+                        <span class="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase shadow">
+                            {{ imovel.status }}
+                        </span>
+                    </div>
+
+                    <!-- Informações e Valores -->
+                    <div class="p-5 space-y-3">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-base line-clamp-1">{{ imovel.titulo }}</h3>
+                            <p class="text-xs text-gray-500 mt-0.5">Bairro: <span class="font-medium text-slate-700">{{ imovel.local_publico.bairro }}</span></p>
+                        </div>
+
+                        <!-- Bloco de Valores (Venda / Locação) -->
+                        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 text-xs">
+                            <div class="bg-slate-50 p-2 rounded-xl">
+                                <span class="block text-[10px] text-gray-400 uppercase font-bold">Venda</span>
+                                <span class="font-black text-slate-900">
+                                    {% if imovel.precos.venda and imovel.precos.venda > 0 %}
+                                        R$ {{ "{:,.2f}".format(imovel.precos.venda).replace(',','X').replace('.',',').replace('X','.') }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded-xl">
+                                <span class="block text-[10px] text-gray-400 uppercase font-bold">Locação</span>
+                                <span class="font-black text-slate-900">
+                                    {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
+                                        R$ {{ "{:,.2f}".format(imovel.precos.locacao).replace(',','X').replace('.',',').replace('X','.') }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Métricas numéricas (Likes, Interesse/Leads, Agendamentos) -->
+                <div class="px-5 py-3 bg-slate-50 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
+                        <span class="block text-red-500 font-black text-sm">❤️ {{ item.curtidas }}</span>
+                        <span class="text-[9px] text-gray-500 uppercase font-bold">Likes</span>
+                    </div>
+                    <div class="bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
+                        <span class="block text-amber-600 font-black text-sm">🎯 {{ item.leads }}</span>
+                        <span class="text-[9px] text-gray-500 uppercase font-bold">Interesse</span>
+                    </div>
+                    <div class="bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
+                        <span class="block text-blue-600 font-black text-sm">📅 {{ item.agendamentos }}</span>
+                        <span class="text-[9px] text-gray-500 uppercase font-bold">Visitas</span>
+                    </div>
+                </div>
+
+                <!-- Botão Ver Imóvel -->
+                <div class="p-4 bg-white border-t border-gray-100">
+                    <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" target="_blank" 
+                       class="w-full block text-center py-2.5 bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-sm">
+                        Ver imóvel
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-span-full bg-white rounded-2xl p-12 text-center border border-gray-200 text-gray-500 text-sm">
+                Nenhum imóvel vinculado ao seu perfil de proprietário.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
