@@ -180,11 +180,10 @@
                             <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}"
                                 class="w-32 h-10 bg-slate-900 hover:bg-amber-600 text-white font-bold text-xs uppercase flex items-center justify-center transition rounded-lg">Ver Detalhes</a>
 
-                            <button onclick="clicarFavorito('{{ imovel._id }}')" 
-                                class="text-lg transition transform active:scale-125 focus:outline-none p-1" 
-                                title="Favoritar">
+                            <button onclick="clicarFavorito('{{ imovel._id }}')"
+                                class="text-lg transition transform active:scale-125 focus:outline-none p-1" title="Favoritar">
                                 <span id="coracao-{{ imovel._id }}">
-                                    {% if session.get('user_id') and imovel._id in session.get('favoritos_ids', []) %}❤️{% else %}🤍{% endif %}
+                                    {% if session.get('user_id') and imovel._id|string in favoritos_ids %}❤️{% else %}🤍{% endif %}
                                 </span>
                             </button>
                         </div>

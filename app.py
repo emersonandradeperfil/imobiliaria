@@ -144,7 +144,14 @@ def index():
         "Conjuntos Comerciais": [i for i in imoveis_ativos if i.get('tipo') == 'comercial']
     }
     
-    return render_template('index.html', secoes=secoes)
+    # Busca os IDs dos favoritos do usuário logado (convertidos para string)
+    favoritos_ids = []
+    if 'user_id' in session:
+        user = db.users.find_one({"_id": ObjectId(session['user_id'])})
+        if user and 'favoritos' in user:
+            favoritos_ids = [str(fav_id) for fav_id in user['favoritos']]
+    
+    return render_template('index.html', secoes=secoes, favoritos_ids=favoritos_ids)
 
 @app.route('/cadastrar')
 def cadastrar_cliente():
