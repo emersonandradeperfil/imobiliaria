@@ -53,7 +53,12 @@
                     <a href="{{ url_for('meu_perfil') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PERFIL</a>
                     <a href="{{ url_for('admin_usuarios') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'usuarios' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">USUÁRIOS</a>
                     <a href="{{ url_for('admin_imoveis') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">IMÓVEIS</a>
-                    <a href="{{ url_for('admin_painel') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PAINEL</a>
+                    <a href="{{ url_for('admin_painel') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition 
+                        {% if active_tab == 'admin_painel' or active_tab == 'painel' %}
+                            bg-slate-900 text-white shadow-md ring-2 ring-slate-600
+                        {% else %}
+                            bg-slate-200 text-slate-900 hover:bg-slate-300
+                        {% endif %}">PAINEL</a>
 
                 {% elif session.get('papel') == 'corretor' %}
                     <a href="{{ url_for('painel_corretor') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PAINEL</a>
