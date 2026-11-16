@@ -627,7 +627,7 @@ def agendar_visita(imoid):
         flash('Informe a data e o horário desejados.', 'danger')
         return redirect(request.referrer or url_for('index'))
         
-    data_hora = datetime.strptime(f"{data} {hora}", '%Y-%m-%d %H:%M')
+    data_hora = datetime.strptime(f"{data} {hora}", '%Y-%m-%d %H:%M:%S')
     db.agendamentos.insert_one({
         "cliente_id": ObjectId(user_id),
         "imovel_id": ObjectId(imoid),
@@ -965,10 +965,16 @@ def excluir_usuario(user_id):
     db.users.delete_one({"_id": ObjectId(user_id)})
     return redirect(url_for('admin_usuarios'))
 
+from datetime import datetime, date
+
 @app.route('/corretor/painel')
 @login_required
 def painel_corretor():
     db = mongo.db
+    corretor_id = ObjectId(session.get('user_id'))
+    papel = session.get('papel')
+    
+    # Pipeline para Leads
     pipeline_leads = [
         {"$sort": {"criado_em": -1}},
         {"$lookup": {"from": "imoveis", "localField": "imovel_id", "foreignField": "_id", "as": "imovel_info"}},
@@ -977,7 +983,196 @@ def painel_corretor():
         {"$unwind": {"path": "$endereco_privado", "preserveNullAndEmptyArrays": True}}
     ]
     leads = list(db.leads.aggregate(pipeline_leads))
-    return render_template('corretor/painel.html', leads=leads, active_tab='painel_corretor')
+    
+    # REGRA DE VISIBILIDADE DOS AGENDAMENTOS:
+    # Se for admin, vê tudo. Se for corretor, vê os PENDENTES (sem dono) OU os que ELE MESMO assumiu.
+    query_agendamentos_filtro = {}
+    if papel != 'admin':
+        query_agendamentos_filtro = {
+            "$or": [
+                {"status": "pendente"},
+                {"corretor_responsavel_id": None},
+                {"corretor_responsavel_id": corretor_id}
+            ]
+        }
+
+    pipeline_agendamentos = [
+        {"$match": query_agendamentos_filtro},
+        {"$sort": {"criado_em": -1}},
+        {"$lookup": {"from": "users", "localField": "cliente_id", "foreignField": "_id", "as": "cliente_info"}},
+        {"$unwind": {"path": "$cliente_info", "preserveNullAndEmptyArrays": True}},
+        {"$lookup": {"from": "imoveis", "localField": "imovel_id", "foreignField": "_id", "as": "imovel_info"}},
+        {"$unwind": {"path": "$imovel_info", "preserveNullAndEmptyArrays": True}},
+        {"$lookup": {"from": "imoveis_enderecos", "localField": "imovel_id", "foreignField": "imovel_id", "as": "endereco_privado"}},
+        {"$unwind": {"path": "$endereco_privado", "preserveNullAndEmptyArrays": True}}
+    ]
+    agendamentos = list(db.agendamentos.aggregate(pipeline_agendamentos)) if 'agendamentos' in db.list_collection_names() else []
+    
+    hoje_str = date.today().isoformat()
+
+    # REGRA DE VISIBILIDADE DOS LEADS:
+    # Admin vê tudo. Corretor vê os que não têm dono OU os que ELE MESMO assumiu.
+    query_leads_filtro = {}
+    if papel != 'admin':
+        query_leads_filtro = {
+            "$or": [
+                {"corretor_responsavel_id": {"$exists": False}},
+                {"corretor_responsavel_id": None},
+                {"status": "pendente"},
+                {"corretor_responsavel_id": corretor_id}
+            ]
+        }
+
+    pipeline_leads = [
+        {"$match": query_leads_filtro},
+        {"$sort": {"criado_em": -1}},
+        {"$lookup": {"from": "imoveis", "localField": "imovel_id", "foreignField": "_id", "as": "imovel_info"}},
+        {"$unwind": {"path": "$imovel_info", "preserveNullAndEmptyArrays": True}},
+        {"$lookup": {"from": "imoveis_enderecos", "localField": "imovel_id", "foreignField": "imovel_id", "as": "endereco_privado"}},
+        {"$unwind": {"path": "$endereco_privado", "preserveNullAndEmptyArrays": True}}
+    ]
+    leads = list(db.leads.aggregate(pipeline_leads))
+    
+    return render_template('corretor/painel.html', 
+                           leads=leads, 
+                           agendamentos=agendamentos, 
+                           today=hoje_str, 
+                           active_tab='painel_corretor')
+
+# --- ASSUMIR / ATENDER LEAD ---
+@app.route('/corretor/lead/atender/<lead_id>')
+@login_required
+@corretor_ou_admin_required
+def atender_lead(lead_id):
+    db = mongo.db
+    corretor_id = ObjectId(session.get('user_id'))
+    
+    # Atualização atômica: Só assume se ainda não tiver corretor ou estiver pendente/disponível
+    resultado = db.leads.find_one_and_update(
+        {
+            "_id": ObjectId(lead_id),
+            "$or": [
+                {"corretor_responsavel_id": {"$exists": False}},
+                {"corretor_responsavel_id": None},
+                {"status": "pendente"}
+            ]
+        },
+        {
+            "$set": {
+                "status": "em_andamento",
+                "corretor_responsavel_id": corretor_id,
+                "atualizado_em": datetime.utcnow()
+            }
+        },
+        return_document=True
+    )
+    
+    if not resultado:
+        flash('Este lead já foi assumido por outro corretor!', 'warning')
+    else:
+        flash('Você assumiu este lead com sucesso!', 'success')
+        
+    return redirect(url_for('painel_corretor') + '#leads')
+
+# --- 1. ASSUMIR / ATENDER AGENDAMENTO ---
+@app.route('/corretor/agendamento/atender/<ag_id>')
+@login_required
+@corretor_ou_admin_required
+def atender_agendamento(ag_id):
+    db = mongo.db
+    corretor_id = ObjectId(session.get('user_id'))
+    
+    resultado = db.agendamentos.find_one_and_update(
+        {
+            "_id": ObjectId(ag_id),
+            "status": "pendente"
+        },
+        {
+            "$set": {
+                "status": "em_andamento",
+                "corretor_responsavel_id": corretor_id,
+                "atualizado_em": datetime.utcnow()
+            }
+        },
+        return_document=True
+    )
+    
+    if not resultado:
+        flash('Este atendimento já foi assumido por outro corretor!', 'warning')
+    else:
+        flash('Você assumiu este atendimento com sucesso!', 'success')
+        
+    return redirect(url_for('painel_corretor'))
+
+# --- 2. ALTERAR STATUS (CONCLUÍDO / CANCELADO) ---
+@app.route('/corretor/agendamento/status/<ag_id>/<novo_status>')
+@login_required
+@corretor_ou_admin_required
+def alterar_status_agendamento_corretor(ag_id, novo_status):
+    db = mongo.db
+    corretor_id = ObjectId(session.get('user_id'))
+    
+    papel = session.get('papel')
+    query = {"_id": ObjectId(ag_id)}
+    if papel != 'admin':
+        query["corretor_responsavel_id"] = corretor_id
+
+    resultado = db.agendamentos.update_one(
+        query,
+        {"$set": {"status": novo_status, "atualizado_em": datetime.utcnow()}}
+    )
+    
+    if resultado.modified_count > 0:
+        flash('Status do agendamento atualizado com sucesso!', 'success')
+    else:
+        flash('Ação não permitida ou agendamento não encontrado.', 'danger')
+        
+    return redirect(url_for('painel_corretor'))
+
+# --- 3. REAGENDAR VISITA (COM NOVA DATA E HORA) ---
+@app.route('/corretor/agendamento/reagendar/<ag_id>', methods=['POST'])
+@login_required
+@corretor_ou_admin_required
+def reagendar_visita_corretor(ag_id):
+    db = mongo.db
+    corretor_id = ObjectId(session.get('user_id'))
+    nova_data = request.form.get('nova_data')
+    nova_hora = request.form.get('nova_hora')
+    
+    if not nova_data or not nova_hora:
+        flash('Informe a nova data e o novo horário para o reagendamento.', 'danger')
+        return redirect(url_for('painel_corretor'))
+        
+    try:
+        if len(nova_hora.split(':')) == 2:
+            nova_hora += ":00"
+        data_hora_nova = datetime.strptime(f"{nova_data} {nova_hora}", '%Y-%m-%d %H:%M:%S')
+    except Exception as e:
+        flash('Formato de data ou hora inválido.', 'danger')
+        return redirect(url_for('painel_corretor'))
+
+    papel = session.get('papel')
+    query = {"_id": ObjectId(ag_id)}
+    if papel != 'admin':
+        query["corretor_responsavel_id"] = corretor_id
+
+    resultado = db.agendamentos.update_one(
+        query,
+        {
+            "$set": {
+                "data_hora": data_hora_nova,
+                "status": "reagendado",
+                "atualizado_em": datetime.utcnow()
+            }
+        }
+    )
+    
+    if resultado.modified_count > 0:
+        flash('Visita reagendada com sucesso!', 'success')
+    else:
+        flash('Erro ao reagendar. Verifique se você é o responsável por este atendimento.', 'danger')
+        
+    return redirect(url_for('painel_corretor'))
 
 if __name__ == '__main__':
     app.run(debug=True)

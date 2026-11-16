@@ -64,14 +64,34 @@
 
                 </div>
 
-                <div class="flex justify-between items-center pt-3 border-t border-gray-100 text-[11px] text-gray-400">
-                    <span>Cadastrado em: {{ lead.criado_em.strftime('%d/%m/%Y %H:%M') if lead.criado_em else ''
-                        }}</span>
-                    <a href="https://api.whatsapp.com/send?phone=55{{ lead.telefone | replace('(', '') | replace(')', '') | replace(' ', '') | replace('-', '') }}"
-                        target="_blank"
-                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1">
-                        WhatsApp
-                    </a>
+                <div class="space-y-3 pt-3 border-t border-gray-100">
+                    <div class="flex justify-between items-center text-xs text-gray-400">
+                        <span>Cadastrado em: {{ lead.criado_em.strftime('%d/%m/%Y %H:%M') if lead.criado_em else ''
+                            }}</span>
+                        <a href="https://api.whatsapp.com/send?phone=55{{ lead.telefone | replace('(', '') | replace(')', '') | replace(' ', '') | replace('-', '') }}"
+                            target="_blank"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1">
+                            WhatsApp
+                        </a>
+                    </div>
+
+                    {% set meu_id = session.get('user_id') %}
+                    {% set responsavel_lead_id = lead.corretor_responsavel_id|string if lead.corretor_responsavel_id
+                    else '' %}
+
+                    <!-- Se não tiver dono ou estiver pendente -> Botão Atender -->
+                    {% if not lead.corretor_responsavel_id or lead.status == 'pendente' %}
+                    <div class="pt-1">
+                        <a href="{{ url_for('atender_lead', lead_id=lead._id) }}#leads"
+                            class="w-full block text-center bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs py-2.5 rounded-xl transition shadow-sm uppercase">Atender</a>
+                    </div>
+                    <!-- Se o corretor logado for o dono -->
+                    {% elif responsavel_lead_id == meu_id %}
+                    <div
+                        class="text-[10px] font-bold text-emerald-700 uppercase bg-emerald-50 py-1.5 px-3 rounded-lg border border-emerald-200 text-center">
+                        ✔️ Você é o responsável por este lead
+                    </div>
+                    {% endif %}
                 </div>
 
             </div>
@@ -91,7 +111,7 @@
         {% if agendamentos %}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {% for ag in agendamentos %}
-            <!-- ID Único adicionado no card para o AJAX localizar -->
+            <!-- Card do Agendamento -->
             <div id="agendamento-{{ ag._id }}"
                 class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
                 <div>
@@ -110,15 +130,16 @@
                                     else '' }}</a></p>
                         </div>
 
-                        <!-- Badge de Status Atual com a classe 'badge-status' pura -->
+                        <!-- Badge de Status Atual -->
                         <div>
                             {% set st = ag.status|default('pendente') %}
                             <span class="badge-status text-[10px] font-bold px-2.5 py-1 rounded-full uppercase
                                 {% if st == 'pendente' %} bg-amber-50 text-amber-800 border border-amber-200
-                                {% elif st == 'agendado' %} bg-blue-50 text-blue-800 border border-blue-200
+                                {% elif st == 'agendado' or st == 'em_andamento' %} bg-blue-50 text-blue-800 border border-blue-200
                                 {% elif st == 'concluido' %} bg-emerald-50 text-emerald-800 border border-emerald-200
+                                {% elif st == 'reagendado' %} bg-purple-50 text-purple-800 border border-purple-200
                                 {% else %} bg-red-50 text-red-800 border border-red-200 {% endif %}">
-                                {{ 'Concluído' if st == 'concluido' else st }}
+                                {{ 'Concluído' if st == 'concluido' else (st | replace('_', ' ')) }}
                             </span>
                         </div>
                     </div>
@@ -153,6 +174,7 @@
 
                 </div>
 
+                <!-- Bloco de Ações do Agendamento -->
                 <div class="space-y-3 pt-3 border-t border-gray-100">
                     <div class="flex justify-between items-center text-xs">
                         <span class="font-extrabold text-slate-900 bg-slate-100 px-3 py-1.5 rounded-lg">
@@ -165,30 +187,65 @@
                         </a>
                     </div>
 
-                    <!-- Botões para Alterar Status com a classe 'botoes-status-container' -->
-                    <!-- Botões para Alterar Status -->
-                    <div class="botoes-status-container flex flex-wrap items-center gap-1.5 pt-1">
-                        <span class="text-[10px] font-bold text-gray-400 mr-1">Status:</span>
-                        {% if st != 'agendado' %}
-                        <a href="{{ url_for('alterar_status_agendamento', ag_id=ag._id, novo_status='agendado') }}#agendamentos"
-                            class="btn-status bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold px-2.5 py-1 rounded transition border border-blue-200">Agendado</a>
-                        {% endif %}
-                        {% if st != 'concluido' %}
-                        <a href="{{ url_for('alterar_status_agendamento', ag_id=ag._id, novo_status='concluido') }}#agendamentos"
-                            class="btn-status bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded transition border border-emerald-200">Concluido</a>
-                        {% endif %}
-                        {% if st != 'cancelado' %}
-                        <a href="{{ url_for('alterar_status_agendamento', ag_id=ag._id, novo_status='cancelado') }}#agendamentos"
-                            class="btn-status bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-bold px-2.5 py-1 rounded transition border border-red-200">Cancelado</a>
-                        {% endif %}
-                        {% if st != 'pendente' %}
-                        <a href="{{ url_for('alterar_status_agendamento', ag_id=ag._id, novo_status='pendente') }}#agendamentos"
-                            class="btn-status bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-bold px-2.5 py-1 rounded transition border border-gray-200">Pendente</a>
-                        {% endif %}
+                    {% set meu_id = session.get('user_id') %}
+                    {% set responsavel_id = ag.corretor_responsavel_id|string if ag.corretor_responsavel_id else '' %}
+
+                    <!-- CASO 1: Agendamento Pendente (Sem dono) -> Botão "Atender" para todos -->
+                    {% if st == 'pendente' or not ag.corretor_responsavel_id %}
+                    <div class="pt-2">
+                        <a href="{{ url_for('atender_agendamento', ag_id=ag._id) }}#agendamentos"
+                            class="w-full block text-center bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs py-2.5 rounded-xl transition shadow-sm uppercase">Atender</a>
                     </div>
+
+                    <!-- CASO 2: O corretor logado é o responsável por este atendimento -->
+                    {% elif responsavel_id == meu_id %}
+                    <div class="space-y-2 pt-2 bg-slate-50 p-3 rounded-xl border border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-emerald-700 uppercase">✔️ Você é o
+                                responsável</span>
+                            <div class="flex gap-1.5">
+                                <a href="{{ url_for('alterar_status_agendamento_corretor', ag_id=ag._id, novo_status='concluido') }}#agendamentos"
+                                    class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-2.5 py-1 rounded transition">Concluir</a>
+                                <a href="{{ url_for('alterar_status_agendamento_corretor', ag_id=ag._id, novo_status='cancelado') }}#agendamentos"
+                                    class="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold px-2.5 py-1 rounded transition">Cancelar</a>
+                            </div>
+                        </div>
+
+                        <!-- Formulário de Reagendamento Exclusivo -->
+                        <form action="{{ url_for('reagendar_visita_corretor', ag_id=ag._id) }}" method="POST"
+                            class="flex flex-wrap sm:flex-nowrap gap-2 pt-2 border-t border-gray-200">
+                            <input type="date" name="nova_data" min="{{ today }}" required
+                                class="bg-white border rounded px-2 py-1 text-xs text-slate-800 w-full sm:w-1/2"
+                                style="color-scheme: light;">
+
+                            <select name="nova_hora" required
+                                class="bg-white border rounded px-2 py-1 text-xs text-slate-800 w-full sm:w-1/3">
+                                <option value="" disabled selected>Horário</option>
+                                <option value="08:00">08:00</option>
+                                <option value="09:00">09:00</option>
+                                <option value="10:00">10:00</option>
+                                <option value="11:00">11:00</option>
+                                <option value="12:00">12:00</option>
+                                <option value="13:00">13:00</option>
+                                <option value="14:00">14:00</option>
+                                <option value="15:00">15:00</option>
+                                <option value="16:00">16:00</option>
+                                <option value="17:00">17:00</option>
+                                <option value="18:00">18:00</option>
+                                <option value="19:00">19:00</option>
+                                <option value="20:00">20:00</option>
+                            </select>
+
+                            <button type="submit"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] px-3 py-1 rounded w-full sm:w-1/6 transition">
+                                OK
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
                 </div>
-            </div>
-            {% endfor %}
+            </div> <!-- Fecha a div do card do agendamento -->
+            {% endfor %} <!-- Fecha o loop dos agendamentos -->
         </div>
         {% else %}
         <div class="bg-white border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-500">
@@ -224,19 +281,16 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-        // Se a URL veio com hash #agendamentos, ativa a aba correta
         if (window.location.hash === '#agendamentos') {
             mudarAba('agendamentos');
         }
 
-        // Restaura a posição exata da tela se houver um scroll salvo
         const scrollSalvo = localStorage.getItem('scroll_painel_corretor');
         if (scrollSalvo !== null) {
             window.scrollTo(0, parseInt(scrollSalvo));
             localStorage.removeItem('scroll_painel_corretor');
         }
 
-        // Intercepta o clique em qualquer botão de status para salvar o scroll
         const botoesStatus = document.querySelectorAll('.btn-status');
         botoesStatus.forEach(botao => {
             botao.addEventListener('click', () => {
