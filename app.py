@@ -85,6 +85,47 @@ def gerar_proximo_codigo():
             pass
     return "AP0001"
 
+# --- FUNÇÃO PARA PROCESSAR UPLOADS DINÂMICOS DE FOTOS ---
+def processar_upload_fotos_dinamicas(request_files, request_form, codigo, pasta_imovel, fotos_existentes=None):
+    lista_fotos = list(fotos_existentes) if fotos_existentes else []
+    contador_ordem = max([f.get("ordem", 0) for f in lista_fotos], default=0) + 1
+    
+    for key in request_files:
+        if key.startswith("fotos_"):
+            idx = key.split("_")[1]
+            cat_select = request_form.get(f"cat_{idx}")
+            
+            if cat_select == "personalizado":
+                custom_name = request_form.get(f"custom_cat_{idx}", "").strip()
+                cat = custom_name.lower().replace(" ", "_") if custom_name else "outro"
+                legenda = custom_name or "Outro"
+            else:
+                cat = cat_select if cat_select else "outros"
+                legenda = cat.capitalize()
+            
+            arquivos = request_files.getlist(key)
+            for file in arquivos:
+                if file and file.filename != '':
+                    extensao = os.path.splitext(file.filename)[1]
+                    nome_arquivo = secure_filename(f"{codigo}_{cat}_{contador_ordem}{extensao}")
+                    file.save(os.path.join(pasta_imovel, nome_arquivo))
+                    
+                    is_capa = True if (cat == 'capa' and not any(f.get('capa') for f in lista_fotos)) else False
+                    
+                    lista_fotos.append({
+                        "arquivo": f"upload/{codigo}/{nome_arquivo}",
+                        "categoria": cat,
+                        "legenda": legenda,
+                        "ordem": contador_ordem,
+                        "capa": is_capa
+                    })
+                    contador_ordem += 1
+                    
+    if not lista_fotos:
+        lista_fotos.append({"arquivo": f"upload/{codigo}/default.jpg", "categoria": "capa", "legenda": "Capa", "ordem": 1, "capa": True})
+        
+    return lista_fotos
+
 @app.route('/ping')
 def ping():
     return "OK", 200
@@ -121,12 +162,11 @@ def imovel_detalhe(slug):
     endereco_privado = None
     if 'user_id' in session:
         try:
-            # Garante que só exibe o endereço se o usuário realmente existir no banco
             user_check = db.users.find_one({"_id": ObjectId(session.get('user_id'))})
             if user_check:
                 endereco_privado = db.imoveis_enderecos.find_one({"imovel_id": imovel["_id"]})
             else:
-                session.clear() # Se o usuário foi deletado, limpa a sessão fantasma
+                session.clear()
         except Exception:
             session.clear()
         
@@ -407,7 +447,6 @@ def login():
             session['user_id'] = str(user['_id'])
             session['user_nome'] = user['nome']
             session['papel'] = user.get('papel', 'cliente')
-            # flash('Login realizado com sucesso!', 'success')
             
             if user['papel'] == 'admin':
                 return redirect(url_for('admin_imoveis'))
@@ -630,7 +669,6 @@ def meu_perfil():
         telefone = sanitizar_texto(request.form.get('telefone'))
         nova_senha = request.form.get('senha')
         
-        # VERIFICAÇÃO: Se o e-mail foi alterado, checa se já existe em outro usuário
         if email != user.get('email'):
             existe_outro = db.users.find_one({"email": email, "_id": {"$ne": ObjectId(user_id)}})
             if existe_outro:
@@ -649,7 +687,6 @@ def meu_perfil():
         db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
         session['user_nome'] = nome
         
-        # flash("Perfil atualizado com sucesso!", "success")
         return redirect(url_for('meu_perfil'))
         
     return render_template('admin/perfil.html', user=user, active_tab='perfil')
@@ -682,29 +719,7 @@ def admin_imovel_novo():
         pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
         os.makedirs(pasta_imovel, exist_ok=True)
         
-        categorias = ['capa', 'sala', 'cozinha', 'quartos', 'banheiros', 'externa', 'outros']
-        lista_fotos = []
-        contador_ordem = 1
-        
-        for cat in categorias:
-            arquivos_categoria = request.files.getlist(f'fotos_{cat}')
-            for file in arquivos_categoria:
-                if file and file.filename != '':
-                    extensao = os.path.splitext(file.filename)[1]
-                    nome_arquivo = secure_filename(f"{codigo}_{cat}_{contador_ordem}{extensao}")
-                    file.save(os.path.join(pasta_imovel, nome_arquivo))
-                    
-                    lista_fotos.append({
-                        "arquivo": f"upload/{codigo}/{nome_arquivo}",
-                        "categoria": cat,
-                        "legenda": cat.capitalize(),
-                        "ordem": contador_ordem,
-                        "capa": True if cat == 'capa' and contador_ordem == 1 else False
-                    })
-                    contador_ordem += 1
-
-        if not lista_fotos:
-            lista_fotos.append({"arquivo": f"upload/{codigo}/default.jpg", "categoria": "capa", "legenda": "Capa", "ordem": 1, "capa": True})
+        lista_fotos = processar_upload_fotos_dinamicas(request.files, request.form, codigo, pasta_imovel)
 
         imovel_doc = {
             "codigo": codigo,
@@ -778,7 +793,12 @@ def editar_imovel(codigo):
         condominio_id = request.form.get('condominio_id')
         corretor_id = request.form.get('corretor_id')
         
-        # Atualização dos dados principais do imóvel
+        pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
+        os.makedirs(pasta_imovel, exist_ok=True)
+        
+        fotos_atuais = imovel.get("midia", {}).get("fotos", [])
+        lista_fotos = processar_upload_fotos_dinamicas(request.files, request.form, codigo, pasta_imovel, fotos_atuais)
+        
         db.imoveis.update_one(
             {"codigo": codigo},
             {
@@ -799,12 +819,12 @@ def editar_imovel(codigo):
                     "caracteristicas.vagas": int(request.form.get('vagas') or 0),
                     "local_publico.bairro": sanitizar_texto(request.form.get('bairro')),
                     "condominio_id": ObjectId(condominio_id) if condominio_id else None,
-                    "corretor_id": ObjectId(corretor_id) if corretor_id else None
+                    "corretor_id": ObjectId(corretor_id) if corretor_id else None,
+                    "midia.fotos": lista_fotos
                 }
             }
         )
         
-        # Atualização ou Inserção do Endereço Privado
         andar_input = request.form.get('andar')
         andar_val = int(andar_input) if andar_input and andar_input.strip() != "" else None
         
@@ -893,9 +913,6 @@ def alterar_papel(user_id):
             {"_id": ObjectId(user_id)},
             {"$set": {"papel": novo_papel}}
         )
-    #     flash('Papel do utilizador atualizado com sucesso!', 'success')
-    # else:
-    #     flash('Papel inválido.', 'danger')
         
     return redirect(url_for('admin_usuarios'))
 
@@ -905,7 +922,6 @@ def alterar_papel(user_id):
 def excluir_usuario(user_id):
     db = mongo.db
     db.users.delete_one({"_id": ObjectId(user_id)})
-    # flash('Utilizador excluído com sucesso!', 'success')
     return redirect(url_for('admin_usuarios'))
 
 @app.route('/corretor/painel')
