@@ -27,8 +27,8 @@
 
         <!-- Barra de Busca Rápida (Código, Título ou Bairro) e Botão Novo -->
         <div class="flex flex-col sm:flex-row gap-2 items-center">
-            <input type="text" id="input-busca-admin" oninput="filtrarTabelaAdmin()" placeholder="Pesquisar código, título ou bairro..." 
-                class="w-full sm:w-64 px-3 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 font-medium">
+            <input type="text" id="input-busca-admin" oninput="filtrarImoveisAdmin()" placeholder="Pesquisar código, título ou bairro..." 
+                class="w-full sm:w-64 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 font-medium">
             
             <a href="{{ url_for('admin_imovel_novo') }}" class="w-full sm:w-auto text-center bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold px-4 py-2 rounded-lg text-xs uppercase tracking-wider shadow-sm transition">
                 + Adicionar Imóvel
@@ -36,8 +36,75 @@
         </div>
     </div>
 
-    <!-- Tabela / Lista de Imóveis -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <!-- ========================================== -->
+    <!-- VISÃO MOBILE: CARDS ESTILO AGENDAMENTOS    -->
+    <!-- ========================================== -->
+    <div id="container-cards-mobile" class="md:hidden space-y-3">
+        {% for imovel in imoveis %}
+        <div class="card-imovel-mobile bg-white rounded-xl shadow-sm border border-gray-200 p-4"
+             data-busca="{{ (imovel.codigo ~ ' ' ~ imovel.titulo ~ ' ' ~ imovel.local_publico.bairro)|lower }}">
+            
+            <div class="flex items-start gap-3.5">
+                <!-- Miniatura da Foto de Capa -->
+                <div class="w-20 h-20 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 border border-gray-200">
+                    {% if imovel.midia and imovel.midia.fotos and imovel.midia.fotos|length > 0 %}
+                        <img src="{{ url_for('static', filename=imovel.midia.fotos[0].arquivo) }}" 
+                             alt="{{ imovel.titulo }}" 
+                             class="w-full h-full object-cover">
+                    {% else %}
+                        <div class="w-full h-full flex items-center justify-center text-gray-400 text-[10px] font-bold">SEM FOTO</div>
+                    {% endif %}
+                </div>
+
+                <!-- Dados do Imóvel -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-bold text-amber-600 uppercase tracking-wide">
+                            CÓDIGO: {{ imovel.codigo }}
+                        </span>
+                        <span class="bg-green-100 text-green-800 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
+                            {{ imovel.status }}
+                        </span>
+                    </div>
+
+                    <h3 class="font-bold text-slate-900 text-sm leading-snug mt-0.5 truncate">
+                        {{ imovel.titulo }}
+                    </h3>
+
+                    <p class="text-xs text-gray-500 mt-1">
+                        Bairro: <span class="text-gray-700 font-medium">{{ imovel.local_publico.bairro }}</span>
+                    </p>
+
+                    <p class="text-sm font-extrabold text-slate-900 mt-1.5">
+                        R$ {{ "{:,.2f}".format(imovel.precos.venda) }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Botões de Ação no Mobile -->
+            <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
+                <a href="{{ url_for('editar_imovel', codigo=imovel.codigo) }}" 
+                   class="flex-1 text-center py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs transition">
+                    Editar
+                </a>
+                <a href="{{ url_for('admin_imovel_excluir', codigo=imovel.codigo) }}" 
+                   onclick="return confirm('Deseja realmente desativar este imóvel?')"
+                   class="flex-1 text-center py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs transition">
+                    Excluir
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center text-gray-500 text-sm">
+            Nenhum imóvel encontrado para este filtro.
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ========================================== -->
+    <!-- VISÃO DESKTOP: TABELA ORIGINAL             -->
+    <!-- ========================================== -->
+    <div class="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <table class="w-full text-left border-collapse">
             <thead class="bg-slate-50 border-b text-xs uppercase text-slate-600">
                 <tr>
@@ -49,9 +116,9 @@
                     <th class="p-4 text-right">Ações</th>
                 </tr>
             </thead>
-            <tbody id="tabela-imoveis-admin" class="divide-y divide-gray-200 text-sm">
+            <tbody class="divide-y divide-gray-200 text-sm">
                 {% for imovel in imoveis %}
-                <tr class="linha-imovel hover:bg-gray-50 transition" 
+                <tr class="linha-imovel-desktop hover:bg-gray-50 transition"
                     data-busca="{{ (imovel.codigo ~ ' ' ~ imovel.titulo ~ ' ' ~ imovel.local_publico.bairro)|lower }}">
                     <td class="p-4 font-bold text-slate-900">{{ imovel.codigo }}</td>
                     <td class="p-4 text-slate-700 font-medium">{{ imovel.titulo }}</td>
@@ -74,15 +141,27 @@
 
 </div>
 
-<!-- Script de Filtragem Instantânea na Tabela Admin -->
+<!-- Script de Filtragem Instantânea (Aplica tanto nos cards mobile quanto na tabela desktop) -->
 <script>
-    function filtrarTabelaAdmin() {
+    function filtrarImoveisAdmin() {
         let termo = document.getElementById('input-busca-admin').value.toLowerCase().trim();
-        let linhas = document.querySelectorAll('.linha-imovel');
+        
+        // Filtra os cards no formato mobile
+        let cardsMobile = document.querySelectorAll('.card-imovel-mobile');
+        cardsMobile.forEach(card => {
+            let dados = card.getAttribute('data-busca');
+            if (dados.includes(termo)) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
 
-        linhas.forEach(linha => {
-            let dadosBusca = linha.getAttribute('data-busca');
-            if (dadosBusca.includes(termo)) {
+        // Filtra as linhas na tabela desktop
+        let linhasDesktop = document.querySelectorAll('.linha-imovel-desktop');
+        linhasDesktop.forEach(linha => {
+            let dados = linha.getAttribute('data-busca');
+            if (dados.includes(termo)) {
                 linha.style.display = '';
             } else {
                 linha.style.display = 'none';

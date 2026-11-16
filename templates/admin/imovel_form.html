@@ -6,10 +6,10 @@
         {% if editando %}Editar Imóvel: {{ imovel.codigo }}{% else %}Cadastrar Novo Imóvel{% endif %}
     </h1>
     
-    <form method="POST" enctype="multipart/form-data" class="space-y-6">
+    <form method="POST" enctype="multipart/form-data" class="space-y-6" onsubmit="prepararEnvioValores()">
         
         <!-- SEÇÃO 1: INFORMAÇÕES PÚBLICAS -->
-        <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2">1. Informações Públicas e Valores</h2>
+        <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2">Descrição</h2>
         
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
@@ -64,26 +64,26 @@
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Valor Venda (R$)</label>
-                <input type="number" step="0.01" name="preco_venda" value="{{ imovel.precos.venda if editando and imovel.precos else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0.00">
+                <input type="text" id="preco_venda_fmt" oninput="mascaraMoeda(this)" value="{{ '%.2f'|format(imovel.precos.venda) if editando and imovel.precos and imovel.precos.venda else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
+                <input type="hidden" name="preco_venda" id="preco_venda_real" value="{{ imovel.precos.venda if editando and imovel.precos else 0 }}">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Valor Locação (R$)</label>
-                <input type="number" step="0.01" name="preco_locacao" value="{{ imovel.precos.locacao if editando and imovel.precos else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0.00">
+                <input type="text" id="preco_locacao_fmt" oninput="mascaraMoeda(this)" value="{{ '%.2f'|format(imovel.precos.locacao) if editando and imovel.precos and imovel.precos.locacao else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
+                <input type="hidden" name="preco_locacao" id="preco_locacao_real" value="{{ imovel.precos.locacao if editando and imovel.precos else 0 }}">
             </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Condomínio Mensal (R$)</label>
-                <input type="number" step="0.01" name="preco_condominio" value="{{ imovel.precos.condominio if editando and imovel.precos else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0.00">
+                <input type="text" id="preco_condominio_fmt" oninput="mascaraMoeda(this)" value="{{ '%.2f'|format(imovel.precos.condominio) if editando and imovel.precos and imovel.precos.condominio else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
+                <input type="hidden" name="preco_condominio" id="preco_condominio_real" value="{{ imovel.precos.condominio if editando and imovel.precos else 0 }}">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">IPTU Anual/Mensal (R$)</label>
-                <input type="number" step="0.01" name="preco_iptu" value="{{ imovel.precos.iptu if editando and imovel.precos else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0.00">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Bairro (Público)</label>
-                <input type="text" id="campo-bairro" name="bairro" value="{{ imovel.local_publico.bairro if editando and imovel.local_publico else '' }}" required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-gray-50" placeholder="Preenchido pelo CEP">
+                <input type="text" id="preco_iptu_fmt" oninput="mascaraMoeda(this)" value="{{ '%.2f'|format(imovel.precos.iptu) if editando and imovel.precos and imovel.precos.iptu else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
+                <input type="hidden" name="preco_iptu" id="preco_iptu_real" value="{{ imovel.precos.iptu if editando and imovel.precos else 0 }}">
             </div>
         </div>
 
@@ -93,15 +93,15 @@
                 <input type="number" name="area_util" value="{{ imovel.caracteristicas.util if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
             <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Quartos / Q. 2</label>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Quartos</label>
                 <input type="number" name="quartos" value="{{ imovel.caracteristicas.quartos if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
             <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Suítes / Suíte 2</label>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Suítes</label>
                 <input type="number" name="suites" value="{{ imovel.caracteristicas.suites if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
             <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Banheiros / Banh. 2</label>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Banheiros</label>
                 <input type="number" name="banheiros" value="{{ imovel.caracteristicas.banheiros if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
         </div>
@@ -120,7 +120,7 @@
         <!-- ========================================== -->
         <!-- SEÇÃO 2: UPLOAD DE FOTOS POR CÔMODOS        -->
         <!-- ========================================== -->
-        <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">2. Galeria de Fotos por Cômodo</h2>
+        <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">Fotos</h2>
         
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="border-2 border-dashed border-gray-300 p-4 rounded-xl bg-gray-50 text-center">
@@ -166,37 +166,76 @@
         <!-- ========================================== -->
         <!-- SEÇÃO 3: DADOS PRIVADOS                     -->
         <!-- ========================================== -->
-        <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">3. Dados Privados (Endereço Completo)</h2>
+        <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">Endereço</h2>
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div >
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">CEP</label>
                 <input type="text" id="campo-cep" name="cep" value="{{ endereco.cep if editando and endereco else '' }}" maxlength="9" placeholder="Ex: 01426-001" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm font-bold text-slate-900">
             </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            <div>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Logradouro</label>
+                <input type="text" id="campo-logradouro" name="logradouro" value="{{ endereco.logradouro if editando and endereco else '' }}" required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-gray-50">
+            </div>
+
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Número</label>
                 <input type="text" name="numero" value="{{ endereco.numero if editando and endereco else '' }}" required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Ex: 1100">
             </div>
+            
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
             <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Logradouro / Rua</label>
-                <input type="text" id="campo-logradouro" name="logradouro" value="{{ endereco.logradouro if editando and endereco else '' }}" required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-gray-50">
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Bairro</label>
+                <input type="text" id="campo-bairro" name="bairro" value="{{ imovel.local_publico.bairro if editando and imovel.local_publico else '' }}" readonly required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-700 cursor-not-allowed" placeholder="Preenchido via CEP">
             </div>
+
             <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Bloco / Complemento</label>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Complemento</label>
                 <input type="text" name="complemento" value="{{ endereco.complemento if editando and endereco else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Ex: Bloco B, Apto 42">
             </div>
+
         </div>
 
-        <button type="submit" class="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold hover:bg-slate-800 text-sm uppercase tracking-wider transition shadow-md">
+        <button type="submit" class="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold hover:bg-slate-800 text-sm uppercase tracking-wider transition shadow-md cursor-pointer">
             {% if editando %}Salvar Alterações{% else %}Cadastrar Imóvel Completo{% endif %}
         </button>
     </form>
 </div>
 
 <script>
+    // Função para formatar a moeda enquanto digita (1.234.567,89)
+    function mascaraMoeda(input) {
+        let value = input.value.replace(/\D/g, '');
+        if (value === "") {
+            input.value = "";
+            return;
+        }
+        value = (parseInt(value) / 100).toFixed(2);
+        value = value.replace('.', ',');
+        value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        input.value = value;
+    }
+
+    // Converte os valores formatados para float padrão antes de enviar o formulário
+    function prepararEnvioValores() {
+        ['venda', 'locacao', 'condominio', 'iptu'].forEach(campo => {
+            let fmtInput = document.getElementById(`preco_${campo}_fmt`);
+            let realInput = document.getElementById(`preco_${campo}_real`);
+            if (fmtInput && realInput) {
+                let valStr = fmtInput.value.replace(/\./g, '').replace(',', '.');
+                realInput.value = valStr ? parseFloat(valStr) : 0;
+            }
+        });
+    }
+
+    // Consulta de CEP ViaCEP (Preenche logradouro e bairro automático e travado)
     document.getElementById('campo-cep').addEventListener('blur', function() {
         let cep = this.value.replace(/\D/g, '');
         if (cep.length === 8) {
