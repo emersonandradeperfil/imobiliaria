@@ -699,6 +699,174 @@ def meu_perfil():
 
 # --- ROTAS DE GESTÃO DE IMÓVEIS (RESTRITAS EXCLUSIVAMENTE AO ADMIN) ---
 
+# --- SUPER PAINEL DO ADMINISTRADOR ---
+
+@app.route('/admin/painel')
+@login_required
+@admin_required
+def admin_painel():
+    db = mongo.db
+    
+    # Lista de corretores/admins para os selects de atribuição
+    corretores = list(db.users.find({"papel": {"$in": ["corretor", "admin"]}}))
+    
+    # 1. LEADS (Excluindo as buscas personalizadas)
+    pipeline_leads = [
+        {"$match": {"origem": {"$ne": "Busca Personalizada Site (OTP)"}}},
+        {"$sort": {"criado_em": -1}},
+        {"$lookup": {"from": "imoveis", "localField": "imovel_id", "foreignField": "_id", "as": "imovel_info"}},
+        {"$unwind": {"path": "$imovel_info", "preserveNullAndEmptyArrays": True}},
+        {"$lookup": {"from": "users", "localField": "corretor_responsavel_id", "foreignField": "_id", "as": "corretor_info"}},
+        {"$unwind": {"path": "$corretor_info", "preserveNullAndEmptyArrays": True}}
+    ]
+    leads = list(db.leads.aggregate(pipeline_leads))
+    
+    # 2. AGENDAMENTOS
+    pipeline_agendamentos = [
+        {"$sort": {"criado_em": -1}},
+        {"$lookup": {"from": "users", "localField": "cliente_id", "foreignField": "_id", "as": "cliente_info"}},
+        {"$unwind": {"path": "$cliente_info", "preserveNullAndEmptyArrays": True}},
+        {"$lookup": {"from": "imoveis", "localField": "imovel_id", "foreignField": "_id", "as": "imovel_info"}},
+        {"$unwind": {"path": "$imovel_info", "preserveNullAndEmptyArrays": True}},
+        {"$lookup": {"from": "users", "localField": "corretor_responsavel_id", "foreignField": "_id", "as": "corretor_info"}},
+        {"$unwind": {"path": "$corretor_info", "preserveNullAndEmptyArrays": True}}
+    ]
+    agendamentos = list(db.agendamentos.aggregate(pipeline_agendamentos)) if 'agendamentos' in db.list_collection_names() else []
+    
+    # 3. BUSCA PRA MIM (Solicitações de busca personalizada)
+    pipeline_buscas = [
+        {"$match": {"origem": "Busca Personalizada Site (OTP)"}},
+        {"$sort": {"criado_em": -1}},
+        {"$lookup": {"from": "users", "localField": "corretor_responsavel_id", "foreignField": "_id", "as": "corretor_info"}},
+        {"$unwind": {"path": "$corretor_info", "preserveNullAndEmptyArrays": True}}
+    ]
+    buscas = list(db.leads.aggregate(pipeline_buscas))
+    
+    # 4. CURTIDAS (Relatório de usuários e imóveis favoritados)
+    usuarios_favoritos = list(db.users.find({"favoritos": {"$exists": True, "$not": {"$size": 0}}}))
+    curtidas_lista = []
+    for u in usuarios_favoritos:
+        favs = u.get("favoritos", [])
+        imoveis_favs = list(db.imoveis.find({"_id": {"$in": favs}}))
+        for imv in imoveis_favs:
+            curtidas_lista.append({
+                "cliente": u,
+                "imovel": imv
+            })
+            
+    hoje_str = date.today().isoformat()
+    
+    return render_template(
+        'admin/painel.html',
+        corretores=corretores,
+        leads=leads,
+        agendamentos=agendamentos,
+        buscas=buscas,
+        curtidas=curtidas_lista,
+        today=hoje_str,
+        active_tab='admin_painel'
+    )
+
+
+# --- AÇÕES DO ADMIN: ATRIBUIR / REAGENDAR ---
+
+@app.route('/admin/lead/atribuir/<lead_id>', methods=['POST'])
+@login_required
+@admin_required
+def admin_atribuir_lead(lead_id):
+    db = mongo.db
+    corretor_id = request.form.get('corretor_id')
+    
+    update_data = {
+        "corretor_responsavel_id": ObjectId(corretor_id) if corretor_id else None,
+        "status": "em_andamento" if corretor_id else "pendente",
+        "atualizado_em": datetime.utcnow()
+    }
+    
+    db.leads.update_one({"_id": ObjectId(lead_id)}, {"$set": update_data})
+    flash('Corretor atribuído com sucesso!', 'success')
+    return redirect(url_for('admin_painel') + '#leads')
+
+# --- GERAR LEAD A PARTIR DE UMA CURTIDA ---
+@app.route('/admin/curtida/gerar-lead', methods=['POST'])
+@login_required
+@admin_required
+def admin_gerar_lead_de_curtida():
+    db = mongo.db
+    user_id = request.form.get('user_id')
+    imovel_id = request.form.get('imovel_id')
+    corretor_id = request.form.get('corretor_id')
+    
+    cliente = db.users.find_one({"_id": ObjectId(user_id)})
+    if not cliente:
+        flash('Cliente não encontrado.', 'danger')
+        return redirect(url_for('admin_painel') + '#curtidas')
+        
+    # Insere o novo lead na coleção de leads
+    db.leads.insert_one({
+        "nome": cliente.get('nome'),
+        "email": cliente.get('email'),
+        "telefone": cliente.get('telefone'),
+        "imovel_id": ObjectId(imovel_id),
+        "origem": "Curtida de Imóvel (Painel Admin)",
+        "corretor_responsavel_id": ObjectId(corretor_id) if corretor_id else None,
+        "status": "em_andamento" if corretor_id else "pendente",
+        "criado_em": datetime.utcnow()
+    })
+    
+    flash('Lead gerado com sucesso a partir da curtida!', 'success')
+    return redirect(url_for('admin_painel') + '#leads')
+
+@app.route('/admin/agendamento/atribuir/<ag_id>', methods=['POST'])
+@login_required
+@admin_required
+def admin_atribuir_agendamento(ag_id):
+    db = mongo.db
+    corretor_id = request.form.get('corretor_id')
+    
+    update_data = {
+        "corretor_responsavel_id": ObjectId(corretor_id) if corretor_id else None,
+        "status": "em_andamento" if corretor_id else "pendente",
+        "atualizado_em": datetime.utcnow()
+    }
+    
+    db.agendamentos.update_one({"_id": ObjectId(ag_id)}, {"$set": update_data})
+    flash('Corretor atribuído ao agendamento com sucesso!', 'success')
+    return redirect(url_for('admin_painel') + '#agendamentos')
+
+@app.route('/admin/agendamento/reagendar/<ag_id>', methods=['POST'])
+@login_required
+@admin_required
+def admin_reagendar_visita(ag_id):
+    db = mongo.db
+    nova_data = request.form.get('nova_data')
+    nova_hora = request.form.get('nova_hora')
+    
+    if not nova_data or not nova_hora:
+        flash('Informe a nova data e o horário.', 'danger')
+        return redirect(url_for('admin_painel') + '#agendamentos')
+        
+    try:
+        if len(nova_hora.split(':')) == 2:
+            nova_hora += ":00"
+        data_hora_nova = datetime.strptime(f"{nova_data} {nova_hora}", '%Y-%m-%d %H:%M:%S')
+    except Exception:
+        flash('Formato inválido.', 'danger')
+        return redirect(url_for('admin_painel') + '#agendamentos')
+        
+    db.agendamentos.update_one(
+        {"_id": ObjectId(ag_id)},
+        {
+            "$set": {
+                "data_hora": data_hora_nova,
+                "status": "reagendado",
+                "atualizado_em": datetime.utcnow()
+            }
+        }
+    )
+    flash('Visita reagendada com sucesso!', 'success')
+    return redirect(url_for('admin_painel') + '#agendamentos')
+
 @app.route('/admin/imoveis')
 @login_required
 @admin_required

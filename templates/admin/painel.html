@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+    <!-- Cabeçalho do Painel Admin -->
+    <div class="flex flex-col md:flex-row justify-between items-center border-b pb-6 gap-4">
+        <div>
+            <h1 class="text-3xl font-extrabold text-slate-900">Painel do Administrador</h1>
+            <p class="text-xs text-gray-500 mt-1">Gerencie leads, agendamentos, buscas e curtidas da imobiliária.</p>
+        </div>
+
+        <!-- Sistema de Abas (Navegação) -->
+        <div class="flex flex-wrap bg-gray-100 p-1 rounded-xl border border-gray-200 gap-1">
+            <button onclick="mudarAba('leads')" id="btn-aba-leads"
+                class="px-4 py-2 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm">
+                Leads ({{ leads|length }})
+            </button>
+            <button onclick="mudarAba('agendamentos')" id="btn-aba-agendamentos"
+                class="px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
+                Agendamentos ({{ agendamentos|length }})
+            </button>
+            <button onclick="mudarAba('buscas')" id="btn-aba-buscas"
+                class="px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
+                Busca pra mim ({{ buscas|length }})
+            </button>
+            <button onclick="mudarAba('curtidas')" id="btn-aba-curtidas"
+                class="px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
+                Curtidas ({{ curtidas|length }})
+            </button>
+        </div>
+    </div>
+
+    <!-- 1. ABA: LEADS -->
+    <div id="secao-leads" class="space-y-4">
+        {% if leads %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for lead in leads %}
+            <div
+                class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4">
+                <div>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-base">{{ lead.nome }}</h3>
+                            <p class="text-xs text-gray-500 mt-0.5">Contato: <span
+                                    class="font-semibold text-slate-700">{{ lead.telefone }}</span></p>
+                            <p class="text-xs text-gray-600 mt-1">E-mail: <a href="mailto:{{ lead.email }}"
+                                    class="text-blue-600 hover:underline">{{ lead.email }}</a></p>
+                        </div>
+                        <span
+                            class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase {% if lead.corretor_responsavel_id %} bg-blue-50 text-blue-800 border border-blue-200 {% else %} bg-amber-50 text-amber-800 border border-amber-200 {% endif %}">
+                            {{ lead.corretor_info.nome if lead.corretor_info else 'Pendente / Livre' }}
+                        </span>
+                    </div>
+
+                    {% if lead.imovel_info %}
+                    <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-3">
+                        {% set foto_capa = lead.imovel_info.midia.fotos[0].arquivo if lead.imovel_info.midia and
+                        lead.imovel_info.midia.fotos else 'upload/default.jpg' %}
+                        <img src="{{ url_for('static', filename=foto_capa) }}"
+                            class="w-12 h-12 object-cover rounded-md border" alt="Imóvel">
+                        <div class="overflow-hidden">
+                            <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{
+                                lead.imovel_info.codigo }}</span>
+                            <h4 class="text-xs font-bold text-slate-900 truncate">{{ lead.imovel_info.titulo }}</h4>
+                            <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ lead.imovel_info.local_publico.bairro
+                                }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Formulário para Atribuir Corretor -->
+                <div class="pt-3 border-t border-gray-100">
+                    <form action="{{ url_for('admin_atribuir_lead', lead_id=lead._id) }}" method="POST"
+                        class="flex items-center gap-2">
+                        <select name="corretor_id"
+                            class="bg-gray-50 border rounded px-2 py-1.5 text-xs text-slate-800 w-full">
+                            <option value="">-- Deixar Pendente / Sem Corretor --</option>
+                            {% for c in corretores %}
+                            <option value="{{ c._id }}" {% if lead.corretor_responsavel_id and
+                                lead.corretor_responsavel_id|string==c._id|string %}selected{% endif %}>
+                                {{ c.nome }} ({{ c.papel }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit"
+                            class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-1.5 rounded transition">Salvar</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-500">
+            <span class="text-3xl block mb-2">📭</span> Nenhum lead cadastrado.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 2. ABA: AGENDAMENTOS -->
+    <div id="secao-agendamentos" class="space-y-4 hidden">
+        {% if agendamentos %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for ag in agendamentos %}
+            <div
+                class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4">
+                <div>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-base">{{ ag.cliente_info.nome if ag.cliente_info
+                                else 'Cliente' }}</h3>
+                            <p class="text-xs text-gray-500 mt-0.5">Contato: <span
+                                    class="font-semibold text-slate-700">{{ ag.cliente_info.telefone if ag.cliente_info
+                                    else 'Não informado' }}</span></p>
+                        </div>
+                        <span
+                            class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase bg-blue-50 text-blue-800 border border-blue-200">
+                            {{ ag.status|replace('_', ' ') }}
+                        </span>
+                    </div>
+
+                    {% if ag.imovel_info %}
+                    <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-3">
+                        {% set foto_capa_ag = ag.imovel_info.midia.fotos[0].arquivo if ag.imovel_info.midia and
+                        ag.imovel_info.midia.fotos else 'upload/default.jpg' %}
+                        <img src="{{ url_for('static', filename=foto_capa_ag) }}"
+                            class="w-12 h-12 object-cover rounded-md border" alt="Imóvel">
+                        <div class="overflow-hidden">
+                            <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{
+                                ag.imovel_info.codigo }}</span>
+                            <h4 class="text-xs font-bold text-slate-900 truncate">{{ ag.imovel_info.titulo }}</h4>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-3 text-xs bg-slate-50 p-2.5 rounded-lg border">
+                        <span class="font-extrabold text-slate-900 block mb-1">📅 Data da Visita: {{
+                            ag.data_hora.strftime('%d/%m/%Y às %H:%M') if ag.data_hora else 'A definir' }}</span>
+                        {% if ag.observacoes %}<p class="text-gray-600">Obs: {{ ag.observacoes }}</p>{% endif %}
+                    </div>
+                </div>
+
+                <div class="space-y-3 pt-3 border-t border-gray-100">
+                    <!-- Atribuir Corretor -->
+                    <form action="{{ url_for('admin_atribuir_agendamento', ag_id=ag._id) }}" method="POST"
+                        class="flex items-center gap-2">
+                        <select name="corretor_id"
+                            class="bg-gray-50 border rounded px-2 py-1.5 text-xs text-slate-800 w-full">
+                            <option value="">-- Sem Corretor Atribuído --</option>
+                            {% for c in corretores %}
+                            <option value="{{ c._id }}" {% if ag.corretor_responsavel_id and
+                                ag.corretor_responsavel_id|string==c._id|string %}selected{% endif %}>
+                                {{ c.nome }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit"
+                            class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-1.5 rounded transition">Atribuir</button>
+                    </form>
+
+                    <!-- Reagendar Visita -->
+                    <form action="{{ url_for('admin_reagendar_visita', ag_id=ag._id) }}" method="POST"
+                        class="flex gap-2 pt-2 border-t border-gray-100">
+                        <input type="date" name="nova_data" min="{{ today }}" required
+                            class="bg-white border rounded px-2 py-1 text-xs text-slate-800 w-1/2"
+                            style="color-scheme: light;">
+                        <select name="nova_hora" required
+                            class="bg-white border rounded px-2 py-1 text-xs text-slate-800 w-1/3">
+                            <option value="" disabled selected>Hora</option>
+                            {% for h in ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
+                            '16:00', '17:00', '18:00', '19:00', '20:00'] %}
+                            <option value="{{ h }}">{{ h }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] px-3 py-1 rounded w-1/6 transition">Reagendar</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-500">
+            <span class="text-3xl block mb-2">📅</span> Nenhum agendamento registrado.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 3. ABA: BUSCA PRA MIM -->
+    <div id="secao-buscas" class="space-y-4 hidden">
+        {% if buscas %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for busca in buscas %}
+            <div
+                class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4">
+                <div>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-base">{{ busca.nome }}</h3>
+                            <p class="text-xs text-gray-500 mt-0.5">Contato: <span
+                                    class="font-semibold text-slate-700">{{ busca.whatsapp or busca.telefone }}</span>
+                            </p>
+                            <p class="text-xs text-gray-600 mt-1">E-mail: <a href="mailto:{{ busca.email }}"
+                                    class="text-blue-600 hover:underline">{{ busca.email }}</a></p>
+                        </div>
+                        <span
+                            class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase bg-purple-50 text-purple-800 border border-purple-200">
+                            Busca Personalizada
+                        </span>
+                    </div>
+
+                    <div class="mt-4 p-3 bg-amber-50/50 border border-amber-100 rounded-lg text-xs space-y-1">
+                        <p><strong>Tipo Desejado:</strong> {{ busca.tipo_imovel or 'Não especificado' }}</p>
+                        <p><strong>Bairro/Região:</strong> {{ busca.bairro or 'Não especificado' }}</p>
+                        {% if busca.observacoes %}
+                        <p class="mt-2 text-gray-700"><strong>Observações:</strong> {{ busca.observacoes }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Atribuir Corretor para atender esta busca -->
+                <div class="pt-3 border-t border-gray-100">
+                    <form action="{{ url_for('admin_atribuir_lead', lead_id=busca._id) }}" method="POST"
+                        class="flex items-center gap-2">
+                        <select name="corretor_id"
+                            class="bg-gray-50 border rounded px-2 py-1.5 text-xs text-slate-800 w-full">
+                            <option value="">-- Atribuir a um Corretor --</option>
+                            {% for c in corretores %}
+                            <option value="{{ c._id }}" {% if busca.corretor_responsavel_id and
+                                busca.corretor_responsavel_id|string==c._id|string %}selected{% endif %}>
+                                {{ c.nome }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit"
+                            class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-1.5 rounded transition">Encaminhar</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-500">
+            <span class="text-3xl block mb-2">🔍</span> Nenhuma solicitação de "Busca pra mim" registrada.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 4. ABA: CURTIDAS -->
+    <div id="secao-curtidas" class="space-y-4 hidden">
+        {% if curtidas %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50 border-b text-[11px] font-bold text-gray-500 uppercase">
+                        <th class="p-4">Cliente</th>
+                        <th class="p-4">Contato</th>
+                        <th class="p-4">Imóvel Curtido</th>
+                        <th class="p-4 text-right">Ação / Gerar Lead</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-xs">
+                    {% for item in curtidas %}
+                    <tr class="hover:bg-gray-50/50 transition">
+                        <td class="p-4 font-bold text-slate-900">{{ item.cliente.nome }}</td>
+                        <td class="p-4 text-gray-600">
+                            <span class="block font-semibold text-slate-800">{{ item.cliente.telefone or 'Não
+                                informado' }}</span>
+                            <a href="mailto:{{ item.cliente.email }}"
+                                class="block text-[11px] text-blue-600 hover:underline mt-0.5">{{ item.cliente.email
+                                }}</a>
+                        </td>
+                        <td class="p-4">
+                            <div class="flex items-center gap-2">
+                                {% set foto_curtida = item.imovel.midia.fotos[0].arquivo if item.imovel.midia and
+                                item.imovel.midia.fotos else 'upload/default.jpg' %}
+                                <img src="{{ url_for('static', filename=foto_curtida) }}"
+                                    class="w-10 h-10 object-cover rounded border" alt="Imóvel">
+                                <div>
+                                    <span class="font-bold text-amber-600 block">{{ item.imovel.codigo }}</span>
+                                    <span class="text-slate-900 truncate block max-w-xs">{{ item.imovel.titulo }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-4 text-right">
+                            <form action="{{ url_for('admin_gerar_lead_de_curtida') }}" method="POST"
+                                class="flex items-center justify-end gap-2">
+                                <input type="hidden" name="user_id" value="{{ item.cliente._id }}">
+                                <input type="hidden" name="imovel_id" value="{{ item.imovel._id }}">
+
+                                <select name="corretor_id"
+                                    class="bg-gray-50 border rounded px-2 py-1 text-xs text-slate-800">
+                                    <option value="">-- Corretor (Pendente) --</option>
+                                    {% for c in corretores %}
+                                    <option value="{{ c._id }}">{{ c.nome }}</option>
+                                    {% endfor %}
+                                </select>
+
+                                <button type="submit"
+                                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1 rounded transition shadow-sm whitespace-nowrap">
+                                    Gerar Lead
+                                </button>
+
+                                <a href="{{ url_for('imovel_detalhe', slug=item.imovel.slug) }}" target="_blank"
+                                    class="bg-slate-900 hover:bg-amber-600 text-white font-bold px-2.5 py-1 rounded transition"
+                                    title="Ver Imóvel">Imóvel</a>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-white border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-500">
+            <span class="text-3xl block mb-2">❤️</span> Nenhum imóvel curtido por clientes até o momento.
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Script de Abas -->
+<script>
+    function mudarAba(aba) {
+        ['leads', 'agendamentos', 'buscas', 'curtidas'].forEach(item => {
+            const secao = document.getElementById(`secao-${item}`);
+            const btn = document.getElementById(`btn-aba-${item}`);
+            if (item === aba) {
+                secao.classList.remove('hidden');
+                btn.className = "px-4 py-2 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm";
+                history.pushState(null, null, `#${aba}`);
+            } else {
+                secao.classList.add('hidden');
+                btn.className = "px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900";
+            }
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const hash = window.location.hash.replace('#', '');
+        if (['leads', 'agendamentos', 'buscas', 'curtidas'].includes(hash)) {
+            mudarAba(hash);
+        }
+    });
+</script>
+{% endblock %}
