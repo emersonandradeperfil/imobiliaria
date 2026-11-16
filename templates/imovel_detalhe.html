@@ -117,13 +117,10 @@
                                 style="scrollbar-width: none; -ms-overflow-style: none;">
                                 
                                 {% for foto in fotos_cat %}
-                                <!-- CORREÇÃO DAS ASPAS AQUI EMBAIXO -->
                                 <div onclick='abrirLightbox("{{ foto.arquivo }}", {{ fotos_cat | map(attribute="arquivo") | list | tojson | safe }}, {{ loop.index0 }})'
                                     class="min-w-[200px] max-w-[200px] sm:min-w-[240px] sm:max-w-[240px] rounded-xl overflow-hidden shadow-sm border bg-white h-36 flex-shrink-0 cursor-pointer group relative">
                                     <img src="{{ url_for('static', filename=foto.arquivo) }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-                                    <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                                        <!-- <span class="bg-slate-900/80 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">🔍 Ampliar</span> -->
-                                    </div>
+                                    <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center"></div>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -147,29 +144,34 @@
         <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-xl space-y-6">
             <div>
                 {% if endereco_privado %}
+                    
+                    <!-- Lógica para definir se exibe o número completo ou restrito apenas à rua -->
+                    {% if session.get('papel') in ['admin', 'corretor'] %}
+                        {% set endereco_exibicao = endereco_privado.logradouro ~ ', nº ' ~ endereco_privado.numero ~ ((' - ' ~ endereco_privado.complemento) if endereco_privado.complemento else '') ~ ' - ' ~ imovel.local_publico.bairro ~ ' - CEP: ' ~ endereco_privado.cep %}
+                        {% set endereco_mapa = endereco_privado.logradouro ~ ', ' ~ endereco_privado.numero ~ ' - ' ~ imovel.local_publico.bairro ~ ' - São Paulo - SP' %}
+                    {% else %}
+                        {% set endereco_exibicao = endereco_privado.logradouro ~ ' - ' ~ imovel.local_publico.bairro ~ ' - CEP: ' ~ endereco_privado.cep %}
+                        {% set endereco_mapa = endereco_privado.logradouro ~ ' - ' ~ imovel.local_publico.bairro ~ ' - São Paulo - SP' %}
+                    {% endif %}
+
                 <p class="text-sm text-gray-300">
-                    {{ endereco_privado.logradouro }}, nº {{ endereco_privado.numero }}
-                    {% if endereco_privado.complemento %}- {{ endereco_privado.complemento }}{% endif %}
-                    - {{ imovel.local_publico.bairro }} - CEP: {{ endereco_privado.cep }}
+                    {{ endereco_exibicao }}
                 </p>
             
                 <!-- MINI MAPA EMBUTIDO -->
-                {% set endereco_completo = endereco_privado.logradouro ~ ', ' ~ endereco_privado.numero ~ ' - ' ~
-                imovel.local_publico.bairro ~ ' - São Paulo - SP' %}
-                
                 <div class="mt-4 rounded-xl overflow-hidden border border-slate-700 h-64 w-full">
                     <iframe width="100%" height="100%" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"
-                        src="https://maps.google.com/maps?q={{ endereco_completo | urlencode }}&t=&z=15&ie=UTF8&iwloc=&output=embed">
+                        src="https://maps.google.com/maps?q={{ endereco_mapa | urlencode }}&t=&z=15&ie=UTF8&iwloc=&output=embed">
                     </iframe>
                 </div>
             
                 <div class="flex flex-wrap gap-3 mt-4">
-                    <a href="https://waze.com/ul?q={{ endereco_completo | urlencode }}" target="_blank"
+                    <a href="https://waze.com/ul?q={{ endereco_mapa | urlencode }}" target="_blank"
                         class="inline-flex items-center gap-2 bg-white hover:bg-gray-100 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition shadow">
                         <span>Waze</span>
                     </a>
             
-                    <a href="https://www.google.com/maps/search/?api=1&query={{ endereco_completo | urlencode }}" target="_blank"
+                    <a href="https://www.google.com/maps/search/?api=1&query={{ endereco_mapa | urlencode }}" target="_blank"
                         class="inline-flex items-center gap-2 bg-white hover:bg-gray-100 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition shadow">
                         <span>Maps</span>
                     </a>
@@ -191,7 +193,6 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[11px] font-semibold text-gray-400 mb-1">Data da Visita</label>
-                            <!-- Adicionado o atributo min="{{ today }}" aqui -->
                             <input type="date" name="data" id="campo-data" min="{{ today }}" required
                                 class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
                                 style="color-scheme: light;">
@@ -342,7 +343,6 @@
 
 <!-- Scripts de Carrossel, Data e Lightbox -->
 <script>
-    // --- FUNÇÕES DE CARROSSEL DAS SEÇÕES ---
     function rolarCarrosselSecao(id, deslocamento) {
         const elemento = document.getElementById(id);
         if (elemento) {
@@ -350,7 +350,6 @@
         }
     }
 
-    // --- VARIÁVEIS E FUNÇÕES DO LIGHTBOX CORRIGIDAS ---
     let listaFotosAtual = [];
     let indiceFotoAtual = 0;
 
@@ -375,24 +374,17 @@
         atualizarExibicaoLightbox();
     }
 
-        // --- SUPORTE A SWIPE (DESLIZAR COM O DEDO) NO LIGHTBOX ---
     document.addEventListener("DOMContentLoaded", () => {
         let touchstartX = 0;
         let touchendX = 0;
-
-        // Elemento onde o lightbox/modal é exibido (ajuste o seletor se o ID do seu modal for diferente)
         const lightboxContainer = document.getElementById('lightbox-modal') || document.body;
 
         function processarSwipe() {
-            const distanciaMinima = 50; // Pixels mínimos para considerar um swipe válido
-
+            const distanciaMinima = 50;
             if (touchendX < touchstartX - distanciaMinima) {
-                // Deslizou para a ESQUERDA -> Avança para a próxima foto (+1)
                 mudarFotoLightbox(1);
             }
-            
             if (touchendX > touchstartX + distanciaMinima) {
-                // Deslizou para a DIREITA -> Volta para a foto anterior (-1)
                 mudarFotoLightbox(-1);
             }
         }
@@ -416,7 +408,6 @@
         }
     }
 
-    // Fechar lightbox com tecla ESC ou setas do teclado
     document.addEventListener('keydown', function(e) {
         let modal = document.getElementById('lightbox-modal');
         if (!modal.classList.contains('hidden')) {
@@ -426,7 +417,6 @@
         }
     });
 
-    // --- SCRIPTS DE OTP E DATA ---
     function abrirModalLead() {
         document.getElementById('modal-lead').classList.remove('hidden');
     }
@@ -505,24 +495,6 @@
             });
         }
     });
-
-    document.addEventListener("DOMContentLoaded", () => {
-        // Seleciona todos os inputs de data que possuem o atributo 'min'
-        const inputsData = document.querySelectorAll('input[type="date"][min]');
-        
-        inputsData.endswith = inputsData.forEach(input => {
-            input.addEventListener('change', function() {
-                const dataSelecionada = this.value;
-                const dataMinima = this.min;
-                
-                if (dataSelecionada && dataMinima && dataSelecionada < dataMinima) {
-                    alert('Você não pode selecionar uma data anterior a hoje!');
-                    this.value = ''; // Limpa o campo
-                }
-            });
-        });
-    });
-
 </script>
 
 <style>
