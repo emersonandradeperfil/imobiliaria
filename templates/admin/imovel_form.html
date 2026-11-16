@@ -24,26 +24,28 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Corretor Responsável (Opcional)</label>
-                <select name="corretor_id" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-white">
-                    <option value="">Nenhum / Geral da Imobiliária</option>
-                    {% for c in corretores %}
-                        <option value="{{ c._id }}" {% if editando and imovel.corretor_id and imovel.corretor_id|string == c._id|string %}selected{% endif %}>
-                            {{ c.nome }} ({{ c.papel }})
-                        </option>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Proprietário</label>
+                <select name="proprietario_id" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm">
+                    <option value="">Nenhum</option>
+                    {% for prop in proprietarios %}
+                    <option value="{{ prop._id }}" {% if imovel and imovel.proprietario_id==prop._id %}selected{% endif %}>
+                        {{ prop.codigo }} - {{ prop.nome }} ({{ prop.email }})
+                    </option>
                     {% endfor %}
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Condomínio (Opcional)</label>
-                <select name="condominio_id" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-white">
-                    <option value="">Nenhum / Edifício Isolado</option>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Condomínio</label>
+                <input type="text" name="condominio_nome" list="lista-condominios"
+                    placeholder="Selecione da lista ou digite um novo..."
+                    value="{% if editando and imovel.condominio_nome %}{{ imovel.condominio_nome }}{% endif %}"
+                    class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-white">
+            
+                <datalist id="lista-condominios">
                     {% for cond in condominios %}
-                        <option value="{{ cond._id }}" {% if editando and imovel.condominio_id and imovel.condominio_id|string == cond._id|string %}selected{% endif %}>
-                            {{ cond.nome }}
-                        </option>
-                    {% endfor %}
-                </select>
+                    <option value="{{ cond.nome }}">
+                        {% endfor %}
+                </datalist>
             </div>
         </div>
 

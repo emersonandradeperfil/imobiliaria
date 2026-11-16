@@ -25,24 +25,36 @@
             </a>
         </div>
 
-        <!-- Barra de Busca Rápida (Código, Título ou Bairro) e Botão Novo -->
+        <!-- Barra de Busca Rápida e Botão Novo (Restrito para Admin) -->
         <div class="flex flex-col sm:flex-row gap-2 items-center">
-            <input type="text" id="input-busca-admin" oninput="filtrarImoveisAdmin()" placeholder="Pesquisar código, título ou bairro..." 
-                class="w-full sm:w-64 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 font-medium">
+            <input type="text" id="input-busca-admin" oninput="filtrarImoveisAdmin()" placeholder="Pesquisar código, bairro, condomínio, proprietário ou data..." 
+                class="w-full sm:w-80 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 font-medium">
             
+            {% if session.get('papel') == 'admin' %}
             <a href="{{ url_for('admin_imovel_novo') }}" class="w-full sm:w-auto text-center bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold px-4 py-2 rounded-lg text-xs uppercase tracking-wider shadow-sm transition">
                 + Adicionar Imóvel
             </a>
+            {% endif %}
         </div>
     </div>
 
     <!-- ========================================== -->
-    <!-- VISÃO MOBILE: CARDS ESTILO AGENDAMENTOS    -->
+    <!-- VISÃO MOBILE: CARDS                        -->
     <!-- ========================================== -->
     <div id="container-cards-mobile" class="md:hidden space-y-3">
         {% for imovel in imoveis %}
+        {% set nome_condominio = imovel.condominio_info.nome if imovel.condominio_info else 'N/D' %}
+        {% set nome_proprietario = imovel.proprietario_info.nome if imovel.proprietario_info else '' %}
+        {% set data_formatada = imovel.criado_em.strftime('%d/%m/%Y') if imovel.criado_em else '' %}
+        
+        {% if session.get('papel') == 'admin' %}
+            {% set string_busca = imovel.codigo ~ ' ' ~ imovel.local_publico.bairro ~ ' ' ~ nome_condominio ~ ' ' ~ nome_proprietario ~ ' ' ~ data_formatada %}
+        {% else %}
+            {% set string_busca = imovel.codigo ~ ' ' ~ imovel.local_publico.bairro ~ ' ' ~ nome_condominio ~ ' ' ~ data_formatada %}
+        {% endif %}
+
         <div class="card-imovel-mobile bg-white rounded-xl shadow-sm border border-gray-200 p-4"
-             data-busca="{{ (imovel.codigo ~ ' ' ~ imovel.titulo ~ ' ' ~ imovel.local_publico.bairro)|lower }}">
+             data-busca="{{ string_busca|lower }}">
             
             <div class="flex items-start gap-3.5">
                 <!-- Miniatura da Foto de Capa -->
@@ -68,21 +80,34 @@
                     </div>
 
                     <h3 class="font-bold text-slate-900 text-sm leading-snug mt-0.5 truncate">
-                        {{ imovel.titulo }}
+                        Condomínio: {{ nome_condominio }}
                     </h3>
 
                     <p class="text-xs text-gray-500 mt-1">
                         Bairro: <span class="text-gray-700 font-medium">{{ imovel.local_publico.bairro }}</span>
                     </p>
 
-                    <p class="text-sm font-extrabold text-slate-900 mt-1.5">
-                        R$ {{ "{:,.2f}".format(imovel.precos.venda) }}
-                    </p>
+                    <!-- Informações Restritas ao Admin no Mobile -->
+                    {% if session.get('papel') == 'admin' %}
+                    <div class="mt-2 pt-2 border-t border-gray-100 text-[11px] text-gray-600 space-y-0.5">
+                        <p><strong>Proprietário:</strong> {{ nome_proprietario if nome_proprietario else 'Não vinculado' }}</p>
+                        <p><strong>Cadastrado por:</strong> {{ imovel.criador_info.nome if imovel.criador_info else 'Sistema' }}</p>
+                        <p><strong>Data:</strong> {{ imovel.criado_em.strftime('%d/%m/%Y %H:%M') if imovel.criado_em else '-' }}</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 
             <!-- Botões de Ação no Mobile -->
             <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
+                <!-- Botão Ver imóvel -->
+                <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" 
+                   class="flex-1 text-center py-2 rounded-lg bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold text-xs transition">
+                    Ver imóvel
+                </a>
+
+                <!-- Botões de Editar/Excluir (Apenas Admin) -->
+                {% if session.get('papel') == 'admin' %}
                 <a href="{{ url_for('editar_imovel', codigo=imovel.codigo) }}" 
                    class="flex-1 text-center py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs transition">
                     Editar
@@ -92,6 +117,7 @@
                    class="flex-1 text-center py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs transition">
                     Excluir
                 </a>
+                {% endif %}
             </div>
         </div>
         {% else %}
@@ -102,37 +128,71 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- VISÃO DESKTOP: TABELA ORIGINAL             -->
+    <!-- VISÃO DESKTOP: TABELA                      -->
     <!-- ========================================== -->
     <div class="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <table class="w-full text-left border-collapse">
             <thead class="bg-slate-50 border-b text-xs uppercase text-slate-600">
                 <tr>
                     <th class="p-4">Código</th>
-                    <th class="p-4">Título</th>
+                    <th class="p-4">Condomínio</th>
                     <th class="p-4">Bairro</th>
-                    <th class="p-4">Valor Venda</th>
+                    {% if session.get('papel') == 'admin' %}
+                    <th class="p-4">Proprietário</th>
+                    <th class="p-4">Cadastrado Por / Data</th>
+                    {% endif %}
                     <th class="p-4">Status</th>
                     <th class="p-4 text-right">Ações</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 text-sm">
                 {% for imovel in imoveis %}
+                {% set nome_condominio = imovel.condominio_info.nome if imovel.condominio_info else 'N/D' %}
+                {% set nome_proprietario = imovel.proprietario_info.nome if imovel.proprietario_info else '' %}
+                {% set data_formatada = imovel.criado_em.strftime('%d/%m/%Y') if imovel.criado_em else '' %}
+
+                {% if session.get('papel') == 'admin' %}
+                    {% set string_busca_desk = imovel.codigo ~ ' ' ~ imovel.local_publico.bairro ~ ' ' ~ nome_condominio ~ ' ' ~ nome_proprietario ~ ' ' ~ data_formatada %}
+                {% else %}
+                    {% set string_busca_desk = imovel.codigo ~ ' ' ~ imovel.local_publico.bairro ~ ' ' ~ nome_condominio ~ ' ' ~ data_formatada %}
+                {% endif %}
+
                 <tr class="linha-imovel-desktop hover:bg-gray-50 transition"
-                    data-busca="{{ (imovel.codigo ~ ' ' ~ imovel.titulo ~ ' ' ~ imovel.local_publico.bairro)|lower }}">
+                    data-busca="{{ string_busca_desk|lower }}">
                     <td class="p-4 font-bold text-slate-900">{{ imovel.codigo }}</td>
-                    <td class="p-4 text-slate-700 font-medium">{{ imovel.titulo }}</td>
+                    <td class="p-4 text-slate-800 font-semibold">{{ nome_condominio }}</td>
                     <td class="p-4 text-gray-500">{{ imovel.local_publico.bairro }}</td>
-                    <td class="p-4 font-semibold text-slate-900">R$ {{ "{:,.2f}".format(imovel.precos.venda) }}</td>
+                    
+                    {% if session.get('papel') == 'admin' %}
+                    <td class="p-4 text-xs text-slate-700">
+                        <span class="font-medium">{{ nome_proprietario if nome_proprietario else 'Não vinculado' }}</span>
+                        {% if imovel.proprietario_info and imovel.proprietario_info.codigo %}
+                            <span class="block text-[10px] text-gray-400">({{ imovel.proprietario_info.codigo }})</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-4 text-xs text-slate-600">
+                        <span class="font-medium">{{ imovel.criador_info.nome if imovel.criador_info else 'Sistema' }}</span>
+                        <span class="block text-[10px] text-gray-400">
+                            {{ imovel.criado_em.strftime('%d/%m/%Y %H:%M') if imovel.criado_em else '-' }}
+                        </span>
+                    </td>
+                    {% endif %}
+
                     <td class="p-4"><span class="bg-green-100 text-green-800 text-xs px-2.5 py-1 rounded-full font-semibold">{{ imovel.status }}</span></td>
+                    
+                    <!-- Coluna de Ações com o link 'Ver imóvel' -->
                     <td class="p-4 text-right space-x-3">
+                        <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" class="text-slate-900 hover:text-amber-600 font-bold text-xs uppercase">Ver imóvel</a>
+                        
+                        {% if session.get('papel') == 'admin' %}
                         <a href="{{ url_for('editar_imovel', codigo=imovel.codigo) }}" class="text-blue-600 hover:underline font-semibold text-xs">Editar</a>
                         <a href="{{ url_for('admin_imovel_excluir', codigo=imovel.codigo) }}" class="text-red-600 hover:underline font-semibold text-xs" onclick="return confirm('Deseja realmente desativar este imóvel?')">Excluir</a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" class="p-6 text-center text-gray-500">Nenhum imóvel encontrado.</td>
+                    <td colspan="{% if session.get('papel') == 'admin' %}7{% else %}5{% endif %}" class="p-6 text-center text-gray-500">Nenhum imóvel encontrado.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -141,12 +201,11 @@
 
 </div>
 
-<!-- Script de Filtragem Instantânea (Aplica tanto nos cards mobile quanto na tabela desktop) -->
+<!-- Script de Filtragem Instantânea -->
 <script>
     function filtrarImoveisAdmin() {
         let termo = document.getElementById('input-busca-admin').value.toLowerCase().trim();
         
-        // Filtra os cards no formato mobile
         let cardsMobile = document.querySelectorAll('.card-imovel-mobile');
         cardsMobile.forEach(card => {
             let dados = card.getAttribute('data-busca');
@@ -157,7 +216,6 @@
             }
         });
 
-        // Filtra as linhas na tabela desktop
         let linhasDesktop = document.querySelectorAll('.linha-imovel-desktop');
         linhasDesktop.forEach(linha => {
             let dados = linha.getAttribute('data-busca');

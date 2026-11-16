@@ -30,11 +30,11 @@
                     <a href="{{ url_for('index') }}" class="hover:text-amber-400 transition font-medium">Início</a>
         
                     {% if session.get('user_id') %}
-                    <span class="text-slate-300 hidden sm:inline">|</span>
+                    
                     <span class="text-gray-300 text-sm">Olá, {{ session.get('user_nome').split()[0] if session.get('user_nome')
                         else '' }}</span>
                     <a href="{{ url_for('logout') }}" class="text-amber-400 hover:text-white transition font-medium">
-                        | Sair
+                    Sair
                     </a>
                     {% else %}
                     <a href="{{ url_for('login') }}" class="hover:text-amber-400 transition font-medium"
@@ -61,9 +61,9 @@
                         {% endif %}">PAINEL</a>
 
                 {% elif session.get('papel') == 'corretor' %}
-                    <a href="{{ url_for('painel_corretor') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PAINEL</a>
-                    
                     <a href="{{ url_for('meu_perfil') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PERFIL</a>
+                    <a href="{{ url_for('admin_imoveis') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">IMÓVEIS</a>
+                    <a href="{{ url_for('painel_corretor') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PAINEL</a>
 
                 {% elif session.get('papel') == 'cliente' %}
                     <a href="{{ url_for('meus_favoritos') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' or active_tab == 'agendamentos' %}bg-slate-900 text-white{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PAINEL</a>
