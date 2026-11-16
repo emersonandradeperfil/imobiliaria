@@ -246,70 +246,73 @@
         {% endif %}
     </div>
 
-    <!-- 4. ABA: CURTIDAS -->
+    <!-- 4. ABA: CURTIDAS (Em formato de Cards Responsivos) -->
     <div id="secao-curtidas" class="space-y-4 hidden">
         {% if curtidas %}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-gray-50 border-b text-[11px] font-bold text-gray-500 uppercase">
-                        <th class="p-4">Cliente</th>
-                        <th class="p-4">Contato</th>
-                        <th class="p-4">Imóvel Curtido</th>
-                        <th class="p-4 text-right">Ação / Gerar Lead</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 text-xs">
-                    {% for item in curtidas %}
-                    <tr class="hover:bg-gray-50/50 transition">
-                        <td class="p-4 font-bold text-slate-900">{{ item.cliente.nome }}</td>
-                        <td class="p-4 text-gray-600">
-                            <span class="block font-semibold text-slate-800">{{ item.cliente.telefone or 'Não
-                                informado' }}</span>
-                            <a href="mailto:{{ item.cliente.email }}"
-                                class="block text-[11px] text-blue-600 hover:underline mt-0.5">{{ item.cliente.email
-                                }}</a>
-                        </td>
-                        <td class="p-4">
-                            <div class="flex items-center gap-2">
-                                {% set foto_curtida = item.imovel.midia.fotos[0].arquivo if item.imovel.midia and
-                                item.imovel.midia.fotos else 'upload/default.jpg' %}
-                                <img src="{{ url_for('static', filename=foto_curtida) }}"
-                                    class="w-10 h-10 object-cover rounded border" alt="Imóvel">
-                                <div>
-                                    <span class="font-bold text-amber-600 block">{{ item.imovel.codigo }}</span>
-                                    <span class="text-slate-900 truncate block max-w-xs">{{ item.imovel.titulo }}</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="p-4 text-right">
-                            <form action="{{ url_for('admin_gerar_lead_de_curtida') }}" method="POST"
-                                class="flex items-center justify-end gap-2">
-                                <input type="hidden" name="user_id" value="{{ item.cliente._id }}">
-                                <input type="hidden" name="imovel_id" value="{{ item.imovel._id }}">
-
-                                <select name="corretor_id"
-                                    class="bg-gray-50 border rounded px-2 py-1 text-xs text-slate-800">
-                                    <option value="">-- Corretor (Pendente) --</option>
-                                    {% for c in corretores %}
-                                    <option value="{{ c._id }}">{{ c.nome }}</option>
-                                    {% endfor %}
-                                </select>
-
-                                <button type="submit"
-                                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1 rounded transition shadow-sm whitespace-nowrap">
-                                    Gerar Lead
-                                </button>
-
-                                <a href="{{ url_for('imovel_detalhe', slug=item.imovel.slug) }}" target="_blank"
-                                    class="bg-slate-900 hover:bg-amber-600 text-white font-bold px-2.5 py-1 rounded transition"
-                                    title="Ver Imóvel">Imóvel</a>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for item in curtidas %}
+            <div
+                class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
+                <div>
+                    <!-- Cabeçalho do Card: Informações do Cliente -->
+                    <div class="flex justify-between items-start pb-3 border-b border-gray-100">
+                        <div>
+                            
+                            <h3 class="font-bold text-slate-900 text-base">{{ item.cliente.nome }}</h3>
+                            <p class="text-xs text-gray-500 mt-1">{{ item.cliente.telefone or 'Não informado' }}</p>
+                            <p class="text-xs text-blue-600 mt-0.5"><a href="mailto:{{ item.cliente.email }}"
+                                    class="hover:underline">{{ item.cliente.email }}</a></p>
+                        </div>
+                    </div>
+    
+                    <!-- Imóvel Curtido -->
+                    {% if item.imovel %}
+                    <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-3">
+                        {% set foto_curtida = item.imovel.midia.fotos[0].arquivo if item.imovel.midia and
+                        item.imovel.midia.fotos else 'upload/default.jpg' %}
+                        <img src="{{ url_for('static', filename=foto_curtida) }}"
+                            class="w-14 h-14 object-cover rounded-md border flex-shrink-0" alt="Imóvel">
+                        <div class="overflow-hidden">
+                            <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{ item.imovel.codigo
+                                }}</span>
+                            <h4 class="text-xs font-bold text-slate-900 truncate">{{ item.imovel.titulo }}</h4>
+                            <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ item.imovel.local_publico.bairro }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+    
+                <!-- Ações: Gerar Lead e Ver Imóvel -->
+                <div class="pt-3 border-t border-gray-100 space-y-3">
+                    <form action="{{ url_for('admin_gerar_lead_de_curtida') }}" method="POST" class="space-y-2">
+                        <input type="hidden" name="user_id" value="{{ item.cliente._id }}">
+                        <input type="hidden" name="imovel_id" value="{{ item.imovel._id }}">
+    
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <select name="corretor_id"
+                                class="bg-gray-50 border rounded px-3 py-2 text-xs text-slate-800 w-full">
+                                <option value="">-- Corretor (Pendente) --</option>
+                                {% for c in corretores %}
+                                <option value="{{ c._id }}">{{ c.nome }}</option>
+                                {% endfor %}
+                            </select>
+    
+                            <button type="submit"
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition shadow-sm whitespace-nowrap">
+                                GERAR LEAD
+                            </button>
+                        </div>
+                    </form>
+    
+                    <div class="flex flex-col sm:flex-row">
+                        <a href="{{ url_for('imovel_detalhe', slug=item.imovel.slug) }}" target="_blank"
+                            class="bg-gray-300 hover:bg-emerald-700 text-gray-500 font-bold text-center text-xs px-4 py-2 rounded-lg transition shadow-sm whitespace-nowrap">
+                            DETALHES
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
         </div>
         {% else %}
         <div class="bg-white border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-500">
