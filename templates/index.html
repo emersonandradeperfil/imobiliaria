@@ -17,13 +17,13 @@
 
     <!-- Conteúdo Central sobreposto ao Vídeo -->
     <div class="relative z-10 max-w-5xl mx-auto px-4 text-center space-y-3 md:space-y-4">
-        <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight drop-shadow-md">
+        <h1 class=" fonte-marca text-5xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight drop-shadow-md">
             TECA BORGES
         </h1>
         <div class="text-gray-200 uppercase tracking-wider space-y-1.5 drop-shadow">
-            <p class="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-amber-400">
+            <!-- <p class="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-amber-400">
                 Venda • Locação • Avaliação e Perícia Judicial
-            </p>
+            </p> -->
             <p class="text-[11px] sm:text-xs md:text-sm lg:text-base text-gray-200">
                 Administração de Bens Imóveis e Condomínios
             </p>
@@ -31,10 +31,10 @@
     </div>
 </div>
 
-<div class="max-w-7xl mx-auto px-6 sm:px-8 py-6 space-y-8">
+<div class="max-w-7xl mx-auto px-6 sm:px-8 py-8 space-y-10">
 
     <!-- Botão Gatilho para Abrir/Fechar os Filtros -->
-    <div class="flex pt-1">
+    <div class="flex items-center justify-between gap-4 pt-1">
         <button type="button" onclick="togglePainelFiltros()" id="btn-toggle-filtros"
             class="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-900 text-slate-900 hover:text-white border border-gray-300 hover:border-slate-900 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm transition cursor-pointer">
             <span id="texto-btn-filtrar">Filtrar</span>
@@ -51,15 +51,15 @@
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
                 <div class="flex items-center gap-2 flex-wrap">
                     <button type="button" onclick="mudarFinalidade('')" id="btn-fin-todos"
-                        class="btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition bg-slate-900 text-white shadow-sm">
+                        class="btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition bg-slate-900 text-white shadow-sm cursor-pointer">
                         Todos
                     </button>
                     <button type="button" onclick="mudarFinalidade('venda')" id="btn-fin-venda"
-                        class="btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition bg-gray-100 text-gray-700 hover:bg-gray-200">
+                        class="btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer">
                         Comprar
                     </button>
                     <button type="button" onclick="mudarFinalidade('locacao')" id="btn-fin-locacao"
-                        class="btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition bg-gray-100 text-gray-700 hover:bg-gray-200">
+                        class="btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer">
                         Alugar
                     </button>
                 </div>
@@ -102,104 +102,163 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- SEÇÕES DE IMÓVEIS (CARROSSÉIS)             -->
+    <!-- VITRINE DE IMÓVEIS (3 POR LINHA, ATÉ 9)    -->
     <!-- ========================================== -->
-    <div id="container-secoes" class="space-y-12">
-        {% for categoria, lista_imoveis in secoes.items() %}
-        {% if lista_imoveis %}
-        <div class="secao-categoria w-full space-y-4 relative">
-
-            <!-- Título da Seção -->
-            <div class="flex justify-between items-center border-b pb-2">
-                <h2 class="text-xl font-bold text-slate-900 uppercase tracking-wide">{{ categoria }}</h2>
-                <span class="contador-secao text-xs font-semibold text-gray-400">
-                    {{ lista_imoveis|length }} imóvel{{ 'is' if lista_imoveis|length > 1 else '' }}
-                </span>
-            </div>
-
-            <!-- Wrapper Relativo para posicionar as setas e o carrossel -->
-            <div class="relative group">
-                <button onclick="rolarCarrossel('carrossel-{{ loop.index }}', -320)"
-                    class="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 bg-slate-900/80 hover:bg-slate-900 text-white w-10 h-10 rounded-full items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100 focus:opacity-100">
-                    ❮
-                </button>
-
-                <!-- Carrossel Horizontal -->
-                <div id="carrossel-{{ loop.index }}"
-                    class="flex overflow-x-auto space-x-6 pb-4 pt-2 scroll-smooth no-scrollbar"
-                    style="scrollbar-width: none; -ms-overflow-style: none;">
+    <div id="container-vitrine" class="space-y-8">
+        <div id="grid-imoveis" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
+            {% for categoria, lista_imoveis in secoes.items() %}
+                {% for imovel in lista_imoveis %}
+                <div id="imovel-{{ imovel._id }}"
+                    onclick="window.location.href='{{ url_for('imovel_detalhe', slug=imovel.slug) }}'"
+                    data-tipo="{{ imovel.tipo|lower }}"
+                    data-venda="{{ '1' if imovel.precos.venda and imovel.precos.venda > 0 else '0' }}"
+                    data-locacao="{{ '1' if imovel.precos.locacao and imovel.precos.locacao > 0 else '0' }}"
+                    data-busca="{{ (imovel.titulo ~ ' ' ~ imovel.local_publico.bairro ~ ' ' ~ imovel.codigo ~ ' ' ~ imovel.tipo)|lower }}"
+                    class="card-imovel bg-white rounded-none border border-gray-200 overflow-hidden flex flex-col justify-between hover:shadow-md transition cursor-pointer group">
                     
-                    {% for imovel in lista_imoveis %}
-                    <div id="imovel-{{ imovel._id }}"
-                        data-tipo="{{ imovel.tipo|lower }}"
-                        data-venda="{{ '1' if imovel.precos.venda and imovel.precos.venda > 0 else '0' }}"
-                        data-locacao="{{ '1' if imovel.precos.locacao and imovel.precos.locacao > 0 else '0' }}"
-                        data-busca="{{ (imovel.titulo ~ ' ' ~ imovel.local_publico.bairro ~ ' ' ~ imovel.codigo)|lower }}"
-                        class="card-imovel min-w-[290px] max-w-[290px] sm:min-w-[300px] sm:max-w-[300px] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-shrink-0 flex flex-col justify-between hover:shadow-md transition">
-                        
-                        <div>
-                            <div class="relative">
-                                {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else 'upload/default.jpg' %}
-                                <img src="{{ url_for('static', filename=capa) }}" alt="Capa" class="w-full h-48 object-cover">
-                                
-                                <div class="absolute top-2.5 left-2.5 flex flex-col gap-1">
-                                    {% if imovel.precos.venda and imovel.precos.venda > 0 %}
-                                    <span class="bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded shadow uppercase">Venda</span>
-                                    {% endif %}
-                                    {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
-                                    <span class="bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded shadow uppercase">Locação</span>
-                                    {% endif %}
-                                </div>
-
-                                <span class="absolute top-2.5 right-2.5 bg-slate-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm">
-                                    {{ imovel.codigo }}
-                                </span>
+                    <div>
+                        <!-- Foto de Capa -->
+                        <div class="relative h-56 w-full bg-slate-100 overflow-hidden">
+                            {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else 'upload/default.jpg' %}
+                            <img src="{{ url_for('static', filename=capa) }}" alt="{{ imovel.titulo }}"
+                                class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            
+                            <div class="absolute top-3 left-3 flex flex-col gap-1">
+                                {% if imovel.precos.venda and imovel.precos.venda > 0 %}
+                                <span class="bg-slate-900/90 text-white text-[10px] font-semibold px-2.5 py-0.5 uppercase tracking-widest">Venda</span>
+                                {% endif %}
+                                {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
+                                <span class="bg-emerald-800/90 text-white text-[10px] font-semibold px-2.5 py-0.5 uppercase tracking-widest">Locação</span>
+                                {% endif %}
                             </div>
 
-                            <div class="p-4">
-                                <span class="text-xs font-bold text-amber-600 uppercase">{{ imovel.tipo }}</span>
-                                <h3 class="font-bold text-base text-slate-900 mt-1 truncate">{{ imovel.titulo }}</h3>
-                                <p class="text-xs text-gray-500 mt-1">{{ imovel.local_publico.bairro }} - São Paulo/SP</p>
-                                
-                                <div class="mt-3 space-y-1">
-                                    {% if imovel.precos.venda and imovel.precos.venda > 0 %}
-                                    <p class="text-sm font-extrabold text-slate-900">
-                                        Venda: R$ {{ "{:,.2f}".format(imovel.precos.venda).replace(',', 'v').replace('.', ',').replace('v', '.') }}
-                                    </p>
-                                    {% endif %}
-                                    {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
-                                    <p class="text-xs font-bold text-emerald-600">
-                                        Locação: R$ {{ "{:,.2f}".format(imovel.precos.locacao).replace(',', 'v').replace('.', ',').replace('v', '.') }}/mês
-                                    </p>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="p-4 bg-gray-50 border-t flex justify-between items-center">
-                            <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}"
-                                class="w-32 h-10 bg-slate-900 hover:bg-amber-600 text-white font-bold text-xs uppercase flex items-center justify-center transition rounded-lg">Ver Detalhes</a>
-
-                            <button onclick="clicarFavorito('{{ imovel._id }}')"
-                                class="text-lg transition transform active:scale-125 focus:outline-none p-1" title="Favoritar">
+                            <button type="button"
+                                onclick="event.stopPropagation(); clicarFavorito('{{ imovel._id }}')"
+                                class="absolute top-3 right-3 bg-white/90 hover:bg-white w-8 h-8 rounded-full flex items-center justify-center text-sm shadow transition transform active:scale-125 focus:outline-none cursor-pointer"
+                                title="Favoritar">
                                 <span id="coracao-{{ imovel._id }}">
                                     {% if session.get('user_id') and imovel._id|string in favoritos_ids %}❤️{% else %}🤍{% endif %}
                                 </span>
                             </button>
                         </div>
-                    </div>
-                    {% endfor %}
-                </div>
 
-                <button onclick="rolarCarrossel('carrossel-{{ loop.index }}', 320)"
-                    class="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 bg-slate-900/80 hover:bg-slate-900 text-white w-10 h-10 rounded-full items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100 focus:opacity-100">
-                    ❯
-                </button>
-            </div>
+                        <!-- Cabeçalho: Tipo + Código e Título/Localização -->
+                        <div class="px-5 pt-4 pb-3 space-y-1.5">
+                            <div class="flex items-center justify-between gap-2 text-[11px] font-semibold tracking-[0.08em] uppercase text-slate-500">
+                                <span>{{ imovel.tipo }}</span>
+                                <span class="font-medium text-slate-400">{{ imovel.codigo }}</span>
+                            </div>
+
+                            <h3 class="font-medium text-[17px] text-slate-900 leading-[1.35] tracking-[-0.01em] line-clamp-2">
+                                {{ imovel.titulo }}{% if imovel.local_publico and imovel.local_publico.bairro %} - {{ imovel.local_publico.bairro }}{% endif %}
+                            </h3>
+                        </div>
+                    </div>
+
+                    <div>
+                        <!-- 4 Especificações com Ícones: Metragem, Dormitório, Banheiro e Vaga -->
+                        <div class="px-5 py-3 border-t border-b border-gray-100 grid grid-cols-4 gap-2 text-[12px] text-slate-700 font-normal">
+                            <!-- 1. Metragem útil -->
+                            <div class="flex items-center gap-1.5" title="Área útil">
+                                <svg class="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                                </svg>
+                                <span class="truncate">{{ imovel.caracteristicas.util }} m²</span>
+                            </div>
+
+                            <!-- 2. Dormitórios -->
+                            <div class="flex items-center gap-1.5" title="Dormitórios">
+                                <svg class="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                                </svg>
+                                <span>{{ imovel.caracteristicas.quartos }}</span>
+                            </div>
+
+                            <!-- 3. Banheiros -->
+                            <div class="flex items-center gap-1.5" title="Banheiros">
+                                <svg class="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 14h16v3a3 3 0 01-3 3H7a3 3 0 01-3-3v-3z" />
+                                </svg>
+                                <span>{{ imovel.caracteristicas.banheiros }}</span>
+                            </div>
+
+                            <!-- 4. Vagas -->
+                            <div class="flex items-center gap-1.5" title="Vagas">
+                                <svg class="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                                </svg>
+                                <span>{{ imovel.caracteristicas.vagas }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Preço -->
+                        <div class="px-5 py-4 space-y-1">
+                            {% if imovel.precos.venda and imovel.precos.venda > 0 %}
+                            <p class="text-[19px] font-semibold text-slate-950 tracking-[-0.02em]">
+                                R$ {{ "{:,.2f}".format(imovel.precos.venda).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+                            </p>
+                            {% endif %}
+                            {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
+                            <p class="text-[14px] font-medium text-emerald-800 tracking-[-0.01em]">
+                                R$ {{ "{:,.2f}".format(imovel.precos.locacao).replace(',', 'v').replace('.', ',').replace('v', '.') }} / mês
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endfor %}
         </div>
-        {% endif %}
-        {% endfor %}
+
+        <!-- Botão Ver Mais Imóveis -->
+        <div id="area-ver-mais" class="hidden pt-4 text-center">
+            <button type="button" id="btn-ver-mais" onclick="expandirTodosImoveis()"
+                class="px-8 py-3 bg-white hover:bg-slate-900 text-slate-900 hover:text-white border border-slate-900 font-medium text-sm tracking-[-0.01em] transition shadow-sm cursor-pointer">
+                Ver mais imóveis
+            </button>
+        </div>
     </div>
+
+    <!-- ========================================== -->
+    <!-- QUEM É A CORRETORA (ESTILO EDITORIAL)      -->
+    <!-- ========================================== -->
+    <section class="w-full max-w-6xl mx-auto px-4 sm:px-6 pt-4">
+        <div class="bg-white border border-gray-200 overflow-hidden grid grid-cols-1 lg:grid-cols-12 shadow-sm">
+    
+            <!-- Coluna Esquerda: Texto -->
+            <div class="lg:col-span-7 p-8 sm:p-12 flex flex-col justify-center space-y-5 bg-stone-50/70">
+                <h2 class="fonte-marca text-3xl sm:text-4xl text-slate-900 leading-tight">
+                    Teca Borges
+                </h2>
+    
+                <div class="space-y-4 text-sm sm:text-[15px] text-slate-700 leading-relaxed font-normal">
+                    <p>
+                        Teca Borges atua com foco em <strong>Venda, Locação, Avaliação e Perícia Judicial</strong>, além de
+                        <strong>Administração de Bens Imóveis e Condomínios</strong>, oferecendo um atendimento próximo,
+                        técnico e transparente para quem compra, vende, aluga ou administra patrimônio.
+                    </p>
+                    <p>
+                        Cada imóvel exige leitura de mercado, critério na precificação e atenção aos detalhes jurídicos e
+                        operacionais. Na avaliação e na perícia judicial, o trabalho segue rigor técnico para entregar
+                        laudos confiáveis e fundamentados.
+                    </p>
+                    <p>
+                        Na administração de bens e condomínios, o foco está na organização, na preservação do patrimônio e
+                        na tranquilidade de proprietários e moradores no dia a dia.
+                    </p>
+                </div>
+            </div>
+    
+            <!-- Coluna Direita: Imagem -->
+            <div class="lg:col-span-5 min-h-[320px] sm:min-h-[420px] bg-slate-200 relative overflow-hidden">
+                <!-- Troque o arquivo abaixo pela foto da corretora ou da fachada/arquitetura quando quiser -->
+                <img src="{{ url_for('static', filename='img/info.webp') }}"
+                    alt="Teca Borges - Imóveis, Avaliação, Perícia e Administração" class="w-full h-full object-cover">
+            </div>
+    
+        </div>
+    </section>
 
     <!-- ========================================== -->
     <!-- FORMULÁRIO: NÃO ENCONTROU O QUE PROCURAVA? -->
@@ -350,11 +409,13 @@
     </div>
 </div>
 
-<!-- Scripts de Filtragem, Carrossel, Favoritos com OTP e Busca Personalizada com OTP -->
+<!-- Scripts de Filtragem, Paginação (9 + Ver mais), Favoritos com OTP e Busca Personalizada com OTP -->
 <script>
     let imovelPendenteId = null;
     let usuarioLogadoDesteCliente = {{ 'true' if session.get('user_id') else 'false' }};
     let finalidadeSelecionada = '';
+    const LIMITE_INICIAL = 9;
+    let mostrarTodosImoveis = false;
 
     // --- ABRIR / FECHAR PAINEL DE FILTROS ---
     function togglePainelFiltros() {
@@ -371,7 +432,13 @@
         }
     }
 
-    // --- LÓGICA DE FILTRAGEM SEM REFRESH ---
+    // --- EXPANDIR TODOS OS IMÓVEIS ---
+    function expandirTodosImoveis() {
+        mostrarTodosImoveis = true;
+        aplicarFiltros();
+    }
+
+    // --- LÓGICA DE FILTRAGEM + LIMITE DE 9 IMÓVEIS ---
     function mudarFinalidade(novaFinalidade) {
         finalidadeSelecionada = novaFinalidade;
 
@@ -384,10 +451,11 @@
 
         Object.keys(botoes).forEach(chave => {
             const btn = botoes[chave].el;
-            btn.className = 'btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition ' + 
+            btn.className = 'btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ' + 
                             (chave === finalidadeSelecionada ? botoes[chave].ativa : classeInativa);
         });
 
+        mostrarTodosImoveis = false;
         aplicarFiltros();
     }
 
@@ -395,47 +463,52 @@
         const tipoSelecionado = document.getElementById('select-tipo').value.toLowerCase();
         const termoBusca = document.getElementById('input-busca').value.toLowerCase().trim();
 
-        const secoes = document.querySelectorAll('.secao-categoria');
-        let totalVisiveisGeral = 0;
+        const cards = document.querySelectorAll('#grid-imoveis .card-imovel');
+        const cardsCompativeis = [];
 
-        secoes.forEach(secao => {
-            const cards = secao.querySelectorAll('.card-imovel');
-            let visiveisNaSecao = 0;
+        cards.forEach(card => {
+            const tipoCard = card.getAttribute('data-tipo');
+            const temVenda = card.getAttribute('data-venda') === '1';
+            const temLocacao = card.getAttribute('data-locacao') === '1';
+            const textoBusca = card.getAttribute('data-busca');
 
-            cards.forEach(card => {
-                const tipoCard = card.getAttribute('data-tipo');
-                const temVenda = card.getAttribute('data-venda') === '1';
-                const temLocacao = card.getAttribute('data-locacao') === '1';
-                const textoBusca = card.getAttribute('data-busca');
+            const passaFinalidade = !finalidadeSelecionada || 
+                                    (finalidadeSelecionada === 'venda' && temVenda) || 
+                                    (finalidadeSelecionada === 'locacao' && temLocacao);
+            const passaTipo = !tipoSelecionado || tipoCard === tipoSelecionado;
+            const passaBusca = !termoBusca || textoBusca.includes(termoBusca);
 
-                const passaFinalidade = !finalidadeSelecionada || 
-                                        (finalidadeSelecionada === 'venda' && temVenda) || 
-                                        (finalidadeSelecionada === 'locacao' && temLocacao);
-                const passaTipo = !tipoSelecionado || tipoCard === tipoSelecionado;
-                const passaBusca = !termoBusca || textoBusca.includes(termoBusca);
-
-                if (passaFinalidade && passaTipo && passaBusca) {
-                    card.classList.remove('hidden');
-                    visiveisNaSecao++;
-                    totalVisiveisGeral++;
-                } else {
-                    card.classList.add('hidden');
-                }
-            });
-
-            if (visiveisNaSecao === 0) {
-                secao.classList.add('hidden');
+            if (passaFinalidade && passaTipo && passaBusca) {
+                cardsCompativeis.push(card);
             } else {
-                secao.classList.remove('hidden');
-                const contadorEl = secao.querySelector('.contador-secao');
-                if (contadorEl) {
-                    contadorEl.textContent = visiveisNaSecao + (visiveisNaSecao === 1 ? ' imóvel' : ' imóveis');
-                }
+                card.classList.add('hidden');
             }
         });
 
+        const totalCompativeis = cardsCompativeis.length;
+        const limiteAtivo = mostrarTodosImoveis ? totalCompativeis : LIMITE_INICIAL;
+
+        cardsCompativeis.forEach((card, index) => {
+            if (index < limiteAtivo) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+
+        const areaVerMais = document.getElementById('area-ver-mais');
+        const btnVerMais = document.getElementById('btn-ver-mais');
+        const restantes = totalCompativeis - LIMITE_INICIAL;
+
+        if (!mostrarTodosImoveis && restantes > 0) {
+            areaVerMais.classList.remove('hidden');
+            btnVerMais.textContent = `Ver mais ${restantes} ${restantes === 1 ? 'imóvel' : 'imóveis'}`;
+        } else {
+            areaVerMais.classList.add('hidden');
+        }
+
         const msgVazio = document.getElementById('mensagem-vazio');
-        if (totalVisiveisGeral === 0) {
+        if (totalCompativeis === 0) {
             msgVazio.classList.remove('hidden');
         } else {
             msgVazio.classList.add('hidden');
@@ -445,17 +518,15 @@
     function limparFiltros() {
         document.getElementById('select-tipo').value = '';
         document.getElementById('input-busca').value = '';
+        mostrarTodosImoveis = false;
         mudarFinalidade('');
     }
 
-    // --- CARROSSEL E FAVORITOS ---
-    function rolarCarrossel(id, deslocamento) {
-        const elemento = document.getElementById(id);
-        if (elemento) {
-            elemento.scrollBy({ left: deslocamento, behavior: 'smooth' });
-        }
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+        aplicarFiltros();
+    });
 
+    // --- FAVORITOS ---
     function clicarFavorito(imoid) {
         if (usuarioLogadoDesteCliente) {
             toggleFavorito(imoid);
@@ -545,7 +616,6 @@
 
             if (data.status === 'success') {
                 fecharModalOtpFavorito();
-                // Redireciona direto para a página de favoritos do cliente
                 window.location.href = data.redirect_url || "{{ url_for('meus_favoritos') }}";
             } else {
                 alert(data.message || 'Código incorreto!');
@@ -622,9 +692,4 @@
         }
     }
 </script>
-
-<style>
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-</style>
 {% endblock %}
