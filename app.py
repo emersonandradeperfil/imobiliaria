@@ -84,8 +84,8 @@ def corretor_ou_admin_required(f):
 def proprietario_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if session.get('papel') != 'proprietario':
-            flash('Acesso restrito a proprietários.', 'danger')
+        if session.get('papel') not in ['proprietario', 'parceiro']:
+            flash('Acesso restrito a proprietários e parceiros.', 'danger')
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated_function
@@ -101,15 +101,16 @@ def gerar_proximo_codigo():
             pass
     return "AP0001"
 
-def gerar_codigo_proprietario():
-    ultimo_prop = mongo.db.users.find_one({"papel": "proprietario"}, sort=[("criado_em", -1)])
+def gerar_codigo_proprietario(papel="proprietario"):
+    prefixo = "PA" if papel == "parceiro" else "PR"
+    ultimo_prop = mongo.db.users.find_one({"papel": papel}, sort=[("criado_em", -1)])
     if ultimo_prop and "codigo" in ultimo_prop:
         try:
             numero = int(ultimo_prop["codigo"][2:]) + 1
-            return f"PR{numero:04d}"
+            return f"{prefixo}{numero:04d}"
         except ValueError:
             pass
-    return "PR0001"
+    return f"{prefixo}0001"
 
 # --- FUNÇÃO PARA PROCESSAR UPLOADS DINÂMICOS DE FOTOS ---
 def processar_upload_fotos_dinamicas(request_files, request_form, codigo, pasta_imovel, fotos_existentes=None):
@@ -566,7 +567,7 @@ def login():
                 return redirect(url_for('admin_imoveis'))
             elif user['papel'] == 'corretor':
                 return redirect(url_for('painel_corretor'))
-            elif user['papel'] == 'proprietario':
+            elif user['papel'] in ['proprietario', 'parceiro']:
                 return redirect(url_for('painel_proprietario'))
             if proxima_pagina:
                 return redirect(proxima_pagina)
@@ -833,7 +834,7 @@ def meu_perfil():
         
     return render_template('admin/perfil.html', user=user, active_tab='perfil')
 
-# --- PAINEL DO PROPRIETÁRIO ---
+# --- PAINEL DO PROPRIETÁRIO / PARCEIRO ---
 @app.route('/proprietario/painel')
 @login_required
 @proprietario_required
@@ -841,7 +842,7 @@ def painel_proprietario():
     db = mongo.db
     proprietario_id = ObjectId(session.get('user_id'))
     
-    # 1. Imóveis cadastrados no nome deste proprietário
+    # 1. Imóveis cadastrados no nome deste proprietário/parceiro
     imoveis_prop = list(db.imoveis.find({"proprietario_id": proprietario_id, "status": "ativo"}))
     imovel_ids = [imv["_id"] for imv in imoveis_prop]
     
@@ -859,7 +860,7 @@ def painel_proprietario():
             "leads": total_leads
         })
         
-    # 2. Agendamentos de visitas para os imóveis deste proprietário
+    # 2. Agendamentos de visitas para os imóveis deste proprietário/parceiro
     agendamentos = []
     if 'agendamentos' in db.list_collection_names() and imovel_ids:
         pipeline_ag = [
@@ -872,7 +873,7 @@ def painel_proprietario():
         ]
         agendamentos = list(db.agendamentos.aggregate(pipeline_ag))
         
-    # 3. Favoritos / Interessados (Clientes que curtiram os imóveis do proprietário)
+    # 3. Favoritos / Interessados (Clientes que curtiram os imóveis)
     interessados_curtidas = []
     if imovel_ids:
         usuarios_fav = list(db.users.find({"ativo": {"$ne": False}, "favoritos": {"$in": imovel_ids}}))
@@ -1151,7 +1152,7 @@ def admin_imovel_novo():
         flash(f'Imóvel {codigo} cadastrado com sucesso!', 'success')
         return redirect(url_for('admin_imoveis'))
         
-    proprietarios = list(db.users.find({"papel": "proprietario", "ativo": {"$ne": False}}))
+    proprietarios = list(db.users.find({"papel": {"$in": ["proprietario", "parceiro"]}, "ativo": {"$ne": False}}))
     condominios = list(db.condominios.find())
     codigo_sugerido = gerar_proximo_codigo()
     return render_template('admin/imovel_form.html', proprietarios=proprietarios, condominios=condominios, codigo_sugerido=codigo_sugerido, active_tab='imoveis')
@@ -1244,7 +1245,7 @@ def editar_imovel(codigo):
         flash(f'Imóvel {codigo} atualizado com sucesso!', 'success')
         return redirect(url_for('admin_imoveis'))
         
-    proprietarios = list(db.users.find({"papel": "proprietario", "ativo": {"$ne": False}}))
+    proprietarios = list(db.users.find({"papel": {"$in": ["proprietario", "parceiro"]}, "ativo": {"$ne": False}}))
     condominios = list(db.condominios.find())
     endereco = db.imoveis_enderecos.find_one({"imovel_id": imovel["_id"]})
     
@@ -1323,8 +1324,8 @@ def admin_usuarios():
                 "ativo": True, 
                 "criado_em": datetime.now(BR_TZ)
             }
-            if papel == 'proprietario':
-                novo_usuario["codigo"] = gerar_codigo_proprietario()
+            if papel in ['proprietario', 'parceiro']:
+                novo_usuario["codigo"] = gerar_codigo_proprietario(papel)
                 
             db.users.insert_one(novo_usuario)
             flash('Cadastrado com sucesso!', 'success')
@@ -1340,7 +1341,7 @@ def alterar_papel(user_id):
     db = mongo.db
     novo_papel = sanitizar_texto(request.form.get('papel'))
     
-    if novo_papel in ['admin', 'corretor', 'cliente', 'proprietario']:
+    if novo_papel in ['admin', 'corretor', 'cliente', 'proprietario', 'parceiro']:
         db.users.update_one(
             {"_id": ObjectId(user_id)},
             {"$set": {"papel": novo_papel}}
