@@ -51,7 +51,7 @@
 
         <div>
             <label class="block text-xs font-semibold mb-1 text-gray-700">Descrição Longa</label>
-            <textarea name="descricao" rows="3" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-900 outline-none" placeholder="Detalhes e diferenciais do imóvel...">{% if editando %}{{ imovel.descricao }}{% endif %}</textarea>
+            <textarea name="descricao" rows="4" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-900 outline-none" placeholder="Detalhes e diferenciais do imóvel...">{% if editando %}{{ imovel.descricao }}{% endif %}</textarea>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -76,7 +76,7 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Condomínio Mensal (R$)</label>
                 <input type="text" id="preco_condominio_fmt" oninput="mascaraMoeda(this)" value="{{ '%.2f'|format(imovel.precos.condominio) if editando and imovel.precos and imovel.precos.condominio else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
@@ -89,10 +89,14 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Área Útil (m²)</label>
-                <input type="number" name="area_util" value="{{ imovel.caracteristicas.util if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
+                <input type="number" step="0.01" name="area_util" value="{{ imovel.caracteristicas.util if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Área Total (m²)</label>
+                <input type="number" step="0.01" name="area_total" value="{{ imovel.caracteristicas.total if editando and imovel.caracteristicas and imovel.caracteristicas.total else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Quartos</label>
@@ -106,16 +110,62 @@
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Banheiros</label>
                 <input type="number" name="banheiros" value="{{ imovel.caracteristicas.banheiros if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs font-semibold mb-1 text-gray-700">Vagas de Garagem</label>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Vagas</label>
                 <input type="number" name="vagas" value="{{ imovel.caracteristicas.vagas if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
-            <div class="flex items-center pt-5">
-                <input type="checkbox" name="destaque" id="destaque" value="1" {% if editando and imovel.destaque %}checked{% endif %} class="w-4 h-4 text-amber-500 rounded border-gray-300">
-                <label for="destaque" class="ml-2 text-sm font-semibold text-slate-800">Destacar na Home?</label>
+        </div>
+
+        <div class="flex items-center pt-1">
+            <input type="checkbox" name="destaque" id="destaque" value="1" {% if editando and imovel.destaque %}checked{% endif %} class="w-4 h-4 text-amber-500 rounded border-gray-300">
+            <label for="destaque" class="ml-2 text-sm font-semibold text-slate-800">Destacar na Home?</label>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- CARACTERÍSTICAS POR CATEGORIA             -->
+        <!-- ========================================== -->
+        {% set feats = imovel.caracteristicas.itens if editando and imovel.caracteristicas and imovel.caracteristicas.itens else {} %}
+        <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">Características</h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-xs text-slate-800 bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <div class="space-y-2">
+                <p class="font-bold uppercase text-slate-700">Facilidades</p>
+                {% for item in ['Portaria 24h', 'Vaga demarcada', 'Acessibilidade', 'Vaga carro elétrico', 'Gerador', 'Próximo ao metrô'] %}
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="feat_facilidades" value="{{ item }}" {% if item in (feats.facilidades or []) %}checked{% endif %} class="rounded border-gray-300">
+                    <span>{{ item }}</span>
+                </label>
+                {% endfor %}
+            </div>
+
+            <div class="space-y-2">
+                <p class="font-bold uppercase text-slate-700">Diferenciais</p>
+                {% for item in ['Reformado', 'Depósito privativo', 'Ar-condicionado', 'Pet place', 'Um por andar', 'Permite animais', 'Aquecimento à gás', 'Hall privativo'] %}
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="feat_diferenciais" value="{{ item }}" {% if item in (feats.diferenciais or []) %}checked{% endif %} class="rounded border-gray-300">
+                    <span>{{ item }}</span>
+                </label>
+                {% endfor %}
+            </div>
+
+            <div class="space-y-2">
+                <p class="font-bold uppercase text-slate-700">Área externa</p>
+                {% for item in ['Churrasqueira', 'Academia', 'Piscina', 'Sauna', 'Área verde', 'Bicicletário', 'Salão de festas', 'Piscina aquecida'] %}
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="feat_area_externa" value="{{ item }}" {% if item in (feats.area_externa or []) %}checked{% endif %} class="rounded border-gray-300">
+                    <span>{{ item }}</span>
+                </label>
+                {% endfor %}
+            </div>
+
+            <div class="space-y-2">
+                <p class="font-bold uppercase text-slate-700">Cômodos</p>
+                {% for item in ['Home office', 'Área de serviço', 'Lavabo', 'Closet', 'Varanda / Terraço', 'Copa'] %}
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="feat_comodos" value="{{ item }}" {% if item in (feats.comodos or []) %}checked{% endif %} class="rounded border-gray-300">
+                    <span>{{ item }}</span>
+                </label>
+                {% endfor %}
             </div>
         </div>
 
@@ -124,7 +174,6 @@
         <!-- ========================================== -->
         <div class="border-t pt-4 space-y-4">
             <div class="flex items-center justify-between border-b pb-2 pt-4">
-
                 <div>
                     <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider">Fotos</h2>
                 </div>
@@ -166,6 +215,27 @@
         {% endif %}
 
         <!-- ========================================== -->
+        <!-- VÍDEOS YOUTUBE (ÁREA PRIVADA DA GALERIA)   -->
+        <!-- ========================================== -->
+        <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">Vídeos (YouTube)</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Link do Vídeo 1</label>
+                <input type="url" name="video_youtube_1"
+                    value="{{ imovel.midia.videos[0].url_original if editando and imovel.midia and imovel.midia.videos and imovel.midia.videos|length > 0 else '' }}"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    class="w-full p-2.5 border border-gray-300 rounded-lg text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Link do Vídeo 2 (opcional)</label>
+                <input type="url" name="video_youtube_2"
+                    value="{{ imovel.midia.videos[1].url_original if editando and imovel.midia and imovel.midia.videos and imovel.midia.videos|length > 1 else '' }}"
+                    placeholder="https://youtu.be/..."
+                    class="w-full p-2.5 border border-gray-300 rounded-lg text-sm">
+            </div>
+        </div>
+
+        <!-- ========================================== -->
         <!-- SEÇÃO 3: ENDEREÇO                           -->
         <!-- ========================================== -->
         <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">Endereço</h2>
@@ -173,7 +243,7 @@
         <div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">CEP</label>
-                <input type="text" id="campo-cep" name="cep" value="{{ endereco.cep if editando and endereco else '' }}" maxlength="9" placeholder="Digite o CEP" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm  text-slate-900">
+                <input type="text" id="campo-cep" name="cep" value="{{ endereco.cep if editando and endereco else '' }}" maxlength="9" placeholder="Digite o CEP" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm text-slate-900">
             </div>
         </div>
 
@@ -256,14 +326,12 @@
         btn.closest('.comodo-item').remove();
     }
 
-    // Adiciona o primeiro bloco (Capa) automaticamente se estiver vazio ao abrir
     window.addEventListener('DOMContentLoaded', () => {
         if (document.querySelectorAll('.comodo-item').length === 0) {
             adicionarComodo('capa');
         }
     });
 
-    // Formatação de Moeda
     function mascaraMoeda(input) {
         let value = input.value.replace(/\D/g, '');
         if (value === "") {
@@ -287,7 +355,6 @@
         });
     }
 
-    // Consulta CEP ViaCEP
     document.getElementById('campo-cep').addEventListener('blur', function() {
         let cep = this.value.replace(/\D/g, '');
         if (cep.length === 8) {
@@ -331,6 +398,5 @@
             alert("Erro de conexão ao remover foto.");
         }
     }
-
 </script>
 {% endblock %}

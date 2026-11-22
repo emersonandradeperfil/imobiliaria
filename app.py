@@ -12,6 +12,7 @@ from werkzeug.utils import secure_filename
 from bson.objectid import ObjectId
 import requests
 from dotenv import load_dotenv
+import re
 
 # Carrega as variáveis de ambiente do arquivo .env local
 load_dotenv()
@@ -190,6 +191,34 @@ def imovel_detalhe(slug):
     
     condominio = db.condominios.find_one({"_id": imovel.get("condominio_id")})
     
+    bairro_atual = (imovel.get("local_publico") or {}).get("bairro", "").strip()
+    imoveis_destaque = []
+    ids_excluidos = [imovel["_id"]]
+
+    # 1. Busca até 5 imóveis ativos do mesmo bairro (sem o próprio imóvel)
+    if bairro_atual:
+        mesmo_bairro = list(
+            db.imoveis.find({
+                "status": "ativo",
+                "_id": {"$nin": ids_excluidos},
+                "local_publico.bairro": {"$regex": f"^{bairro_atual}$", "$options": "i"}
+            }).sort("criado_em", -1).limit(5)
+        )
+        imoveis_destaque.extend(mesmo_bairro)
+        ids_excluidos.extend([i["_id"] for i in mesmo_bairro])
+
+    # 2. Se faltar para completar 5, preenche com os destaques da página inicial
+    if len(imoveis_destaque) < 5:
+        faltam = 5 - len(imoveis_destaque)
+        extras_home = list(
+            db.imoveis.find({
+                "status": "ativo",
+                "destaque": True,
+                "_id": {"$nin": ids_excluidos}
+            }).sort("criado_em", -1).limit(faltam)
+        )
+        imoveis_destaque.extend(extras_home)
+    
     endereco_privado = None
     if 'user_id' in session:
         try:
@@ -205,9 +234,33 @@ def imovel_detalhe(slug):
         'imovel_detalhe.html', 
         imovel=imovel, 
         condominio=condominio, 
+        imoveis_destaque=imoveis_destaque,
         endereco_privado=endereco_privado,
         today=datetime.now(BR_TZ).date().isoformat()
     )
+
+@app.route('/imovel/<slug>/galeria')
+def imovel_galeria(slug):
+    db = mongo.db
+    imovel = db.imoveis.find_one({"slug": slug, "status": "ativo"})
+    if not imovel:
+        return "Imóvel não encontrado", 404
+
+    if 'user_id' not in session:
+        flash('Faça login ou libere seu acesso na página do imóvel para ver a galeria completa.', 'warning')
+        return redirect(url_for('imovel_detalhe', slug=slug))
+
+    try:
+        user_check = db.users.find_one({"_id": ObjectId(session.get('user_id')), "ativo": {"$ne": False}})
+        if not user_check:
+            session.clear()
+            return redirect(url_for('imovel_detalhe', slug=slug))
+    except Exception:
+        session.clear()
+        return redirect(url_for('imovel_detalhe', slug=slug))
+
+    aba_inicial = request.args.get('aba', 'fotos')
+    return render_template('imovel_galeria.html', imovel=imovel, aba_inicial=aba_inicial)
 
 # --- OTP PERSISTIDO NO MONGODB ---
 
@@ -1102,6 +1155,24 @@ def admin_imovel_novo():
     condominios = list(db.condominios.find())
     codigo_sugerido = gerar_proximo_codigo()
     return render_template('admin/imovel_form.html', proprietarios=proprietarios, condominios=condominios, codigo_sugerido=codigo_sugerido, active_tab='imoveis')
+
+def extrair_youtube_embed(url_texto):
+    if not url_texto:
+        return None
+    url_texto = url_texto.strip()
+    padroes = [
+        r"(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})"
+    ]
+    for padrao in padroes:
+        match = re.search(padrao, url_texto)
+        if match:
+            video_id = match.group(1)
+            return {
+                "url_original": url_texto,
+                "video_id": video_id,
+                "embed_url": f"https://www.youtube.com/embed/{video_id}"
+            }
+    return None
 
 @app.route('/admin/imoveis/editar/<codigo>', methods=['GET', 'POST'])
 @login_required
