@@ -2,9 +2,28 @@
 {% set active_tab = 'imoveis' %}
 {% block content %}
 <div class="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-200 my-6">
-    <h1 class="text-2xl font-bold mb-6 text-slate-900 border-b pb-3">
-        {% if editando %}Editar Imóvel: {{ imovel.codigo }}{% else %}Cadastrar Novo Imóvel{% endif %}
-    </h1>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6 border-b pb-3">
+        <h1 class="text-2xl font-bold text-slate-900">
+            {% if editando %}Editar Imóvel: {{ imovel.codigo }}{% else %}Cadastrar Novo Imóvel{% endif %}
+        </h1>
+
+        {% if not editando %}
+        <button type="button" onclick="abrirModalJson()"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs uppercase tracking-wider rounded-xl shadow-sm transition cursor-pointer">
+            <span>{ }</span>
+            <span>Preencher com JSON</span>
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Banner de aviso pós-importação JSON -->
+    <div id="alerta-json-aplicado" class="hidden mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-start justify-between gap-3">
+        <div>
+            <p class="font-bold text-emerald-950">Dados do JSON aplicados com sucesso!</p>
+            <p class="mt-0.5">Revise os campos preenchidos e complete manualmente o <strong>CEP / Número</strong>, as <strong>fotos por cômodo</strong> e os <strong>vídeos do YouTube</strong> antes de salvar.</p>
+        </div>
+        <button type="button" onclick="this.parentElement.classList.add('hidden')" class="text-emerald-700 hover:text-emerald-950 font-bold text-sm cursor-pointer">✕</button>
+    </div>
     
     <form method="POST" enctype="multipart/form-data" class="space-y-6" onsubmit="prepararEnvioFormulario()">
         
@@ -292,6 +311,45 @@
     </form>
 </div>
 
+<!-- ========================================== -->
+<!-- MODAL: PREENCHER FORMULÁRIO COM JSON       -->
+<!-- ========================================== -->
+<div id="modal-json-imovel" class="fixed inset-0 bg-slate-950/75 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 sm:p-7 relative text-slate-900 space-y-4">
+        <div class="flex items-center justify-between border-b pb-3">
+            <div>
+                <h3 class="text-lg font-extrabold text-slate-900">Preencher Imóvel via JSON</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Cole abaixo o JSON extraído do anúncio para preencher o formulário automaticamente.</p>
+            </div>
+            <button type="button" onclick="fecharModalJson()" class="text-gray-400 hover:text-slate-900 text-xl font-bold cursor-pointer">×</button>
+        </div>
+
+        <div>
+            <div class="flex items-center justify-between mb-1.5">
+                <label for="textarea-json-imovel" class="text-xs font-bold text-slate-700 uppercase">Conteúdo JSON</label>
+                <button type="button" onclick="inserirExemploJson()" class="text-xs font-semibold text-amber-600 hover:text-amber-700 underline cursor-pointer">
+                    Colar estrutura de exemplo
+                </button>
+            </div>
+            <textarea id="textarea-json-imovel" rows="12"
+                placeholder='{"titulo": "Casa reformada em Alphaville", "tipo": "casa", "condominio_nome": "Alpha 2", ...}'
+                class="w-full p-3 bg-slate-950 text-emerald-300 font-mono text-xs rounded-xl border border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"></textarea>
+            <p id="erro-json-imovel" class="hidden text-xs font-semibold text-red-600 mt-2"></p>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2 border-t">
+            <button type="button" onclick="fecharModalJson()"
+                class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs uppercase rounded-xl transition cursor-pointer">
+                Cancelar
+            </button>
+            <button type="button" onclick="aplicarJsonNoFormulario()"
+                class="px-5 py-2.5 bg-slate-900 hover:bg-amber-400 hover:text-slate-950 text-white font-bold text-xs uppercase rounded-xl transition shadow-md cursor-pointer">
+                Aplicar no Formulário
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
     let comodoIndex = 0;
 
@@ -446,6 +504,251 @@
         } catch (err) {
             console.error("Erro:", err);
             alert("Erro de conexão ao remover foto.");
+        }
+    }
+
+    // ==========================================
+    // AUTO-PREENCHIMENTO VIA JSON
+    // ==========================================
+    function abrirModalJson() {
+        const modal = document.getElementById('modal-json-imovel');
+        const erro = document.getElementById('erro-json-imovel');
+        if (erro) {
+            erro.classList.add('hidden');
+            erro.textContent = '';
+        }
+        modal.classList.remove('hidden');
+        document.getElementById('textarea-json-imovel').focus();
+    }
+
+    function fecharModalJson() {
+        document.getElementById('modal-json-imovel').classList.add('hidden');
+    }
+
+    function inserirExemploJson() {
+        const exemplo = {
+            titulo: "Residência Reformada com Lazer Completo",
+            condominio_nome: "Alpha 2",
+            descricao: "Casa ampla, reformada, com ambientes integrados, área gourmet e piscina.",
+            tipo: "casa",
+            destaque: true,
+            precos: {
+                venda: 6900000,
+                locacao: 0,
+                condominio: 1750,
+                iptu: 1800
+            },
+            caracteristicas: {
+                util: 470,
+                total: 580,
+                quartos: 4,
+                suites: 4,
+                banheiros: 6,
+                vagas: 4,
+                itens: {
+                    facilidades: ["Portaria 24h", "Vaga demarcada"],
+                    diferenciais: ["Reformado", "Ar-condicionado", "Permite animais"],
+                    area_externa: ["Churrasqueira", "Piscina", "Área verde"],
+                    comodos: ["Home office", "Área de serviço", "Lavabo", "Closet", "Varanda / Terraço"]
+                }
+            },
+            endereco: {
+                cep: "",
+                numero: "",
+                complemento: ""
+            }
+        };
+        document.getElementById('textarea-json-imovel').value = JSON.stringify(exemplo, null, 2);
+    }
+
+    function normalizarNumeroMonetario(valor) {
+        if (valor === null || valor === undefined || valor === '') return 0;
+        if (typeof valor === 'number') return Number.isFinite(valor) ? valor : 0;
+        let str = String(valor).replace(/R\$/gi, '').trim();
+        if (!str) return 0;
+        if (str.includes(',') && str.includes('.')) {
+            str = str.replace(/\./g, '').replace(',', '.');
+        } else if (str.includes(',')) {
+            str = str.replace(',', '.');
+        }
+        const num = parseFloat(str);
+        return Number.isNaN(num) ? 0 : num;
+    }
+
+    function preencherCampoMoeda(prefixo, valorBruto) {
+        const fmtInput = document.getElementById(`preco_${prefixo}_fmt`);
+        const realInput = document.getElementById(`preco_${prefixo}_real`);
+        if (!fmtInput || !realInput) return;
+
+        const numero = normalizarNumeroMonetario(valorBruto);
+        if (numero > 0) {
+            const centavos = Math.round(numero * 100).toString();
+            fmtInput.value = centavos;
+            fmtInput.dispatchEvent(new Event('input', { bubbles: true }));
+            realInput.value = numero.toFixed(2);
+        } else {
+            fmtInput.value = '';
+            fmtInput.dispatchEvent(new Event('input', { bubbles: true }));
+            realInput.value = 0;
+        }
+    }
+
+    function normalizarTipoImovel(tipoRaw) {
+        if (!tipoRaw) return 'apartamento';
+        const t = String(tipoRaw).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        if (t.includes('cobertura')) return 'cobertura';
+        if (t.includes('casa') || t.includes('sobrado') || t.includes('condominio')) return 'casa';
+        if (t.includes('comercial') || t.includes('sala') || t.includes('conjunto') || t.includes('loja') || t.includes('galpao')) return 'comercial';
+        return 'apartamento';
+    }
+
+    function normalizarTextoComparacao(str) {
+        return String(str || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
+    }
+
+    function preencherCondominioJson(nomeCond) {
+        const selectCond = document.getElementById('select-condominio');
+        const inputNovoCond = document.getElementById('input-novo-condominio');
+        const hiddenCondReal = document.getElementById('condominio_nome_real');
+        if (!selectCond || !hiddenCondReal) return;
+
+        const limpo = String(nomeCond || '').trim();
+        if (!limpo) {
+            selectCond.value = '';
+            selectCond.dispatchEvent(new Event('change', { bubbles: true }));
+            return;
+        }
+
+        const alvoNorm = normalizarTextoComparacao(limpo);
+        let encontrado = null;
+        for (const opt of selectCond.options) {
+            if (opt.value && opt.value !== '__novo__' && normalizarTextoComparacao(opt.value) === alvoNorm) {
+                encontrado = opt.value;
+                break;
+            }
+        }
+
+        if (encontrado) {
+            selectCond.value = encontrado;
+            selectCond.dispatchEvent(new Event('change', { bubbles: true }));
+        } else {
+            selectCond.value = '__novo__';
+            selectCond.dispatchEvent(new Event('change', { bubbles: true }));
+            if (inputNovoCond) {
+                inputNovoCond.value = limpo;
+                inputNovoCond.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            hiddenCondReal.value = limpo;
+        }
+    }
+
+    function aplicarJsonNoFormulario() {
+        const textarea = document.getElementById('textarea-json-imovel');
+        const erroEl = document.getElementById('erro-json-imovel');
+        let textoBruto = (textarea.value || '').trim();
+
+        // Remove cercas markdown ```json ... ``` caso o usuário cole direto da IA
+        textoBruto = textoBruto.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+
+        let dados;
+        try {
+            dados = JSON.parse(textoBruto);
+        } catch (e) {
+            erroEl.textContent = 'JSON inválido: verifique vírgulas, aspas e chaves. (' + e.message + ')';
+            erroEl.classList.remove('hidden');
+            return;
+        }
+
+        const setInputByName = (name, val) => {
+            const el = document.querySelector(`[name="${name}"]`);
+            if (!el || val === undefined || val === null) return;
+            el.value = val;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+
+        // 1. Campos principais
+        setInputByName('titulo', dados.titulo || dados.title || '');
+        setInputByName('descricao', dados.descricao || dados.description || '');
+
+        const selectTipo = document.querySelector('select[name="tipo"]');
+        if (selectTipo && (dados.tipo || dados.type)) {
+            selectTipo.value = normalizarTipoImovel(dados.tipo || dados.type);
+            selectTipo.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        // 2. Condomínio
+        const nomeCond = dados.condominio_nome ?? dados.condominio ?? '';
+        preencherCondominioJson(nomeCond);
+
+        // 3. Preços (aceita tanto objeto "precos" quanto chaves na raiz)
+        const precos = dados.precos || {};
+        preencherCampoMoeda('venda', precos.venda ?? dados.preco_venda ?? dados.valor_venda);
+        preencherCampoMoeda('locacao', precos.locacao ?? dados.preco_locacao ?? dados.valor_locacao);
+        preencherCampoMoeda('condominio', precos.condominio ?? dados.preco_condominio ?? dados.valor_condominio);
+        preencherCampoMoeda('iptu', precos.iptu ?? dados.preco_iptu ?? dados.valor_iptu);
+
+        // 4. Medidas e quantidades (aceita objeto "caracteristicas" ou raiz)
+        const carac = dados.caracteristicas || {};
+        setInputByName('area_util', carac.util ?? carac.area_util ?? dados.area_util ?? '');
+        setInputByName('area_total', carac.total ?? carac.area_total ?? dados.area_total ?? '');
+        setInputByName('quartos', carac.quartos ?? carac.dormitorios ?? dados.quartos ?? dados.dormitorios ?? '');
+        setInputByName('suites', carac.suites ?? dados.suites ?? '');
+        setInputByName('banheiros', carac.banheiros ?? dados.banheiros ?? '');
+        setInputByName('vagas', carac.vagas ?? dados.vagas ?? '');
+
+        // 5. Destaque
+        const chkDestaque = document.getElementById('destaque');
+        if (chkDestaque && typeof dados.destaque === 'boolean') {
+            chkDestaque.checked = dados.destaque;
+            chkDestaque.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        // 6. Checkboxes de características (reseta antes e marca os presentes no JSON)
+        const itens = carac.itens || dados.itens || {};
+        const todosSelecionadosNorm = new Set();
+        ['facilidades', 'diferenciais', 'area_externa', 'comodos'].forEach(grupo => {
+            const lista = itens[grupo] || dados[`feat_${grupo}`] || [];
+            if (Array.isArray(lista)) {
+                lista.forEach(item => todosSelecionadosNorm.add(normalizarTextoComparacao(item)));
+            }
+        });
+        if (Array.isArray(dados.caracteristicas_lista)) {
+            dados.caracteristicas_lista.forEach(item => todosSelecionadosNorm.add(normalizarTextoComparacao(item)));
+        }
+
+        document.querySelectorAll('input[type="checkbox"][name^="feat_"]').forEach(cb => {
+            const marcar = todosSelecionadosNorm.has(normalizarTextoComparacao(cb.value));
+            cb.checked = marcar;
+            cb.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+
+        // 7. Endereço opcional (se vier CEP no JSON, dispara blur para consultar o ViaCEP)
+        const end = dados.endereco || {};
+        const cepVal = end.cep ?? dados.cep ?? '';
+        const numeroVal = end.numero ?? dados.numero ?? '';
+        const compVal = end.complemento ?? dados.complemento ?? '';
+
+        if (numeroVal) setInputByName('numero', numeroVal);
+        if (compVal) setInputByName('complemento', compVal);
+        if (cepVal) {
+            const campoCep = document.getElementById('campo-cep');
+            if (campoCep) {
+                campoCep.value = cepVal;
+                campoCep.dispatchEvent(new Event('input', { bubbles: true }));
+                campoCep.dispatchEvent(new Event('blur', { bubbles: true }));
+            }
+        }
+
+        fecharModalJson();
+        const alerta = document.getElementById('alerta-json-aplicado');
+        if (alerta) {
+            alerta.classList.remove('hidden');
+            alerta.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     }
 </script>
