@@ -5,7 +5,7 @@
 <!-- HERO BANNER COM VÍDEO EM DESTAQUE          -->
 <!-- ========================================== -->
 <div class="relative w-full h-[360px] sm:h-[440px] bg-slate-900 overflow-hidden flex items-center justify-center">
-    
+
     <!-- Vídeo de Fundo (Autoplay, Mudo, Loop e Playsinline para funcionar no iPhone/Android) -->
     <video autoplay loop muted playsinline poster="{{ url_for('static', filename='img/banner-fallback.jpg') }}"
         class="absolute inset-0 w-full h-full object-cover opacity-55">
@@ -17,7 +17,8 @@
 
     <!-- Conteúdo Central sobreposto ao Vídeo -->
     <div class="relative z-10 max-w-5xl mx-auto px-4 text-center space-y-3 md:space-y-4">
-        <h1 class=" fonte-marca text-5xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight drop-shadow-md">
+        <h1
+            class=" fonte-marca text-5xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight drop-shadow-md">
             TECA BORGES
         </h1>
         <div class="text-gray-200 uppercase tracking-wider space-y-1.5 drop-shadow">
@@ -40,13 +41,14 @@
             <span id="texto-btn-filtrar">Filtrar</span>
         </button>
     </div>
-    
+
     <!-- ========================================== -->
     <!-- BARRA DE FILTROS RETRÁTIL (INICIA OCULTA)  -->
     <!-- ========================================== -->
-    <div id="painel-filtros" class="hidden bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 max-w-5xl mx-auto transition-all">
+    <div id="painel-filtros"
+        class="hidden bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 max-w-5xl mx-auto transition-all">
         <div class="space-y-4">
-            
+
             <!-- Linha 1: Finalidade (Todos / Comprar / Alugar) -->
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
                 <div class="flex items-center gap-2 flex-wrap">
@@ -80,8 +82,9 @@
                 </div>
 
                 <div class="sm:col-span-7">
-                    <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Bairro, Código ou Palavra-chave</label>
-                    <input type="text" id="input-busca" oninput="aplicarFiltros()" 
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Bairro, Código ou
+                        Palavra-chave</label>
+                    <input type="text" id="input-busca" oninput="aplicarFiltros()"
                         placeholder="Digite para filtrar na hora (ex: Jardins, Brooklin, AP0001)..."
                         class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900">
                 </div>
@@ -92,11 +95,13 @@
     <!-- ========================================== -->
     <!-- MENSAGEM DE NENHUM RESULTADO (DINÂMICA)    -->
     <!-- ========================================== -->
-    <div id="mensagem-vazio" class="hidden bg-white rounded-2xl border border-gray-200 p-12 text-center max-w-xl mx-auto shadow-sm">
+    <div id="mensagem-vazio"
+        class="hidden bg-white rounded-2xl border border-gray-200 p-12 text-center max-w-xl mx-auto shadow-sm">
         <span class="text-4xl block mb-3">🔍</span>
         <h3 class="text-lg font-bold text-slate-900">Nenhum imóvel encontrado</h3>
         <p class="text-sm text-gray-500 mt-1">Não encontramos imóveis com essa combinação de filtros no momento.</p>
-        <button type="button" onclick="limparFiltros()" class="inline-block mt-4 px-5 py-2.5 bg-slate-900 text-white text-xs font-bold uppercase rounded-xl hover:bg-slate-800 transition cursor-pointer">
+        <button type="button" onclick="limparFiltros()"
+            class="inline-block mt-4 px-5 py-2.5 bg-slate-900 text-white text-xs font-bold uppercase rounded-xl hover:bg-slate-800 transition cursor-pointer">
             Ver todos os imóveis
         </button>
     </div>
@@ -107,107 +112,139 @@
     <div id="container-vitrine" class="space-y-8">
         <div id="grid-imoveis" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
             {% for categoria, lista_imoveis in secoes.items() %}
-                {% for imovel in lista_imoveis %}
-                <div id="imovel-{{ imovel._id }}"
-                    onclick="window.location.href='{{ url_for('imovel_detalhe', slug=imovel.slug) }}'"
-                    data-tipo="{{ imovel.tipo|lower }}"
-                    data-venda="{{ '1' if imovel.precos.venda and imovel.precos.venda > 0 else '0' }}"
-                    data-locacao="{{ '1' if imovel.precos.locacao and imovel.precos.locacao > 0 else '0' }}"
-                    data-busca="{{ (imovel.titulo ~ ' ' ~ imovel.local_publico.bairro ~ ' ' ~ imovel.codigo ~ ' ' ~ imovel.tipo)|lower }}"
-                    class="card-imovel bg-white rounded-none border border-gray-200 overflow-hidden flex flex-col justify-between hover:shadow-md transition cursor-pointer group">
-                    
-                    <div>
-                        <!-- Foto de Capa -->
-                        <div class="relative h-56 w-full bg-slate-100 overflow-hidden">
-                            {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else 'upload/default.jpg' %}
-                            <img src="{{ url_for('static', filename=capa) }}" alt="{{ imovel.titulo }}"
-                                class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-                            
-                            <div class="absolute top-3 left-3 flex flex-col gap-1">
-                                {% if imovel.precos.venda and imovel.precos.venda > 0 %}
-                                <span class="bg-slate-900/90 text-white text-[10px] font-semibold px-2.5 py-0.5 uppercase tracking-widest">Venda</span>
-                                {% endif %}
-                                {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
-                                <span class="bg-emerald-800/90 text-white text-[10px] font-semibold px-2.5 py-0.5 uppercase tracking-widest">Locação</span>
-                                {% endif %}
-                            </div>
+            {% for imovel in lista_imoveis %}
+            <div id="imovel-{{ imovel._id }}"
+                onclick="window.location.href='{{ url_for('imovel_detalhe', slug=imovel.slug) }}'"
+                data-tipo="{{ imovel.tipo|lower }}"
+                data-venda="{{ '1' if imovel.precos.venda and imovel.precos.venda > 0 else '0' }}"
+                data-locacao="{{ '1' if imovel.precos.locacao and imovel.precos.locacao > 0 else '0' }}"
+                data-busca="{{ (imovel.titulo ~ ' ' ~ imovel.local_publico.bairro ~ ' ' ~ imovel.codigo ~ ' ' ~ imovel.tipo)|lower }}"
+                class="card-imovel bg-white rounded-none border border-gray-200 overflow-hidden flex flex-col justify-between hover:shadow-md transition cursor-pointer group">
 
-                            <button type="button"
-                                onclick="event.stopPropagation(); clicarFavorito('{{ imovel._id }}')"
-                                class="absolute top-3 right-3 bg-white/90 hover:bg-white w-8 h-8 rounded-full flex items-center justify-center text-sm shadow transition transform active:scale-125 focus:outline-none cursor-pointer"
-                                title="Favoritar">
-                                <span id="coracao-{{ imovel._id }}">
-                                    {% if session.get('user_id') and imovel._id|string in favoritos_ids %}❤️{% else %}🤍{% endif %}
-                                </span>
-                            </button>
-                        </div>
+                <div>
+                    <!-- Foto de Capa -->
+                    <div class="relative h-56 w-full bg-slate-100 overflow-hidden">
+                        {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else
+                        'upload/default.jpg' %}
+                        <img src="{{ url_for('static', filename=capa) }}" alt="{{ imovel.titulo }}"
+                            class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
 
-                        <!-- Cabeçalho: Tipo + Código e Título/Localização -->
-                        <div class="px-5 pt-4 pb-3 space-y-1.5">
-                            <div class="flex items-center justify-between gap-2 text-[11px] font-semibold tracking-[0.08em] uppercase text-slate-500">
-                                <span>{{ imovel.tipo }}</span>
-                                <span class="font-medium text-slate-400">{{ imovel.codigo }}</span>
-                            </div>
-
-                            <h3 class="font-medium text-[17px] text-slate-900 leading-[1.35] tracking-[-0.01em] line-clamp-2">
-                                {{ imovel.titulo }}{% if imovel.local_publico and imovel.local_publico.bairro %} - {{ imovel.local_publico.bairro }}{% endif %}
-                            </h3>
-                        </div>
-                    </div>
-
-                    <div>
-                        <!-- 4 Especificações com Ícones: Metragem, Dormitório, Banheiro e Vaga -->
-                        <div class="px-5 py-3 border-t border-b border-gray-100 grid grid-cols-4 gap-2 text-[12px] text-slate-700 font-normal">
-                            <!-- 1. Metragem útil -->
-                            <div class="flex items-center gap-1.5" title="Área útil">
-                                <svg class="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
-                                </svg>
-                                <span class="truncate">{{ imovel.caracteristicas.util }} m²</span>
-                            </div>
-
-                            <!-- 2. Dormitórios -->
-                            <div class="flex items-center gap-1.5" title="Dormitórios">
-                                <svg class="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                                </svg>
-                                <span>{{ imovel.caracteristicas.quartos }}</span>
-                            </div>
-
-                            <!-- 3. Banheiros -->
-                            <div class="flex items-center gap-1.5" title="Banheiros">
-                                <svg class="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 14h16v3a3 3 0 01-3 3H7a3 3 0 01-3-3v-3z" />
-                                </svg>
-                                <span>{{ imovel.caracteristicas.banheiros }}</span>
-                            </div>
-
-                            <!-- 4. Vagas -->
-                            <div class="flex items-center gap-1.5" title="Vagas">
-                                <svg class="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
-                                </svg>
-                                <span>{{ imovel.caracteristicas.vagas }}</span>
-                            </div>
-                        </div>
-
-                        <!-- Preço -->
-                        <div class="px-5 py-4 space-y-1">
+                        <div class="absolute top-3 left-3 flex flex-col gap-1">
                             {% if imovel.precos.venda and imovel.precos.venda > 0 %}
-                            <p class="text-[19px] font-semibold text-slate-950 tracking-[-0.02em]">
-                                R$ {{ "{:,.2f}".format(imovel.precos.venda).replace(',', 'v').replace('.', ',').replace('v', '.') }}
-                            </p>
+                            <span
+                                class="bg-slate-900/90 text-white text-[10px] font-semibold px-2.5 py-0.5 uppercase tracking-widest">Venda</span>
                             {% endif %}
                             {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
-                            <p class="text-[14px] font-medium text-emerald-800 tracking-[-0.01em]">
-                                R$ {{ "{:,.2f}".format(imovel.precos.locacao).replace(',', 'v').replace('.', ',').replace('v', '.') }} / mês
-                            </p>
+                            <span
+                                class="bg-emerald-800/90 text-white text-[10px] font-semibold px-2.5 py-0.5 uppercase tracking-widest">Locação</span>
                             {% endif %}
                         </div>
+
+                        <button type="button" onclick="event.stopPropagation(); clicarFavorito('{{ imovel._id }}')"
+                            class="absolute top-3 right-3 bg-white/90 hover:bg-white w-8 h-8 rounded-full flex items-center justify-center text-sm shadow transition transform active:scale-125 focus:outline-none cursor-pointer"
+                            title="Favoritar">
+                            <span id="coracao-{{ imovel._id }}">
+                                {% if session.get('user_id') and imovel._id|string in favoritos_ids %}❤️{% else %}🤍{%
+                                endif %}
+                            </span>
+                        </button>
+                    </div>
+
+                    <!-- Cabeçalho: Tipo + Código e Título/Localização -->
+                    <div class="px-5 pt-4 pb-3 space-y-1.5">
+                        <div
+                            class="flex items-center justify-between gap-2 text-[11px] font-semibold tracking-[0.08em] uppercase text-slate-500">
+                            <span>{{ imovel.tipo }}</span>
+                            <span class="font-medium text-slate-400">{{ imovel.codigo }}</span>
+                        </div>
+
+                        <h3
+                            class="font-medium text-[17px] text-slate-900 leading-[1.35] tracking-[-0.01em] line-clamp-2">
+                            {{ imovel.titulo }}{% if imovel.local_publico and imovel.local_publico.bairro %} - {{
+                            imovel.local_publico.bairro }}{% endif %}
+                        </h3>
                     </div>
                 </div>
-                {% endfor %}
+
+                <div>
+                    <!-- 4 Especificações com Ícones: Metragem, Dormitório, Banheiro e Vaga -->
+                    <div
+                        class="border-t border-b border-gray-100 flex items-center justify-around py-2.5 text-[12px] text-slate-700 font-normal">
+                        <!-- 1. Metragem útil -->
+                        <div class="flex items-center gap-1.5" title="Área útil">
+                            <svg class="w-6 h-6 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor"
+                                stroke-width="1.6" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                            </svg>
+                            <span class="truncate">{{ imovel.caracteristicas.util }} m²</span>
+                        </div>
+
+                        <!-- 2. Dormitórios -->
+                        <div class="flex items-center gap-1.5" title="Dormitórios">
+                            <svg class="w-6 h-6 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor"
+                                stroke-width="1.6" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M3.75 19.5V13.5m16.5 6v-6M3.75 13.5h16.5m-16.5 0v-2.25A1.5 1.5 0 0 1 5.25 9.75h13.5a1.5 1.5 0 0 1 1.5 1.5v2.25M5.25 9.75V6.75A1.5 1.5 0 0 1 6.75 5.25h10.5a1.5 1.5 0 0 1 1.5 1.5v3M3.75 17.25h16.5M7.5 9.75V8.25a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 .75.75v1.5m1.5 0V8.25a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 .75.75v1.5" />
+                            </svg>
+
+                            <span>{{ imovel.caracteristicas.quartos }}</span>
+                        </div>
+
+                        <!-- 3. Banheiros -->
+                        <div class="flex items-center gap-1.5" title="Banheiros">
+                            <svg class="w-6 h-6 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor"
+                                stroke-width="1.6" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M3.75 13.5h16.5v4.5a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-4.5Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 19.5v1.5m12-1.5v1.5" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M18 13.5V6a2.25 2.25 0 0 0-3.75-1.677L12.75 5.75" />
+                                <circle cx="8.25" cy="8.25" r="1.5" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M6.75 13.5v-1.5a1.5 1.5 0 0 1 1.5-1.5h.75a1.5 1.5 0 0 1 1.5 1.5v1.5" />
+                            </svg>
+
+                            <span>{{ imovel.caracteristicas.banheiros }}</span>
+                        </div>
+
+                        <!-- 4. Vagas -->
+                        <div class="flex items-center gap-1.5" title="Vagas">
+                            <svg class="w-6 h-6 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.6"
+                                viewBox="0 0 24 24">
+                                <!-- Telhado e estrutura da garagem -->
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.5 9.5 12 3.5l9.5 6" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 8.5V20h15V8.5" />
+                                <!-- Base inferior -->
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.5 20h19" />
+                                <!-- Vão do portão e ripas horizontais -->
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 20v-8.5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1V20" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 13.5h9M7.5 16.5h9" />
+                            </svg>
+
+
+                            <span>{{ imovel.caracteristicas.vagas }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Preço -->
+                    <div class="px-5 py-4 space-y-1">
+                        {% if imovel.precos.venda and imovel.precos.venda > 0 %}
+                        <p class="text-[19px] font-semibold text-slate-950 tracking-[-0.02em]">
+                            R$ {{ "{:,.2f}".format(imovel.precos.venda).replace(',', 'v').replace('.', ',').replace('v',
+                            '.') }}
+                        </p>
+                        {% endif %}
+                        {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
+                        <p class="text-[14px] font-medium text-emerald-800 tracking-[-0.01em]">
+                            R$ {{ "{:,.2f}".format(imovel.precos.locacao).replace(',', 'v').replace('.',
+                            ',').replace('v', '.') }} / mês
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
             {% endfor %}
         </div>
 
@@ -225,38 +262,41 @@
     <!-- ========================================== -->
     <section class="w-full max-w-6xl mx-auto px-4 sm:px-6 pt-4">
         <div class="bg-white border border-gray-200 overflow-hidden grid grid-cols-1 lg:grid-cols-12 shadow-sm">
-    
+
             <!-- Coluna Esquerda: Texto -->
             <div class="lg:col-span-7 p-8 sm:p-12 flex flex-col justify-center space-y-5 bg-stone-50/70">
                 <h2 class="fonte-marca text-3xl sm:text-4xl text-slate-900 leading-tight">
                     Teca Borges
                 </h2>
-    
+
                 <div class="space-y-4 text-sm sm:text-[15px] text-slate-700 leading-relaxed font-normal">
                     <p>
-                        Teca Borges atua com foco em <strong>Venda, Locação, Avaliação e Perícia Judicial</strong>, além de
+                        Teca Borges atua com foco em <strong>Venda, Locação, Avaliação e Perícia Judicial</strong>, além
+                        de
                         <strong>Administração de Bens Imóveis e Condomínios</strong>, oferecendo um atendimento próximo,
                         técnico e transparente para quem compra, vende, aluga ou administra patrimônio.
                     </p>
                     <p>
-                        Cada imóvel exige leitura de mercado, critério na precificação e atenção aos detalhes jurídicos e
+                        Cada imóvel exige leitura de mercado, critério na precificação e atenção aos detalhes jurídicos
+                        e
                         operacionais. Na avaliação e na perícia judicial, o trabalho segue rigor técnico para entregar
                         laudos confiáveis e fundamentados.
                     </p>
                     <p>
-                        Na administração de bens e condomínios, o foco está na organização, na preservação do patrimônio e
+                        Na administração de bens e condomínios, o foco está na organização, na preservação do patrimônio
+                        e
                         na tranquilidade de proprietários e moradores no dia a dia.
                     </p>
                 </div>
             </div>
-    
+
             <!-- Coluna Direita: Imagem -->
             <div class="lg:col-span-5 min-h-[320px] sm:min-h-[420px] bg-slate-200 relative overflow-hidden">
                 <!-- Troque o arquivo abaixo pela foto da corretora ou da fachada/arquitetura quando quiser -->
                 <img src="{{ url_for('static', filename='img/info.webp') }}"
                     alt="Teca Borges - Imóveis, Avaliação, Perícia e Administração" class="w-full h-full object-cover">
             </div>
-    
+
         </div>
     </section>
 
@@ -272,12 +312,13 @@
                     Descreva o tipo de imóvel e região que procuramos para você as melhores ofertas.
                 </p>
             </div>
-    
+
             <form id="form-busca-personalizada" onsubmit="iniciarBuscaPersonalizada(event)" class="space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm sm:text-base font-medium text-slate-900 mb-1">Tipo de Imóvel</label>
-                        <input type="text" id="busca-tipo" required placeholder="Ex: Apartamento 3 quartos, Cobertura..."
+                        <input type="text" id="busca-tipo" required
+                            placeholder="Ex: Apartamento 3 quartos, Cobertura..."
                             class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
                     </div>
                     <div>
@@ -286,7 +327,7 @@
                             class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
                     </div>
                 </div>
-    
+
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm sm:text-base font-medium text-slate-900 mb-1">Seu Nome</label>
@@ -305,14 +346,14 @@
                             class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
                     </div>
                 </div>
-    
+
                 <div>
                     <label class="block text-sm sm:text-base font-medium text-slate-900 mb-1">Observações</label>
                     <textarea id="busca-obs" rows="3"
                         placeholder="Ex: Precisa ter varanda gourmet, aceita pet, valor até R$ 800 mil..."
                         class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400"></textarea>
                 </div>
-    
+
                 <div class="pt-2 text-center">
                     <button type="submit"
                         class="w-full sm:w-auto px-8 py-3.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold text-sm uppercase rounded-xl transition shadow-lg cursor-pointer">
@@ -326,10 +367,12 @@
 </div>
 
 <!-- MODAL DE CAPTAÇÃO DE LEAD (Favoritos) -->
-<div id="modal-lead" class="fixed inset-0 bg-slate-950/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+<div id="modal-lead"
+    class="fixed inset-0 bg-slate-950/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative transform transition-all text-slate-900">
-        <button onclick="fecharModalLead()" class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">×</button>
-        
+        <button onclick="fecharModalLead()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">×</button>
+
         <div class="text-center mb-6">
             <span class="text-3xl">❤️</span>
             <h3 class="text-xl font-extrabold text-slate-900 mt-2">Gostou deste imóvel?</h3>
@@ -354,7 +397,8 @@
                     oninput="this.value = this.value.replace(/\D/g, '')"
                     class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
             </div>
-            <button type="submit" class="w-full bg-slate-900 hover:bg-amber-400 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md cursor-pointer">
+            <button type="submit"
+                class="w-full bg-slate-900 hover:bg-amber-400 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md cursor-pointer">
                 Enviar
             </button>
         </form>
@@ -362,23 +406,28 @@
 </div>
 
 <!-- MODAL DE VERIFICAÇÃO OTP PARA O FAVORITO -->
-<div id="modal-otp-favorito" class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+<div id="modal-otp-favorito"
+    class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-slate-900 relative">
-        <button onclick="fecharModalOtpFavorito()" class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">×</button>
-        
+        <button onclick="fecharModalOtpFavorito()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">×</button>
+
         <div class="text-center mb-6">
             <span class="text-3xl">✉️</span>
             <h3 class="text-xl font-extrabold text-slate-900 mt-2">Confirme seu E-mail</h3>
-            <p class="text-xs text-gray-500 mt-1">Enviamos um código de verificação para <span id="span-email-fav" class="font-bold text-slate-800"></span>.</p>
+            <p class="text-xs text-gray-500 mt-1">Enviamos um código de verificação para <span id="span-email-fav"
+                    class="font-bold text-slate-800"></span>.</p>
         </div>
 
         <form onsubmit="confirmarOtpFavorito(event)" class="space-y-4">
             <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1 text-center">Digite o Código de Verificação</label>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1 text-center">Digite o Código de
+                    Verificação</label>
                 <input type="text" id="input-codigo-otp-fav" required placeholder="Ex: 1234" maxlength="6"
                     class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-center text-xl font-bold tracking-widest text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900">
             </div>
-            <button type="submit" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md cursor-pointer">
+            <button type="submit"
+                class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md cursor-pointer">
                 Confirmar e Salvar Favorito
             </button>
         </form>
@@ -386,23 +435,28 @@
 </div>
 
 <!-- MODAL DE VERIFICAÇÃO DE E-MAIL (OTP) PARA BUSCA PERSONALIZADA -->
-<div id="modal-otp-busca" class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+<div id="modal-otp-busca"
+    class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-slate-900 relative">
-        <button onclick="fecharModalOtp()" class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">×</button>
-        
+        <button onclick="fecharModalOtp()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">×</button>
+
         <div class="text-center mb-6">
             <span class="text-3xl">✉️</span>
             <h3 class="text-xl font-extrabold text-slate-900 mt-2">Confirme seu E-mail</h3>
-            <p class="text-xs text-gray-500 mt-1">Enviamos um código de verificação para <span id="span-email-destino" class="font-bold text-slate-800"></span>.</p>
+            <p class="text-xs text-gray-500 mt-1">Enviamos um código de verificação para <span id="span-email-destino"
+                    class="font-bold text-slate-800"></span>.</p>
         </div>
 
         <form onsubmit="confirmarCodigoOtp(event)" class="space-y-4">
             <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase mb-1 text-center">Digite o Código de Verificação</label>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1 text-center">Digite o Código de
+                    Verificação</label>
                 <input type="text" id="input-codigo-otp" required placeholder="Ex: 1234" maxlength="6"
                     class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-center text-xl font-bold tracking-widest text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900">
             </div>
-            <button type="submit" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md cursor-pointer">
+            <button type="submit"
+                class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md cursor-pointer">
                 Confirmar e Enviar Pedido
             </button>
         </form>
@@ -451,8 +505,8 @@
 
         Object.keys(botoes).forEach(chave => {
             const btn = botoes[chave].el;
-            btn.className = 'btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ' + 
-                            (chave === finalidadeSelecionada ? botoes[chave].ativa : classeInativa);
+            btn.className = 'btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ' +
+                (chave === finalidadeSelecionada ? botoes[chave].ativa : classeInativa);
         });
 
         mostrarTodosImoveis = false;
@@ -472,9 +526,9 @@
             const temLocacao = card.getAttribute('data-locacao') === '1';
             const textoBusca = card.getAttribute('data-busca');
 
-            const passaFinalidade = !finalidadeSelecionada || 
-                                    (finalidadeSelecionada === 'venda' && temVenda) || 
-                                    (finalidadeSelecionada === 'locacao' && temLocacao);
+            const passaFinalidade = !finalidadeSelecionada ||
+                (finalidadeSelecionada === 'venda' && temVenda) ||
+                (finalidadeSelecionada === 'locacao' && temLocacao);
             const passaTipo = !tipoSelecionado || tipoCard === tipoSelecionado;
             const passaBusca = !termoBusca || textoBusca.includes(termoBusca);
 
@@ -549,7 +603,7 @@
                 headers: { 'Content-Type': 'application/json' }
             });
             let data = await response.json();
-            
+
             if (data.status === 'success') {
                 let span = document.getElementById(`coracao-${imoid}`);
                 if (span) {
