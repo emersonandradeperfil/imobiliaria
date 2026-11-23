@@ -25,14 +25,14 @@
         </div>
     </div>
 
-    <!-- ABA 1: FOTOS SEPARADAS POR CÔMODO -->
+    <!-- ABA 1: FOTOS SEPARADAS POR CÔMODO (DO ÚLTIMO PARA O PRIMEIRO) -->
     <div id="secao-fotos-galeria" class="space-y-8">
         {% if imovel.midia and imovel.midia.fotos %}
-            {% set categorias_encontradas = imovel.midia.fotos | map(attribute='categoria') | unique | list %}
+            {% set categorias_encontradas = imovel.midia.fotos | map(attribute='categoria') | unique | list | reverse | list %}
             {% set ns = namespace(indice_global=0) %}
 
             {% for cat in categorias_encontradas %}
-                {% set fotos_cat = imovel.midia.fotos | selectattr('categoria', 'equalto', cat) | list %}
+                {% set fotos_cat = imovel.midia.fotos | selectattr('categoria', 'equalto', cat) | list | reverse | list %}
                 {% if fotos_cat %}
                     {% if cat == 'capa' %}{% set nome_comodo = 'Fachada / Geral' %}
                     {% elif cat == 'sala' %}{% set nome_comodo = 'Sala / Living' %}
@@ -113,9 +113,9 @@
 <script>
     const todasFotosGaleria = [
         {% if imovel.midia and imovel.midia.fotos %}
-            {% set categorias_lista = imovel.midia.fotos | map(attribute='categoria') | unique | list %}
+            {% set categorias_lista = imovel.midia.fotos | map(attribute='categoria') | unique | list | reverse | list %}
             {% for cat in categorias_lista %}
-                {% set fotos_cat = imovel.midia.fotos | selectattr('categoria', 'equalto', cat) | list %}
+                {% set fotos_cat = imovel.midia.fotos | selectattr('categoria', 'equalto', cat) | list | reverse | list %}
                 {% if fotos_cat %}
                     {% if cat == 'capa' %}{% set rotulo_comodo = 'Fachada / Geral' %}
                     {% elif cat == 'sala' %}{% set rotulo_comodo = 'Sala / Living' %}
