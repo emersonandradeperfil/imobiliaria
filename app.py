@@ -5,11 +5,12 @@ import html
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from database import init_db, mongo
 import bcrypt
-from datetime import datetime, date
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from functools import wraps
 from werkzeug.utils import secure_filename
 from bson.objectid import ObjectId
+from bson.errors import InvalidId
 import requests
 from dotenv import load_dotenv
 import re
@@ -22,7 +23,10 @@ app = Flask(__name__)
 # Fuso horário padrão do Brasil (Brasília)
 BR_TZ = ZoneInfo("America/Sao_Paulo")
 
-# BLINDAGEM 2: SECRET_KEY obrigatória e segura em produção
+# Limite máximo de upload (ex.: 15 MB por requisição)
+app.config['MAX_CONTENT_LENGTH'] = 15 * 1024 * 1024
+
+# SECRET_KEY
 secret_key_env = os.getenv("SECRET_KEY")
 if not secret_key_env:
     app.secret_key = "123456-trocar-em-producao"
@@ -36,13 +40,52 @@ UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'upload')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# --- GUARDIÃO DE TEXTOS / PREVENÇÃO DE INPUT INJECTION (XSS) ---
+# --- FUNÇÕES AUXILIARES DE SEGURANÇA E INTEGRAÇÃO ---
 def sanitizar_texto(texto):
     if not texto:
         return ""
     return html.escape(str(texto).strip())
 
-# --- DECORATOR DE SEGURANÇA ATUALIZADO ---
+def oid_seguro(valor_id):
+    if not valor_id:
+        return None
+    try:
+        return ObjectId(str(valor_id).strip())
+    except (InvalidId, TypeError):
+        return None
+
+def enviar_email_mailgun(para_email, assunto, corpo_texto):
+    api_key = os.getenv('MAILGUN_API_KEY')
+    domain = os.getenv('MAILGUN_DOMAIN')
+    if not api_key or not domain or not para_email:
+        return False
+    try:
+        resp = requests.post(
+            f"https://api.mailgun.net/v3/{domain}/messages",
+            auth=("api", api_key),
+            data={
+                "from": f"Teca Borges Imóveis <postmaster@{domain}>",
+                "to": [para_email],
+                "subject": assunto,
+                "text": corpo_texto
+            },
+            timeout=5
+        )
+        return 200 <= resp.status_code < 300
+    except Exception as e:
+        print(f"Erro ao enviar e-mail via Mailgun: {e}")
+        return False
+
+MAX_TENTATIVAS_LOGIN = 5
+BLOQUEIO_LOGIN_MINUTOS = 15
+MAX_TENTATIVAS_OTP = 5
+EXPIRACAO_OTP_MINUTOS = 10
+
+def _obter_chave_tentativa_login(email):
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or 'unknown').split(',')[0].strip()
+    return f"{email.lower()}|{ip}"
+
+# --- DECORATORS DE SEGURANÇA ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -50,14 +93,15 @@ def login_required(f):
             flash('Faça login para acessar esta página.', 'warning')
             return redirect(url_for('login', next=request.path))
         
-        try:
-            user_existe = mongo.db.users.find_one({"_id": ObjectId(session['user_id']), "ativo": {"$ne": False}})
-            if not user_existe:
-                session.clear()
-                flash('Sua conta foi desativada ou removida. Faça login novamente.', 'danger')
-                return redirect(url_for('login'))
-        except Exception:
+        uid = oid_seguro(session['user_id'])
+        if not uid:
             session.clear()
+            return redirect(url_for('login'))
+
+        user_existe = mongo.db.users.find_one({"_id": uid, "ativo": {"$ne": False}})
+        if not user_existe:
+            session.clear()
+            flash('Sua conta foi desativada ou removida. Faça login novamente.', 'danger')
             return redirect(url_for('login'))
             
         return f(*args, **kwargs)
@@ -116,6 +160,7 @@ def gerar_codigo_proprietario(papel="proprietario"):
 def processar_upload_fotos_dinamicas(request_files, request_form, codigo, pasta_imovel, fotos_existentes=None):
     lista_fotos = list(fotos_existentes) if fotos_existentes else []
     contador_ordem = max([f.get("ordem", 0) for f in lista_fotos], default=0) + 1
+    extensoes_permitidas = {".jpg", ".jpeg", ".png", ".webp"}
     
     for key in request_files:
         if key.startswith("fotos_"):
@@ -133,7 +178,9 @@ def processar_upload_fotos_dinamicas(request_files, request_form, codigo, pasta_
             arquivos = request_files.getlist(key)
             for file in arquivos:
                 if file and file.filename != '':
-                    extensao = os.path.splitext(file.filename)[1]
+                    extensao = os.path.splitext(file.filename)[1].lower()
+                    if extensao not in extensoes_permitidas:
+                        continue
                     nome_arquivo = secure_filename(f"{codigo}_{cat}_{contador_ordem}{extensao}")
                     file.save(os.path.join(pasta_imovel, nome_arquivo))
                     
@@ -172,8 +219,9 @@ def index():
     }
     
     favoritos_ids = []
-    if 'user_id' in session:
-        user = db.users.find_one({"_id": ObjectId(session['user_id'])})
+    uid = oid_seguro(session.get('user_id'))
+    if uid:
+        user = db.users.find_one({"_id": uid})
         if user and 'favoritos' in user:
             favoritos_ids = [str(fav_id) for fav_id in user['favoritos']]
     
@@ -196,19 +244,17 @@ def imovel_detalhe(slug):
     imoveis_destaque = []
     ids_excluidos = [imovel["_id"]]
 
-    # 1. Busca até 5 imóveis ativos do mesmo bairro (sem o próprio imóvel)
     if bairro_atual:
         mesmo_bairro = list(
             db.imoveis.find({
                 "status": "ativo",
                 "_id": {"$nin": ids_excluidos},
-                "local_publico.bairro": {"$regex": f"^{bairro_atual}$", "$options": "i"}
+                "local_publico.bairro": {"$regex": f"^{re.escape(bairro_atual)}$", "$options": "i"}
             }).sort("criado_em", -1).limit(5)
         )
         imoveis_destaque.extend(mesmo_bairro)
         ids_excluidos.extend([i["_id"] for i in mesmo_bairro])
 
-    # 2. Se faltar para completar 5, preenche com os destaques da página inicial
     if len(imoveis_destaque) < 5:
         faltam = 5 - len(imoveis_destaque)
         extras_home = list(
@@ -221,14 +267,12 @@ def imovel_detalhe(slug):
         imoveis_destaque.extend(extras_home)
     
     endereco_privado = None
-    if 'user_id' in session:
-        try:
-            user_check = db.users.find_one({"_id": ObjectId(session.get('user_id')), "ativo": {"$ne": False}})
-            if user_check:
-                endereco_privado = db.imoveis_enderecos.find_one({"imovel_id": imovel["_id"]})
-            else:
-                session.clear()
-        except Exception:
+    uid = oid_seguro(session.get('user_id'))
+    if uid:
+        user_check = db.users.find_one({"_id": uid, "ativo": {"$ne": False}})
+        if user_check:
+            endereco_privado = db.imoveis_enderecos.find_one({"imovel_id": imovel["_id"]})
+        else:
             session.clear()
         
     return render_template(
@@ -251,23 +295,63 @@ def imovel_galeria(slug):
         flash('Faça login ou libere seu acesso na página do imóvel para ver a galeria completa.', 'warning')
         return redirect(url_for('imovel_detalhe', slug=slug))
 
-    try:
-        user_check = db.users.find_one({"_id": ObjectId(session.get('user_id')), "ativo": {"$ne": False}})
-        if not user_check:
-            session.clear()
-            return redirect(url_for('imovel_detalhe', slug=slug))
-    except Exception:
+    uid = oid_seguro(session.get('user_id'))
+    user_check = db.users.find_one({"_id": uid, "ativo": {"$ne": False}}) if uid else None
+    if not user_check:
         session.clear()
         return redirect(url_for('imovel_detalhe', slug=slug))
 
     aba_inicial = request.args.get('aba', 'fotos')
     return render_template('imovel_galeria.html', imovel=imovel, aba_inicial=aba_inicial)
 
-# --- OTP PERSISTIDO NO MONGODB ---
+# --- OTP PERSISTIDO NO MONGODB COM EXPIRAÇÃO E LIMITE DE TENTATIVAS ---
+def _salvar_otp(email, tipo, extra_fields=None):
+    codigo = str(random.randint(1000, 9999))
+    agora = datetime.now(BR_TZ)
+    doc = {
+        "codigo": codigo,
+        "tipo": tipo,
+        "tentativas": 0,
+        "expira_em": agora + timedelta(minutes=EXPIRACAO_OTP_MINUTOS),
+        "criado_em": agora
+    }
+    if extra_fields:
+        doc.update(extra_fields)
+    mongo.db.otps.update_one({"email": email}, {"$set": doc}, upsert=True)
+    return codigo
+
+def _validar_otp(email, tipo, codigo_informado):
+    registro = mongo.db.otps.find_one({"email": email, "tipo": tipo})
+    if not registro:
+        return None, "Código incorreto ou expirado!"
+
+    agora = datetime.now(BR_TZ)
+    expira_em = registro.get("expira_em")
+    if expira_em:
+        if expira_em.tzinfo is None:
+            expira_em = expira_em.replace(tzinfo=BR_TZ)
+        if agora > expira_em:
+            mongo.db.otps.delete_one({"_id": registro["_id"]})
+            return None, "Código expirado! Solicite um novo código."
+
+    tentativas = registro.get("tentativas", 0)
+    if tentativas >= MAX_TENTATIVAS_OTP:
+        mongo.db.otps.delete_one({"_id": registro["_id"]})
+        return None, "Limite de tentativas excedido! Solicite um novo código."
+
+    if str(codigo_informado or "").strip() != str(registro.get("codigo")):
+        mongo.db.otps.update_one({"_id": registro["_id"]}, {"$inc": {"tentativas": 1}})
+        restantes = max(0, MAX_TENTATIVAS_OTP - (tentativas + 1))
+        if restantes == 0:
+            mongo.db.otps.delete_one({"_id": registro["_id"]})
+            return None, "Código incorreto. Limite de tentativas atingido; solicite um novo código."
+        return None, f"Código incorreto! Restam {restantes} tentativa(s)."
+
+    return registro, None
 
 @app.route('/api/enviar-otp-imovel', methods=['POST'])
 def enviar_otp_imovel():
-    dados = request.json
+    dados = request.json or {}
     email = sanitizar_texto(dados.get('email'))
     nome = sanitizar_texto(dados.get('nome'))
     whatsapp = sanitizar_texto(dados.get('whatsapp'))
@@ -279,106 +363,79 @@ def enviar_otp_imovel():
     if mongo.db.users.find_one({"email": email}):
         return jsonify({"status": "error", "message": "Este e-mail já está cadastrado no sistema. Faça login para continuar."}), 400
         
-    codigo = str(random.randint(1000, 9999))
-    
-    mongo.db.otps.update_one(
-        {"email": email},
-        {
-            "$set": {
-                "codigo": codigo,
-                "nome": nome,
-                "whatsapp": whatsapp,
-                "imovel_id": imoid,
-                "tipo": "imovel",
-                "criado_em": datetime.now(BR_TZ)
-            }
-        },
-        upsert=True
-    )
-    
-    api_key = os.getenv('MAILGUN_API_KEY')
-    domain = os.getenv('MAILGUN_DOMAIN')
-    
-    try:
-        requests.post(
-            f"https://api.mailgun.net/v3/{domain}/messages",
-            auth=("api", api_key),
-            data={
-                "from": f"Teca Borges Imóveis <postmaster@{domain}>",
-                "to": [email],
-                "subject": "Teca Borges - Código de verificação para ver imóvel",
-                "text": f"""Olá {nome}!
+    codigo = _salvar_otp(email, "imovel", {"nome": nome, "whatsapp": whatsapp, "imovel_id": imoid})
+    enviar_email_mailgun(
+        email,
+        "Teca Borges - Código de verificação para ver imóvel",
+        f"""Olá {nome}!
 
-Seu código de verificação é: {codigo}
+Seu código de verificação é: {codigo} (válido por {EXPIRACAO_OTP_MINUTOS} minutos).
 
 Sua senha provisória de acesso é: 123456
 
 Você pode alterá-la a qualquer momento acessando o seu painel de perfil no site."""
-            },
-            timeout=5
-        )
-    except Exception as e:
-        print(f"Erro ao enviar OTP do imóvel: {e}")
-        
+    )
     return jsonify({"status": "success"})
 
 @app.route('/api/verificar-otp-e-liberar-imovel', methods=['POST'])
 def verificar_otp_e_liberar_imovel():
-    dados = request.json
+    dados = request.json or {}
     email = sanitizar_texto(dados.get('email'))
     codigo_informado = dados.get('codigo')
     
-    registro = mongo.db.otps.find_one({"email": email, "tipo": "imovel"})
-    if registro and registro["codigo"] == codigo_informado:
-        db = mongo.db
-        nome = registro["nome"]
-        whatsapp = registro["whatsapp"]
-        imoid = registro["imovel_id"]
-        
-        user = db.users.find_one({"email": email})
-        if not user:
-            senha_temp = bcrypt.hashpw("123456".encode('utf-8'), bcrypt.gensalt())
-            res_user = db.users.insert_one({
-                "nome": nome,
-                "email": email,
-                "senha_hash": senha_temp,
-                "telefone": whatsapp,
-                "papel": "cliente",
-                "ativo": True,
-                "favoritos": [],
-                "criado_em": datetime.now(BR_TZ)
-            })
-            user_id = res_user.inserted_id
-        else:
-            user_id = user["_id"]
-            db.users.update_one({"_id": user_id}, {"$set": {"nome": nome, "telefone": whatsapp, "ativo": True}})
+    registro, erro = _validar_otp(email, "imovel", codigo_informado)
+    if erro:
+        return jsonify({"status": "error", "message": erro}), 400
 
+    db = mongo.db
+    nome = registro["nome"]
+    whatsapp = registro["whatsapp"]
+    imoid = registro["imovel_id"]
+    imovel_oid = oid_seguro(imoid)
+    
+    user = db.users.find_one({"email": email})
+    if not user:
+        senha_temp = bcrypt.hashpw("123456".encode('utf-8'), bcrypt.gensalt())
+        res_user = db.users.insert_one({
+            "nome": nome,
+            "email": email,
+            "senha_hash": senha_temp,
+            "telefone": whatsapp,
+            "papel": "cliente",
+            "ativo": True,
+            "favoritos": [],
+            "criado_em": datetime.now(BR_TZ)
+        })
+        user_id = res_user.inserted_id
+    else:
+        user_id = user["_id"]
+        db.users.update_one({"_id": user_id}, {"$set": {"nome": nome, "telefone": whatsapp, "ativo": True}})
+
+    if imovel_oid:
         db.leads.insert_one({
             "nome": nome,
             "email": email,
             "telefone": whatsapp,
-            "imovel_id": ObjectId(imoid),
+            "imovel_id": imovel_oid,
             "origem": "Liberação Dados Imóvel (OTP)",
             "criado_em": datetime.now(BR_TZ)
         })
-        
-        session['user_id'] = str(user_id)
-        session['user_nome'] = nome
-        session['user_whatsapp'] = whatsapp
-        session['papel'] = "cliente"
-        
-        db.otps.delete_one({"email": email})
-        
-        imovel_doc = db.imoveis.find_one({"_id": ObjectId(imoid)})
-        slug_destino = imovel_doc.get("slug") if imovel_doc else ""
-        return jsonify({"status": "success", "slug": slug_destino})
-        
-    return jsonify({"status": "error", "message": "Código incorreto ou expirado!"}), 400
+    
+    session['user_id'] = str(user_id)
+    session['user_nome'] = nome
+    session['user_whatsapp'] = whatsapp
+    session['papel'] = "cliente"
+    
+    db.otps.delete_one({"_id": registro["_id"]})
+    
+    imovel_doc = db.imoveis.find_one({"_id": imovel_oid}) if imovel_oid else None
+    slug_destino = imovel_doc.get("slug") if imovel_doc else ""
+    return jsonify({"status": "success", "slug": slug_destino})
 
 # --- OTP PARA BUSCA PERSONALIZADA ---
 @app.route('/api/enviar-otp-busca', methods=['POST'])
 def enviar_otp_busca():
-    dados = request.json
+    dados = request.json or {}
     email = sanitizar_texto(dados.get('email'))
     
     if not email:
@@ -387,83 +444,64 @@ def enviar_otp_busca():
     if mongo.db.users.find_one({"email": email}):
         return jsonify({"status": "error", "message": "Este e-mail já está cadastrado no sistema. Faça login para continuar."}), 400
         
-    codigo = str(random.randint(1000, 9999))
-    mongo.db.otps.update_one(
-        {"email": email},
-        {"$set": {"codigo": codigo, "tipo": "busca", "criado_em": datetime.now(BR_TZ)}},
-        upsert=True
+    codigo = _salvar_otp(email, "busca")
+    enviar_email_mailgun(
+        email,
+        "Teca Borges - Código de verificação para sua busca",
+        f"""Olá!
+Seu código de verificação para busca personalizada é: {codigo} (válido por {EXPIRACAO_OTP_MINUTOS} minutos)."""
     )
-    
-    api_key = os.getenv('MAILGUN_API_KEY')
-    domain = os.getenv('MAILGUN_DOMAIN')
-    
-    try:
-        requests.post(
-            f"https://api.mailgun.net/v3/{domain}/messages",
-            auth=("api", api_key),
-            data={
-                "from": f"Teca Borges Imóveis <postmaster@{domain}>",
-                "to": [email],
-                "subject": "Teca Borges - Código de verificação para sua busca",
-                "text": f"""Olá!
-Seu código de verificação para busca personalizada é: {codigo}"""
-            },
-            timeout=5
-        )
-    except Exception as e:
-        print(f"Erro ao enviar OTP via Mailgun: {e}")
-        
     return jsonify({"status": "success"})
 
 @app.route('/api/verificar-otp-e-salvar-busca', methods=['POST'])
 def verificar_otp_e_salvar_busca():
-    dados = request.json
+    dados = request.json or {}
     email = sanitizar_texto(dados.get('email'))
     codigo_informado = dados.get('codigo')
     
-    registro = mongo.db.otps.find_one({"email": email, "tipo": "busca"})
-    if registro and registro["codigo"] == codigo_informado:
-        db = mongo.db
-        nome = sanitizar_texto(dados.get('nome'))
-        whatsapp = sanitizar_texto(dados.get('whatsapp'))
-        
-        lead_data = {
+    registro, erro = _validar_otp(email, "busca", codigo_informado)
+    if erro:
+        return jsonify({"status": "error", "message": erro}), 400
+
+    db = mongo.db
+    nome = sanitizar_texto(dados.get('nome'))
+    whatsapp = sanitizar_texto(dados.get('whatsapp'))
+    
+    lead_data = {
+        "nome": nome,
+        "email": email,
+        "whatsapp": whatsapp,
+        "tipo_imovel": sanitizar_texto(dados.get('tipo')),
+        "bairro": sanitizar_texto(dados.get('bairro')),
+        "observacoes": sanitizar_texto(dados.get('observacoes')),
+        "origem": "Busca Personalizada Site (OTP)",
+        "verificado": True,
+        "criado_em": datetime.now(BR_TZ)
+    }
+    
+    db.leads.insert_one(lead_data)
+    
+    user = db.users.find_one({"email": email})
+    if not user:
+        senha_temp = bcrypt.hashpw("123456".encode('utf-8'), bcrypt.gensalt())
+        db.users.insert_one({
             "nome": nome,
             "email": email,
-            "whatsapp": whatsapp,
-            "tipo_imovel": sanitizar_texto(dados.get('tipo')),
-            "bairro": sanitizar_texto(dados.get('bairro')),
-            "observacoes": sanitizar_texto(dados.get('observacoes')),
-            "origem": "Busca Personalizada Site (OTP)",
-            "verificado": True,
+            "senha_hash": senha_temp,
+            "telefone": whatsapp,
+            "papel": "cliente",
+            "ativo": True,
+            "favoritos": [],
             "criado_em": datetime.now(BR_TZ)
-        }
+        })
         
-        db.leads.insert_one(lead_data)
-        
-        user = db.users.find_one({"email": email})
-        if not user:
-            senha_temp = bcrypt.hashpw("123456".encode('utf-8'), bcrypt.gensalt())
-            db.users.insert_one({
-                "nome": nome,
-                "email": email,
-                "senha_hash": senha_temp,
-                "telefone": whatsapp,
-                "papel": "cliente",
-                "ativo": True,
-                "favoritos": [],
-                "criado_em": datetime.now(BR_TZ)
-            })
-            
-        db.otps.delete_one({"email": email})
-        return jsonify({"status": "success"})
-    
-    return jsonify({"status": "error", "message": "Código incorreto ou expirado!"}), 400
+    db.otps.delete_one({"_id": registro["_id"]})
+    return jsonify({"status": "success"})
 
 # --- OTP PARA CADASTRO DE CLIENTE ---
 @app.route('/api/enviar-otp-cadastro', methods=['POST'])
 def enviar_otp_cadastro():
-    dados = request.json
+    dados = request.json or {}
     email = sanitizar_texto(dados.get('email'))
     
     if not email:
@@ -472,85 +510,73 @@ def enviar_otp_cadastro():
     if mongo.db.users.find_one({"email": email}):
         return jsonify({"status": "error", "message": "Este e-mail já está cadastrado."}), 400
         
-    codigo = str(random.randint(1000, 9999))
-    mongo.db.otps.update_one(
-        {"email": email},
-        {
-            "$set": {
-                "codigo": codigo,
-                "nome": sanitizar_texto(dados.get('nome')),
-                "senha": dados.get('senha'),
-                "telefone": sanitizar_texto(dados.get('telefone')),
-                "tipo": "cadastro",
-                "criado_em": datetime.now(BR_TZ)
-            }
-        },
-        upsert=True
-    )
-    
-    api_key = os.getenv('MAILGUN_API_KEY')
-    domain = os.getenv('MAILGUN_DOMAIN')
-    
-    try:
-        requests.post(
-            f"https://api.mailgun.net/v3/{domain}/messages",
-            auth=("api", api_key),
-            data={
-                "from": f"Teca Borges Imóveis <postmaster@{domain}>",
-                "to": [email],
-                "subject": "Teca Borges - Confirmação de Cadastro",
-                "text": f"""Olá!
+    codigo = _salvar_otp(email, "cadastro", {
+        "nome": sanitizar_texto(dados.get('nome')),
+        "senha": dados.get('senha'),
+        "telefone": sanitizar_texto(dados.get('telefone'))
+    })
+    enviar_email_mailgun(
+        email,
+        "Teca Borges - Confirmação de Cadastro",
+        f"""Olá!
 
-Seu código de verificação é: {codigo}"""
-            },
-            timeout=5
-        )
-    except Exception as e:
-        print(f"Erro ao enviar OTP de cadastro: {e}")
-        
+Seu código de verificação é: {codigo} (válido por {EXPIRACAO_OTP_MINUTOS} minutos)."""
+    )
     return jsonify({"status": "success"})
 
 @app.route('/api/verificar-otp-e-cadastrar', methods=['POST'])
 def verificar_otp_e_cadastrar():
-    dados = request.json
+    dados = request.json or {}
     email = sanitizar_texto(dados.get('email'))
     codigo_informado = dados.get('codigo')
     
-    registro = mongo.db.otps.find_one({"email": email, "tipo": "cadastro"})
-    if registro and registro["codigo"] == codigo_informado:
-        db = mongo.db
-        nome = registro["nome"]
-        senha = registro["senha"]
-        telefone = registro["telefone"]
-        
-        senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt())
-        
-        db.users.insert_one({
-            "nome": nome,
-            "email": email,
-            "senha_hash": senha_hash,
-            "telefone": telefone,
-            "papel": "cliente",
-            "ativo": True,
-            "favoritos": [],
-            "criado_em": datetime.now(BR_TZ)
-        })
-        
-        db.otps.delete_one({"email": email})
-        return jsonify({"status": "success"})
-        
-    return jsonify({"status": "error", "message": "Código incorreto ou expirado!"}), 400
+    registro, erro = _validar_otp(email, "cadastro", codigo_informado)
+    if erro:
+        return jsonify({"status": "error", "message": erro}), 400
+
+    db = mongo.db
+    nome = registro["nome"]
+    senha = registro["senha"]
+    telefone = registro["telefone"]
+    
+    senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt())
+    
+    db.users.insert_one({
+        "nome": nome,
+        "email": email,
+        "senha_hash": senha_hash,
+        "telefone": telefone,
+        "papel": "cliente",
+        "ativo": True,
+        "favoritos": [],
+        "criado_em": datetime.now(BR_TZ)
+    })
+    
+    db.otps.delete_one({"_id": registro["_id"]})
+    return jsonify({"status": "success"})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     proxima_pagina = request.args.get('next') or request.form.get('next')
     if request.method == 'POST':
         email = sanitizar_texto(request.form.get('email'))
-        senha = request.form.get('senha')
-        
+        senha = request.form.get('senha') or ""
+        chave_tentativa = _obter_chave_tentativa_login(email)
+        agora = datetime.now(BR_TZ)
+
+        registro_tentativa = mongo.db.login_tentativas.find_one({"chave": chave_tentativa})
+        if registro_tentativa and registro_tentativa.get("bloqueado_ate"):
+            bloqueado_ate = registro_tentativa["bloqueado_ate"]
+            if bloqueado_ate.tzinfo is None:
+                bloqueado_ate = bloqueado_ate.replace(tzinfo=BR_TZ)
+            if agora < bloqueado_ate:
+                minutos_restantes = max(1, int((bloqueado_ate - agora).total_seconds() // 60) + 1)
+                flash(f'Muitas tentativas incorretas. Tente novamente em {minutos_restantes} minuto(s).', 'error')
+                return render_template('login.html', next=proxima_pagina)
+
         user = mongo.db.users.find_one({"email": email, "ativo": {"$ne": False}})
         senha_valida = False
-        if user and 'senha_hash' in user:
+        if user and 'senha_hash' in user and senha:
             hash_armazenado = user['senha_hash']
             hash_bytes = hash_armazenado.encode('utf-8') if isinstance(hash_armazenado, str) else hash_armazenado
             try:
@@ -559,6 +585,7 @@ def login():
                 senha_valida = False
 
         if user and senha_valida:
+            mongo.db.login_tentativas.delete_one({"chave": chave_tentativa})
             session['user_id'] = str(user['_id'])
             session['user_nome'] = user['nome']
             session['papel'] = user.get('papel', 'cliente')
@@ -573,7 +600,21 @@ def login():
                 return redirect(proxima_pagina)
             return redirect(url_for('index'))
         else:
-            flash('Usuário não cadastrado, verificar login e senha', 'error')
+            falhas_atuais = (registro_tentativa.get("falhas", 0) if registro_tentativa else 0) + 1
+            update_tentativa = {
+                "email": email,
+                "falhas": falhas_atuais,
+                "atualizado_em": agora
+            }
+            if falhas_atuais >= MAX_TENTATIVAS_LOGIN:
+                update_tentativa["bloqueado_ate"] = agora + timedelta(minutes=BLOQUEIO_LOGIN_MINUTOS)
+                mensagem_erro = f'Muitas tentativas incorretas. Acesso bloqueado por {BLOQUEIO_LOGIN_MINUTOS} minutos.'
+            else:
+                restantes = MAX_TENTATIVAS_LOGIN - falhas_atuais
+                mensagem_erro = f'Usuário não cadastrado ou senha incorreta ({restantes} tentativa(s) restante(s)).'
+
+            mongo.db.login_tentativas.update_one({"chave": chave_tentativa}, {"$set": update_tentativa}, upsert=True)
+            flash(mensagem_erro, 'error')
             
     return render_template('login.html', next=proxima_pagina)
 
@@ -587,24 +628,12 @@ def esqueci_senha():
         senha_temporaria = ''.join(random.choice(caracteres) for _ in range(6))
         senha_hash = bcrypt.hashpw(senha_temporaria.encode('utf-8'), bcrypt.gensalt())
         mongo.db.users.update_one({"_id": user["_id"]}, {"$set": {"senha_hash": senha_hash}})
-        
-        api_key = os.getenv('MAILGUN_API_KEY')
-        domain = os.getenv('MAILGUN_DOMAIN')
-        try:
-            requests.post(
-                f"https://api.mailgun.net/v3/{domain}/messages",
-                auth=("api", api_key),
-                data={
-                    "from": f"Teca Borges Imóveis <postmaster@{domain}>",
-                    "to": [email],
-                    "subject": "Teca Borges - Sua nova senha temporária",
-                    "text": f"""Olá, {user['nome']},
+        enviar_email_mailgun(
+            email,
+            "Teca Borges - Sua nova senha temporária",
+            f"""Olá, {user['nome']},
 Sua nova senha temporária é: {senha_temporaria}"""
-                },
-                timeout=5
-            )
-        except Exception as e:
-            print(f"Erro ao enviar via Mailgun: {e}")
+        )
 
     flash('Se este e-mail estiver cadastrado, as instruções foram enviadas.', 'success')
     return redirect(url_for('login'))
@@ -620,22 +649,25 @@ def logout():
 @login_required
 def favoritar_imovel(imoid):
     db = mongo.db
-    user_id = session.get('user_id')
-    imovel_obj_id = ObjectId(imoid)
-    user = db.users.find_one({"_id": ObjectId(user_id)})
-    favoritos = user.get("favoritos", [])
+    user_id = oid_seguro(session.get('user_id'))
+    imovel_obj_id = oid_seguro(imoid)
+    if not user_id or not imovel_obj_id:
+        return jsonify({"status": "error", "message": "ID inválido."}), 400
+
+    user = db.users.find_one({"_id": user_id})
+    favoritos = user.get("favoritos", []) if user else []
     
     if imovel_obj_id in favoritos:
-        db.users.update_one({"_id": ObjectId(user_id)}, {"$pull": {"favoritos": imovel_obj_id}})
+        db.users.update_one({"_id": user_id}, {"$pull": {"favoritos": imovel_obj_id}})
         favoritado = False
     else:
-        db.users.update_one({"_id": ObjectId(user_id)}, {"$push": {"favoritos": imovel_obj_id}})
+        db.users.update_one({"_id": user_id}, {"$push": {"favoritos": imovel_obj_id}})
         favoritado = True  
-    return {"status": "success", "favoritado": favoritado}
+    return jsonify({"status": "success", "favoritado": favoritado})
 
 @app.route('/api/enviar-otp-favorito', methods=['POST'])
 def enviar_otp_favorito():
-    dados = request.json
+    dados = request.json or {}
     email = sanitizar_texto(dados.get('email'))
     nome = sanitizar_texto(dados.get('nome'))
     telefone = sanitizar_texto(dados.get('telefone'))
@@ -647,102 +679,84 @@ def enviar_otp_favorito():
     if mongo.db.users.find_one({"email": email}):
         return jsonify({"status": "error", "message": "Este e-mail já está cadastrado no sistema. Faça login para continuar."}), 400
         
-    codigo = str(random.randint(1000, 9999))
-    mongo.db.otps.update_one(
-        {"email": email},
-        {
-            "$set": {
-                "codigo": codigo,
-                "nome": nome,
-                "telefone": telefone,
-                "imovel_id": imovel_id,
-                "tipo": "favorito",
-                "criado_em": datetime.now(BR_TZ)
-            }
-        },
-        upsert=True
-    )
-    
-    api_key = os.getenv('MAILGUN_API_KEY')
-    domain = os.getenv('MAILGUN_DOMAIN')
-    try:
-        requests.post(
-            f"https://api.mailgun.net/v3/{domain}/messages",
-            auth=("api", api_key),
-            data={
-                "from": f"Teca Borges Imóveis <postmaster@{domain}>",
-                "to": [email],
-                "subject": "Teca Borges - Código de verificação para favoritar imóvel",
-                "text": f"""Olá {nome}!
+    codigo = _salvar_otp(email, "favorito", {"nome": nome, "telefone": telefone, "imovel_id": imovel_id})
+    enviar_email_mailgun(
+        email,
+        "Teca Borges - Código de verificação para favoritar imóvel",
+        f"""Olá {nome}!
 
-Seu código de verificação é: {codigo}
+Seu código de verificação é: {codigo} (válido por {EXPIRACAO_OTP_MINUTOS} minutos).
 
 Sua senha provisória de acesso é: 123456
 
 Você pode alterá-la a qualquer momento acessando o seu painel de perfil no site."""
-            },
-            timeout=5
-        )
-    except Exception as e:
-        print(f"Erro ao enviar OTP via Mailgun: {e}")
+    )
     return jsonify({"status": "success"})
 
 @app.route('/api/verificar-otp-e-salvar-favorito', methods=['POST'])
 def verificar_otp_e_salvar_favorito():
-    dados = request.json
+    dados = request.json or {}
     email = sanitizar_texto(dados.get('email'))
     codigo_informado = dados.get('codigo')
     
-    registro = mongo.db.otps.find_one({"email": email, "tipo": "favorito"})
-    if registro and registro["codigo"] == codigo_informado:
-        db = mongo.db
-        nome = registro["nome"]
-        telefone = registro["telefone"]
-        imovel_id_str = registro["imovel_id"]
-        imovel_obj_id = ObjectId(imovel_id_str)
-        
-        user = db.users.find_one({"email": email})
-        if user:
-            user_id = user["_id"]
-            db.users.update_one({"_id": user_id}, {"$set": {"nome": nome, "telefone": telefone, "ativo": True}})
-        else:
-            senha_temp = bcrypt.hashpw("123456".encode('utf-8'), bcrypt.gensalt())
-            res_user = db.users.insert_one({
-                "nome": nome,
-                "email": email,
-                "senha_hash": senha_temp,
-                "telefone": telefone,
-                "papel": "cliente",
-                "ativo": True,
-                "favoritos": [],
-                "criado_em": datetime.now(BR_TZ)
-            })
-            user_id = res_user.inserted_id
+    registro, erro = _validar_otp(email, "favorito", codigo_informado)
+    if erro:
+        return jsonify({"status": "error", "message": erro}), 400
 
-        db.users.update_one({"_id": user_id}, {"$addToSet": {"favoritos": imovel_obj_id}})
-        db.leads.insert_one({
+    db = mongo.db
+    nome = registro["nome"]
+    telefone = registro["telefone"]
+    imovel_id_str = registro["imovel_id"]
+    imovel_obj_id = oid_seguro(imovel_id_str)
+    if not imovel_obj_id:
+        return jsonify({"status": "error", "message": "Imóvel inválido."}), 400
+    
+    user = db.users.find_one({"email": email})
+    if user:
+        user_id = user["_id"]
+        db.users.update_one({"_id": user_id}, {"$set": {"nome": nome, "telefone": telefone, "ativo": True}})
+    else:
+        senha_temp = bcrypt.hashpw("123456".encode('utf-8'), bcrypt.gensalt())
+        res_user = db.users.insert_one({
             "nome": nome,
             "email": email,
+            "senha_hash": senha_temp,
             "telefone": telefone,
-            "imovel_id": imovel_obj_id,
-            "origem": "Modal Favorito Site (OTP)",
+            "papel": "cliente",
+            "ativo": True,
+            "favoritos": [],
             "criado_em": datetime.now(BR_TZ)
         })
-        
-        session['user_id'] = str(user_id)
-        session['user_nome'] = nome
-        session['papel'] = "cliente"
-        
-        db.otps.delete_one({"email": email})
-        return jsonify({"status": "success", "redirect_url": url_for('meus_favoritos')})
-    return jsonify({"status": "error", "message": "Código incorreto!"}), 400
+        user_id = res_user.inserted_id
+
+    db.users.update_one({"_id": user_id}, {"$addToSet": {"favoritos": imovel_obj_id}})
+    db.leads.insert_one({
+        "nome": nome,
+        "email": email,
+        "telefone": telefone,
+        "imovel_id": imovel_obj_id,
+        "origem": "Modal Favorito Site (OTP)",
+        "criado_em": datetime.now(BR_TZ)
+    })
+    
+    session['user_id'] = str(user_id)
+    session['user_nome'] = nome
+    session['papel'] = "cliente"
+    
+    db.otps.delete_one({"_id": registro["_id"]})
+    return jsonify({"status": "success", "redirect_url": url_for('meus_favoritos')})
 
 # --- TRAVA DE SEGURANÇA DE DATA NO BACKEND PARA AGENDAMENTOS ---
 @app.route('/imovel/agendar/<imoid>', methods=['POST'])
 @login_required
 def agendar_visita(imoid):
     db = mongo.db
-    user_id = session.get('user_id')
+    user_id = oid_seguro(session.get('user_id'))
+    imovel_oid = oid_seguro(imoid)
+    if not user_id or not imovel_oid:
+        flash('Imóvel inválido.', 'danger')
+        return redirect(request.referrer or url_for('index'))
+
     data = request.form.get('data')
     hora = request.form.get('hora')
     observacoes = sanitizar_texto(request.form.get('observacoes', ''))
@@ -765,8 +779,8 @@ def agendar_visita(imoid):
         return redirect(request.referrer or url_for('index'))
 
     db.agendamentos.insert_one({
-        "cliente_id": ObjectId(user_id),
-        "imovel_id": ObjectId(imoid),
+        "cliente_id": user_id,
+        "imovel_id": imovel_oid,
         "data_hora": data_hora,
         "observacoes": observacoes,
         "status": "pendente",
@@ -779,8 +793,9 @@ def agendar_visita(imoid):
 @login_required
 def meus_favoritos():
     db = mongo.db
-    user = db.users.find_one({"_id": ObjectId(session.get('user_id'))})
-    fav_ids = user.get("favoritos", [])
+    uid = oid_seguro(session.get('user_id'))
+    user = db.users.find_one({"_id": uid}) if uid else None
+    fav_ids = user.get("favoritos", []) if user else []
     imoveis_favoritos = list(db.imoveis.find({"_id": {"$in": fav_ids}, "status": "ativo"}))
     return render_template('cliente/favoritos.html', imoveis=imoveis_favoritos, active_tab='favoritos')
 
@@ -788,23 +803,24 @@ def meus_favoritos():
 @login_required
 def meus_agendamentos():
     db = mongo.db
+    uid = oid_seguro(session.get('user_id'))
     pipeline = [
-        {"$match": {"cliente_id": ObjectId(session.get('user_id'))}},
+        {"$match": {"cliente_id": uid}},
         {"$sort": {"data_hora": 1}},
         {"$lookup": {"from": "imoveis", "localField": "imovel_id", "foreignField": "_id", "as": "imovel_info"}},
         {"$unwind": {"path": "$imovel_info", "preserveNullAndEmptyArrays": True}},
         {"$lookup": {"from": "imoveis_enderecos", "localField": "imovel_id", "foreignField": "imovel_id", "as": "endereco_privado"}},
         {"$unwind": {"path": "$endereco_privado", "preserveNullAndEmptyArrays": True}}
     ]
-    agendamentos = list(db.agendamentos.aggregate(pipeline)) if 'agendamentos' in db.list_collection_names() else []
+    agendamentos = list(db.agendamentos.aggregate(pipeline)) if (uid and 'agendamentos' in db.list_collection_names()) else []
     return render_template('cliente/agendamentos.html', agendamentos=agendamentos, active_tab='agendamentos')
 
 @app.route('/perfil', methods=['GET', 'POST'])
 @login_required
 def meu_perfil():
     db = mongo.db
-    user_id = session.get('user_id')
-    user = db.users.find_one({"_id": ObjectId(user_id)})
+    user_id = oid_seguro(session.get('user_id'))
+    user = db.users.find_one({"_id": user_id})
     
     if request.method == 'POST':
         nome = sanitizar_texto(request.form.get('nome'))
@@ -813,7 +829,7 @@ def meu_perfil():
         nova_senha = request.form.get('senha')
         
         if email != user.get('email'):
-            existe_outro = db.users.find_one({"email": email, "_id": {"$ne": ObjectId(user_id)}})
+            existe_outro = db.users.find_one({"email": email, "_id": {"$ne": user_id}})
             if existe_outro:
                 flash("Este e-mail já está cadastrado.", "danger")
                 return redirect(url_for('meu_perfil'))
@@ -827,9 +843,9 @@ def meu_perfil():
         if nova_senha and nova_senha.strip() != "":
             update_data["senha_hash"] = bcrypt.hashpw(nova_senha.encode('utf-8'), bcrypt.gensalt())
             
-        db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
+        db.users.update_one({"_id": user_id}, {"$set": update_data})
         session['user_nome'] = nome
-        
+        flash("Perfil atualizado com sucesso!", "success")
         return redirect(url_for('meu_perfil'))
         
     return render_template('admin/perfil.html', user=user, active_tab='perfil')
@@ -840,9 +856,8 @@ def meu_perfil():
 @proprietario_required
 def painel_proprietario():
     db = mongo.db
-    proprietario_id = ObjectId(session.get('user_id'))
+    proprietario_id = oid_seguro(session.get('user_id'))
     
-    # 1. Imóveis cadastrados no nome deste proprietário/parceiro
     imoveis_prop = list(db.imoveis.find({"proprietario_id": proprietario_id, "status": "ativo"}))
     imovel_ids = [imv["_id"] for imv in imoveis_prop]
     
@@ -860,7 +875,6 @@ def painel_proprietario():
             "leads": total_leads
         })
         
-    # 2. Agendamentos de visitas para os imóveis deste proprietário/parceiro
     agendamentos = []
     if 'agendamentos' in db.list_collection_names() and imovel_ids:
         pipeline_ag = [
@@ -873,7 +887,6 @@ def painel_proprietario():
         ]
         agendamentos = list(db.agendamentos.aggregate(pipeline_ag))
         
-    # 3. Favoritos / Interessados (Clientes que curtiram os imóveis)
     interessados_curtidas = []
     if imovel_ids:
         usuarios_fav = list(db.users.find({"ativo": {"$ne": False}, "favoritos": {"$in": imovel_ids}}))
@@ -964,15 +977,19 @@ def admin_painel():
 @admin_required
 def admin_atribuir_lead(lead_id):
     db = mongo.db
-    corretor_id = request.form.get('corretor_id')
-    
+    lid = oid_seguro(lead_id)
+    if not lid:
+        flash('Lead inválido.', 'danger')
+        return redirect(url_for('admin_painel') + '#leads')
+
+    corretor_oid = oid_seguro(request.form.get('corretor_id'))
     update_data = {
-        "corretor_responsavel_id": ObjectId(corretor_id) if corretor_id else None,
-        "status": "em_andamento" if corretor_id else "pendente",
+        "corretor_responsavel_id": corretor_oid,
+        "status": "em_andamento" if corretor_oid else "pendente",
         "atualizado_em": datetime.now(BR_TZ)
     }
     
-    db.leads.update_one({"_id": ObjectId(lead_id)}, {"$set": update_data})
+    db.leads.update_one({"_id": lid}, {"$set": update_data})
     flash('Corretor atribuído com sucesso!', 'success')
     return redirect(url_for('admin_painel') + '#leads')
 
@@ -981,23 +998,23 @@ def admin_atribuir_lead(lead_id):
 @admin_required
 def admin_gerar_lead_de_curtida():
     db = mongo.db
-    user_id = request.form.get('user_id')
-    imovel_id = request.form.get('imovel_id')
-    corretor_id = request.form.get('corretor_id')
+    uid = oid_seguro(request.form.get('user_id'))
+    imovel_oid = oid_seguro(request.form.get('imovel_id'))
+    corretor_oid = oid_seguro(request.form.get('corretor_id'))
     
-    cliente = db.users.find_one({"_id": ObjectId(user_id)})
-    if not cliente:
-        flash('Cliente não encontrado.', 'danger')
+    cliente = db.users.find_one({"_id": uid}) if uid else None
+    if not cliente or not imovel_oid:
+        flash('Cliente ou imóvel inválido.', 'danger')
         return redirect(url_for('admin_painel') + '#curtidas')
         
     db.leads.insert_one({
         "nome": cliente.get('nome'),
         "email": cliente.get('email'),
         "telefone": cliente.get('telefone'),
-        "imovel_id": ObjectId(imovel_id),
+        "imovel_id": imovel_oid,
         "origem": "Curtida de Imóvel (Painel Admin)",
-        "corretor_responsavel_id": ObjectId(corretor_id) if corretor_id else None,
-        "status": "em_andamento" if corretor_id else "pendente",
+        "corretor_responsavel_id": corretor_oid,
+        "status": "em_andamento" if corretor_oid else "pendente",
         "criado_em": datetime.now(BR_TZ)
     })
     
@@ -1009,15 +1026,19 @@ def admin_gerar_lead_de_curtida():
 @admin_required
 def admin_atribuir_agendamento(ag_id):
     db = mongo.db
-    corretor_id = request.form.get('corretor_id')
-    
+    aid = oid_seguro(ag_id)
+    if not aid:
+        flash('Agendamento inválido.', 'danger')
+        return redirect(url_for('admin_painel') + '#agendamentos')
+
+    corretor_oid = oid_seguro(request.form.get('corretor_id'))
     update_data = {
-        "corretor_responsavel_id": ObjectId(corretor_id) if corretor_id else None,
-        "status": "em_andamento" if corretor_id else "pendente",
+        "corretor_responsavel_id": corretor_oid,
+        "status": "em_andamento" if corretor_oid else "pendente",
         "atualizado_em": datetime.now(BR_TZ)
     }
     
-    db.agendamentos.update_one({"_id": ObjectId(ag_id)}, {"$set": update_data})
+    db.agendamentos.update_one({"_id": aid}, {"$set": update_data})
     flash('Corretor atribuído ao agendamento com sucesso!', 'success')
     return redirect(url_for('admin_painel') + '#agendamentos')
 
@@ -1026,6 +1047,11 @@ def admin_atribuir_agendamento(ag_id):
 @admin_required
 def admin_reagendar_visita(ag_id):
     db = mongo.db
+    aid = oid_seguro(ag_id)
+    if not aid:
+        flash('Agendamento inválido.', 'danger')
+        return redirect(url_for('admin_painel') + '#agendamentos')
+
     nova_data = request.form.get('nova_data')
     nova_hora = request.form.get('nova_hora')
     
@@ -1047,7 +1073,7 @@ def admin_reagendar_visita(ag_id):
         return redirect(url_for('admin_painel') + '#agendamentos')
         
     db.agendamentos.update_one(
-        {"_id": ObjectId(ag_id)},
+        {"_id": aid},
         {
             "$set": {
                 "data_hora": data_hora_nova,
@@ -1059,7 +1085,6 @@ def admin_reagendar_visita(ag_id):
     flash('Visita reagendada com sucesso!', 'success')
     return redirect(url_for('admin_painel') + '#agendamentos')
 
-# --- LISTAGEM DE IMÓVEIS COM PAGINAÇÃO E DADOS DE PROPRIETÁRIO/CRIADOR ---
 @app.route('/admin/imoveis')
 @login_required
 @corretor_ou_admin_required
@@ -1093,8 +1118,8 @@ def admin_imovel_novo():
         titulo = sanitizar_texto(request.form.get('titulo'))
         slug = sanitizar_texto(request.form.get('slug')) or titulo.lower().replace(" ", "-")
         
-        condominio_id = request.form.get('condominio_id')
-        proprietario_id = request.form.get('proprietario_id')
+        condominio_oid = oid_seguro(request.form.get('condominio_id'))
+        proprietario_oid = oid_seguro(request.form.get('proprietario_id'))
         
         pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
         os.makedirs(pasta_imovel, exist_ok=True)
@@ -1128,9 +1153,9 @@ def admin_imovel_novo():
                 "cidade": sanitizar_texto(request.form.get('cidade', 'São Paulo')),
                 "estado": sanitizar_texto(request.form.get('estado', 'SP'))
             },
-            "condominio_id": ObjectId(condominio_id) if condominio_id else None,
-            "proprietario_id": ObjectId(proprietario_id) if proprietario_id else None,
-            "criado_por": ObjectId(session.get('user_id')) if session.get('user_id') else None,
+            "condominio_id": condominio_oid,
+            "proprietario_id": proprietario_oid,
+            "criado_por": oid_seguro(session.get('user_id')),
             "midia": {"fotos": lista_fotos},
             "criado_em": datetime.now(BR_TZ)
         }
@@ -1189,8 +1214,8 @@ def editar_imovel(codigo):
         titulo = sanitizar_texto(request.form.get('titulo'))
         descricao = sanitizar_texto(request.form.get('descricao'))
         tipo = sanitizar_texto(request.form.get('tipo'))
-        condominio_id = request.form.get('condominio_id')
-        proprietario_id = request.form.get('proprietario_id')
+        condominio_oid = oid_seguro(request.form.get('condominio_id'))
+        proprietario_oid = oid_seguro(request.form.get('proprietario_id'))
         
         pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
         os.makedirs(pasta_imovel, exist_ok=True)
@@ -1217,8 +1242,8 @@ def editar_imovel(codigo):
                     "caracteristicas.banheiros": int(request.form.get('banheiros') or 0),
                     "caracteristicas.vagas": int(request.form.get('vagas') or 0),
                     "local_publico.bairro": sanitizar_texto(request.form.get('bairro')),
-                    "condominio_id": ObjectId(condominio_id) if condominio_id else None,
-                    "proprietario_id": ObjectId(proprietario_id) if proprietario_id else None,
+                    "condominio_id": condominio_oid,
+                    "proprietario_id": proprietario_oid,
                     "midia.fotos": lista_fotos
                 }
             }
@@ -1265,7 +1290,7 @@ def editar_imovel(codigo):
 @admin_required
 def remover_foto_imovel(codigo):
     db = mongo.db
-    dados = request.json
+    dados = request.json or {}
     caminho_foto = dados.get('arquivo')
     
     imovel = db.imoveis.find_one({"codigo": codigo})
@@ -1307,7 +1332,7 @@ def admin_usuarios():
     if request.method == 'POST':
         nome = sanitizar_texto(request.form.get('nome'))
         email = sanitizar_texto(request.form.get('email'))
-        senha = request.form.get('senha')
+        senha = request.form.get('senha') or ""
         papel = sanitizar_texto(request.form.get('papel'))
         telefone = sanitizar_texto(request.form.get('telefone'))
         
@@ -1339,13 +1364,17 @@ def admin_usuarios():
 @admin_required
 def alterar_papel(user_id):
     db = mongo.db
+    uid = oid_seguro(user_id)
+    if not uid:
+        flash('Usuário inválido.', 'danger')
+        return redirect(url_for('admin_usuarios'))
+
     novo_papel = sanitizar_texto(request.form.get('papel'))
-    
     if novo_papel in ['admin', 'corretor', 'cliente', 'proprietario', 'parceiro']:
-        db.users.update_one(
-            {"_id": ObjectId(user_id)},
-            {"$set": {"papel": novo_papel}}
-        )
+        db.users.update_one({"_id": uid}, {"$set": {"papel": novo_papel}})
+        flash('Papel do usuário atualizado com sucesso!', 'success')
+    else:
+        flash('Papel inválido.', 'danger')
         
     return redirect(url_for('admin_usuarios'))
 
@@ -1354,8 +1383,13 @@ def alterar_papel(user_id):
 @admin_required
 def excluir_usuario(user_id):
     db = mongo.db
+    uid = oid_seguro(user_id)
+    if not uid:
+        flash('Usuário inválido.', 'danger')
+        return redirect(url_for('admin_usuarios'))
+
     db.users.update_one(
-        {"_id": ObjectId(user_id)},
+        {"_id": uid},
         {"$set": {"ativo": False, "desativado_em": datetime.now(BR_TZ)}}
     )
     flash('Usuário desativado com sucesso (Soft-Delete para preservar histórico).', 'info')
@@ -1365,7 +1399,7 @@ def excluir_usuario(user_id):
 @login_required
 def painel_corretor():
     db = mongo.db
-    corretor_id = ObjectId(session.get('user_id'))
+    corretor_id = oid_seguro(session.get('user_id'))
     papel = session.get('papel')
     
     query_agendamentos_filtro = {}
@@ -1456,11 +1490,15 @@ def painel_corretor():
 @corretor_ou_admin_required
 def atender_lead(lead_id):
     db = mongo.db
-    corretor_id = ObjectId(session.get('user_id'))
+    corretor_id = oid_seguro(session.get('user_id'))
+    lid = oid_seguro(lead_id)
+    if not lid:
+        flash('Lead inválido.', 'danger')
+        return redirect(url_for('painel_corretor') + '#leads')
     
     resultado = db.leads.find_one_and_update(
         {
-            "_id": ObjectId(lead_id),
+            "_id": lid,
             "$or": [
                 {"corretor_responsavel_id": {"$exists": False}},
                 {"corretor_responsavel_id": None},
@@ -1489,11 +1527,15 @@ def atender_lead(lead_id):
 @corretor_ou_admin_required
 def atender_agendamento(ag_id):
     db = mongo.db
-    corretor_id = ObjectId(session.get('user_id'))
+    corretor_id = oid_seguro(session.get('user_id'))
+    aid = oid_seguro(ag_id)
+    if not aid:
+        flash('Agendamento inválido.', 'danger')
+        return redirect(url_for('painel_corretor'))
     
     resultado = db.agendamentos.find_one_and_update(
         {
-            "_id": ObjectId(ag_id),
+            "_id": aid,
             "status": "pendente"
         },
         {
@@ -1518,16 +1560,20 @@ def atender_agendamento(ag_id):
 @corretor_ou_admin_required
 def alterar_status_agendamento_corretor(ag_id, novo_status):
     db = mongo.db
-    corretor_id = ObjectId(session.get('user_id'))
+    corretor_id = oid_seguro(session.get('user_id'))
+    aid = oid_seguro(ag_id)
+    if not aid:
+        flash('Agendamento inválido.', 'danger')
+        return redirect(url_for('painel_corretor'))
     
     papel = session.get('papel')
-    query = {"_id": ObjectId(ag_id)}
+    query = {"_id": aid}
     if papel != 'admin':
         query["corretor_responsavel_id"] = corretor_id
 
     resultado = db.agendamentos.update_one(
         query,
-        {"$set": {"status": novo_status, "atualizado_em": datetime.now(BR_TZ)}}
+        {"$set": {"status": sanitizar_texto(novo_status), "atualizado_em": datetime.now(BR_TZ)}}
     )
     
     if resultado.modified_count > 0:
@@ -1542,7 +1588,12 @@ def alterar_status_agendamento_corretor(ag_id, novo_status):
 @corretor_ou_admin_required
 def reagendar_visita_corretor(ag_id):
     db = mongo.db
-    corretor_id = ObjectId(session.get('user_id'))
+    corretor_id = oid_seguro(session.get('user_id'))
+    aid = oid_seguro(ag_id)
+    if not aid:
+        flash('Agendamento inválido.', 'danger')
+        return redirect(url_for('painel_corretor'))
+
     nova_data = request.form.get('nova_data')
     nova_hora = request.form.get('nova_hora')
     
@@ -1564,7 +1615,7 @@ def reagendar_visita_corretor(ag_id):
         return redirect(url_for('painel_corretor'))
 
     papel = session.get('papel')
-    query = {"_id": ObjectId(ag_id)}
+    query = {"_id": aid}
     if papel != 'admin':
         query["corretor_responsavel_id"] = corretor_id
 

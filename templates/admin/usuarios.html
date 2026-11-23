@@ -52,7 +52,19 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Senha</label>
-                    <input type="password" name="senha" required class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900">
+                    <div class="relative">
+                        <input type="password" id="adm-cad-senha" name="senha" required
+                            onkeyup="checarCapsLock(event, 'caps-adm-cad')" onkeydown="checarCapsLock(event, 'caps-adm-cad')"
+                            class="w-full pl-3 pr-11 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900">
+                        <button type="button" onclick="alternarSenha('adm-cad-senha', this)" title="Mostrar ou ocultar senha"
+                            class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-slate-900 focus:outline-none cursor-pointer">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                    <p id="caps-adm-cad" class="hidden text-xs font-semibold text-amber-700 mt-1">⚠️ Caps Lock ativado</p>
                 </div>
                 <button type="submit" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md cursor-pointer">
                     Cadastrar Usuário
@@ -85,7 +97,6 @@
                             <td class="p-3 text-gray-600">{{ u.email }}</td>
                             <td class="p-3">
                                 <div class="flex items-center space-x-3">
-                                    <!-- Formulário para alterar o papel -->
                                     <form action="{{ url_for('alterar_papel', user_id=u._id) }}" method="POST" class="flex items-center space-x-2">
                                         <select name="papel" class="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900">
                                             <option value="admin" {% if u.papel == 'admin' %}selected{% endif %}>ADMIN</option>
@@ -97,7 +108,6 @@
                                         <button type="submit" class="bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">Salvar</button>
                                     </form>
 
-                                    <!-- Link para excluir o usuário -->
                                     <a href="{{ url_for('excluir_usuario', user_id=u._id) }}" onclick="return confirm('Tem certeza que deseja excluir este usuário?')" class="text-red-600 hover:text-red-800 font-bold text-xs">Excluir</a>
                                 </div>
                             </td>
@@ -109,4 +119,20 @@
         </div>
     </div>
 </div>
+
+<script>
+function alternarSenha(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const mostrando = input.type === 'text';
+    input.type = mostrando ? 'password' : 'text';
+    btn.classList.toggle('text-amber-600', !mostrando);
+}
+
+function checarCapsLock(event, avisoId) {
+    const aviso = document.getElementById(avisoId);
+    if (!aviso || typeof event.getModifierState !== 'function') return;
+    aviso.classList.toggle('hidden', !event.getModifierState('CapsLock'));
+}
+</script>
 {% endblock %}
