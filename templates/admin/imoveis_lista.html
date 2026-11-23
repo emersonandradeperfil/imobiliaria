@@ -142,7 +142,7 @@
                     <th class="p-4">Cadastrado Por / Data</th>
                     {% endif %}
                     <th class="p-4">Status</th>
-                    <th class="p-4 text-right">Ações</th>
+                    <th class="p-4 text-center">Ações</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 text-sm">
@@ -182,7 +182,7 @@
                     
                     <!-- Coluna de Ações com o link 'Ver imóvel' -->
                     <td class="p-4 text-right space-x-3">
-                        <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" class="text-slate-900 hover:text-amber-600 font-bold text-xs uppercase">Ver imóvel</a>
+                        <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" class="text-blue-600 hover:underline font-semibold text-xs">Detalhes</a>
                         
                         {% if session.get('papel') == 'admin' %}
                         <a href="{{ url_for('editar_imovel', codigo=imovel.codigo) }}" class="text-blue-600 hover:underline font-semibold text-xs">Editar</a>
