@@ -364,8 +364,8 @@
 <div id="modal-lead"
     class="fixed inset-0 bg-slate-950/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative transform transition-all text-slate-900">
-        <button onclick="fecharModalLead()"
-            class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">×</button>
+        <button type="button" onclick="fecharModalLead()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold cursor-pointer">×</button>
 
         <div class="text-center mb-6">
             <span class="text-3xl">❤️</span>
@@ -387,14 +387,22 @@
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Contato</label>
-                <input type="tel" id="lead-telefone" required placeholder="11 91234-5678" maxlength="11"
-                    oninput="this.value = this.value.replace(/\D/g, '')"
+                <input type="tel" id="lead-telefone" required placeholder="11 912345678"
+                    inputmode="numeric" minlength="12" maxlength="12"
+                    oninput="formatarTelefoneModalLead(this)"
                     class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
             </div>
-            <button type="submit"
-                class="w-full bg-slate-900 hover:bg-amber-400 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md cursor-pointer">
-                Enviar
-            </button>
+
+            <div class="flex flex-col gap-3 pt-1">
+                <button type="submit"
+                    class="w-full bg-slate-900 hover:bg-amber-400 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md cursor-pointer">
+                    Enviar dados
+                </button>
+                <a id="btn-logar-modal" href="{{ url_for('login', next=request.path) }}"
+                    class="w-full bg-gray-100 hover:bg-gray-200 text-slate-900 font-bold py-3 rounded-xl transition text-sm text-center border border-gray-300 flex items-center justify-center">
+                    Fazer Login
+                </a>
+            </div>
         </form>
     </div>
 </div>
@@ -403,8 +411,8 @@
 <div id="modal-otp-favorito"
     class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-slate-900 relative">
-        <button onclick="fecharModalOtpFavorito()"
-            class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">×</button>
+        <button type="button" onclick="fecharModalOtpFavorito()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold cursor-pointer">×</button>
 
         <div class="text-center mb-6">
             <span class="text-3xl">✉️</span>
@@ -432,8 +440,8 @@
 <div id="modal-otp-busca"
     class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-slate-900 relative">
-        <button onclick="fecharModalOtp()"
-            class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">×</button>
+        <button type="button" onclick="fecharModalOtp()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold cursor-pointer">×</button>
 
         <div class="text-center mb-6">
             <span class="text-3xl">✉️</span>
@@ -571,12 +579,27 @@
     });
 
     // --- FAVORITOS ---
+    function formatarTelefoneModalLead(input) {
+        const digitos = input.value.replace(/\D/g, '').slice(0, 11);
+        if (digitos.length <= 2) {
+            input.value = digitos;
+        } else {
+            input.value = `${digitos.slice(0, 2)} ${digitos.slice(2)}`;
+        }
+    }
+
     function clicarFavorito(imoid) {
         if (usuarioLogadoDesteCliente) {
             toggleFavorito(imoid);
         } else {
             imovelPendenteId = imoid;
             document.getElementById('modal-imovel-id').value = imoid;
+            const btnLogar = document.getElementById('btn-logar-modal');
+            if (btnLogar) {
+                const baseLogin = "{{ url_for('login', next=request.path) }}";
+                const sep = baseLogin.includes('?') ? '&' : '?';
+                btnLogar.href = `${baseLogin}${sep}fav_imovel=${encodeURIComponent(imoid)}`;
+            }
             document.getElementById('modal-lead').classList.remove('hidden');
         }
     }
@@ -609,8 +632,17 @@
         event.preventDefault();
         let nome = document.getElementById('lead-nome').value;
         let email = document.getElementById('lead-email').value;
-        let telefone = document.getElementById('lead-telefone').value;
+        let telEl = document.getElementById('lead-telefone');
+        let telefone = telEl.value.replace(/\D/g, '').slice(0, 11);
         let imoid = imovelPendenteId;
+
+        if (telefone.length !== 11) {
+            formatarTelefoneModalLead(telEl);
+            telEl.setCustomValidity('Informe DDD (2 dígitos) + celular (9 dígitos).');
+            telEl.reportValidity();
+            return;
+        }
+        telEl.setCustomValidity('');
 
         try {
             let response = await fetch('/api/enviar-otp-favorito', {
