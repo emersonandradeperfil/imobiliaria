@@ -76,13 +76,29 @@ def enviar_email_mailgun(para_email, assunto, corpo_texto):
         print(f"Erro ao enviar e-mail via Mailgun: {e}")
         return False
 
+def resolver_condominio(nome_raw):
+    """Busca ou cria o condomínio pelo nome e retorna (condominio_id, condominio_nome)."""
+    nome_limpo = sanitizar_texto(nome_raw)
+    if not nome_limpo:
+        return None, ""
+    db = mongo.db
+    existente = db.condominios.find_one({
+        "nome": {"$regex": f"^{re.escape(nome_limpo)}$", "$options": "i"}
+    })
+    if existente:
+        return existente["_id"], existente.get("nome", nome_limpo)
+    res = db.condominios.insert_one({
+        "nome": nome_limpo,
+        "criado_em": datetime.now(BR_TZ)
+    })
+    return res.inserted_id, nome_limpo
+
 def excluir_dados_usuario_lgpd(user_doc):
-    """Usuário removido com sucesso"""
+    """Remove definitivamente o usuário e seus dados pessoais vinculados (LGPD), preservando imóveis."""
     db = mongo.db
     uid = user_doc["_id"]
     email = user_doc.get("email")
 
-    # 1. Remove agendamentos feitos como cliente e desvincula caso fosse corretor responsável
     if 'agendamentos' in db.list_collection_names():
         db.agendamentos.delete_many({"cliente_id": uid})
         db.agendamentos.update_many(
@@ -90,7 +106,6 @@ def excluir_dados_usuario_lgpd(user_doc):
             {"$set": {"corretor_responsavel_id": None}}
         )
 
-    # 2. Remove leads pessoais pelo e-mail e desvincula caso fosse corretor responsável
     if 'leads' in db.list_collection_names():
         if email:
             db.leads.delete_many({"email": email})
@@ -99,18 +114,15 @@ def excluir_dados_usuario_lgpd(user_doc):
             {"$set": {"corretor_responsavel_id": None}}
         )
 
-    # 3. Remove OTPs e tentativas de login vinculadas ao e-mail
     if email:
         if 'otps' in db.list_collection_names():
             db.otps.delete_many({"email": email})
         if 'login_tentativas' in db.list_collection_names():
             db.login_tentativas.delete_many({"email": email})
 
-    # 4. Desvincula proprietário/criador nos imóveis sem apagar os imóveis
     db.imoveis.update_many({"proprietario_id": uid}, {"$set": {"proprietario_id": None}})
     db.imoveis.update_many({"criado_por": uid}, {"$set": {"criado_por": None}})
 
-    # 5. Exclui o registro do usuário
     db.users.delete_one({"_id": uid})
 
 MAX_TENTATIVAS_LOGIN = 5
@@ -1188,13 +1200,19 @@ def admin_imovel_novo():
         titulo = sanitizar_texto(request.form.get('titulo'))
         slug = sanitizar_texto(request.form.get('slug')) or titulo.lower().replace(" ", "-")
         
-        condominio_oid = oid_seguro(request.form.get('condominio_id'))
+        condominio_oid, condominio_nome = resolver_condominio(request.form.get('condominio_nome'))
         proprietario_oid = oid_seguro(request.form.get('proprietario_id'))
         
         pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
         os.makedirs(pasta_imovel, exist_ok=True)
         
         lista_fotos = processar_upload_fotos_dinamicas(request.files, request.form, codigo, pasta_imovel)
+
+        videos = []
+        for campo_video in ['video_youtube_1', 'video_youtube_2']:
+            v_info = extrair_youtube_embed(request.form.get(campo_video))
+            if v_info:
+                videos.append(v_info)
 
         imovel_doc = {
             "codigo": codigo,
@@ -1216,7 +1234,13 @@ def admin_imovel_novo():
                 "quartos": int(request.form.get('quartos') or 0),
                 "suites": int(request.form.get('suites') or 0),
                 "banheiros": int(request.form.get('banheiros') or 0),
-                "vagas": int(request.form.get('vagas') or 0)
+                "vagas": int(request.form.get('vagas') or 0),
+                "itens": {
+                    "facilidades": request.form.getlist('feat_facilidades'),
+                    "diferenciais": request.form.getlist('feat_diferenciais'),
+                    "area_externa": request.form.getlist('feat_area_externa'),
+                    "comodos": request.form.getlist('feat_comodos')
+                }
             },
             "local_publico": {
                 "bairro": sanitizar_texto(request.form.get('bairro')),
@@ -1224,9 +1248,10 @@ def admin_imovel_novo():
                 "estado": sanitizar_texto(request.form.get('estado', 'SP'))
             },
             "condominio_id": condominio_oid,
+            "condominio_nome": condominio_nome,
             "proprietario_id": proprietario_oid,
             "criado_por": oid_seguro(session.get('user_id')),
-            "midia": {"fotos": lista_fotos},
+            "midia": {"fotos": lista_fotos, "videos": videos},
             "criado_em": datetime.now(BR_TZ)
         }
         
@@ -1248,7 +1273,7 @@ def admin_imovel_novo():
         return redirect(url_for('admin_imoveis'))
         
     proprietarios = list(db.users.find({"papel": {"$in": ["proprietario", "parceiro"]}, "ativo": {"$ne": False}}))
-    condominios = list(db.condominios.find())
+    condominios = list(db.condominios.find().sort("nome", 1))
     codigo_sugerido = gerar_proximo_codigo()
     return render_template('admin/imovel_form.html', proprietarios=proprietarios, condominios=condominios, codigo_sugerido=codigo_sugerido, active_tab='imoveis')
 
@@ -1284,7 +1309,7 @@ def editar_imovel(codigo):
         titulo = sanitizar_texto(request.form.get('titulo'))
         descricao = sanitizar_texto(request.form.get('descricao'))
         tipo = sanitizar_texto(request.form.get('tipo'))
-        condominio_oid = oid_seguro(request.form.get('condominio_id'))
+        condominio_oid, condominio_nome = resolver_condominio(request.form.get('condominio_nome'))
         proprietario_oid = oid_seguro(request.form.get('proprietario_id'))
         
         pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
@@ -1292,6 +1317,12 @@ def editar_imovel(codigo):
         
         fotos_atuais = imovel.get("midia", {}).get("fotos", [])
         lista_fotos = processar_upload_fotos_dinamicas(request.files, request.form, codigo, pasta_imovel, fotos_atuais)
+
+        videos = []
+        for campo_video in ['video_youtube_1', 'video_youtube_2']:
+            v_info = extrair_youtube_embed(request.form.get(campo_video))
+            if v_info:
+                videos.append(v_info)
         
         db.imoveis.update_one(
             {"codigo": codigo},
@@ -1311,10 +1342,18 @@ def editar_imovel(codigo):
                     "caracteristicas.suites": int(request.form.get('suites') or 0),
                     "caracteristicas.banheiros": int(request.form.get('banheiros') or 0),
                     "caracteristicas.vagas": int(request.form.get('vagas') or 0),
+                    "caracteristicas.itens": {
+                        "facilidades": request.form.getlist('feat_facilidades'),
+                        "diferenciais": request.form.getlist('feat_diferenciais'),
+                        "area_externa": request.form.getlist('feat_area_externa'),
+                        "comodos": request.form.getlist('feat_comodos')
+                    },
                     "local_publico.bairro": sanitizar_texto(request.form.get('bairro')),
                     "condominio_id": condominio_oid,
+                    "condominio_nome": condominio_nome,
                     "proprietario_id": proprietario_oid,
-                    "midia.fotos": lista_fotos
+                    "midia.fotos": lista_fotos,
+                    "midia.videos": videos
                 }
             }
         )
@@ -1341,8 +1380,13 @@ def editar_imovel(codigo):
         return redirect(url_for('admin_imoveis'))
         
     proprietarios = list(db.users.find({"papel": {"$in": ["proprietario", "parceiro"]}, "ativo": {"$ne": False}}))
-    condominios = list(db.condominios.find())
+    condominios = list(db.condominios.find().sort("nome", 1))
     endereco = db.imoveis_enderecos.find_one({"imovel_id": imovel["_id"]})
+
+    if not imovel.get("condominio_nome") and imovel.get("condominio_id"):
+        cond_doc = db.condominios.find_one({"_id": imovel["condominio_id"]})
+        if cond_doc:
+            imovel["condominio_nome"] = cond_doc.get("nome", "")
     
     return render_template(
         'admin/imovel_form.html', 
@@ -1468,7 +1512,7 @@ def excluir_usuario(user_id):
         return redirect(url_for('admin_usuarios'))
 
     excluir_dados_usuario_lgpd(user_alvo)
-    flash('Usuário removido com sucesso', 'success')
+    flash('Usuário e seus dados pessoais foram excluídos permanentemente (LGPD).', 'success')
     return redirect(url_for('admin_usuarios'))
 
 @app.route('/corretor/painel')
