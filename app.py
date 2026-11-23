@@ -1435,7 +1435,7 @@ def remover_foto_imovel(codigo):
 def admin_imovel_excluir(codigo):
     db = mongo.db
     db.imoveis.update_one({"codigo": codigo}, {"$set": {"status": "inativo", "desativado_em": datetime.now(BR_TZ)}})
-    flash(f'Imóvel {codigo} desativado.', 'info')
+    # flash(f'Imóvel {codigo} desativado.', 'info')
     return redirect(url_for('admin_imoveis'))
 
 @app.route('/admin/usuarios', methods=['GET', 'POST'])
@@ -1467,7 +1467,7 @@ def admin_usuarios():
                 novo_usuario["codigo"] = gerar_codigo_proprietario(papel)
                 
             db.users.insert_one(novo_usuario)
-            flash('Cadastrado com sucesso!', 'success')
+            # flash('Cadastrado com sucesso!', 'success')
             return redirect(url_for('admin_usuarios'))
             
     usuarios = list(db.users.find())
