@@ -719,6 +719,18 @@ def login():
             session['user_id'] = str(user['_id'])
             session['user_nome'] = user['nome']
             session['papel'] = user.get('papel', 'cliente')
+
+            origem_base = sanitizar_texto(request.form.get('origem_canal'))
+            origem_detalhe = sanitizar_texto(request.form.get('origem_detalhe'))
+            if origem_base:
+                origem_final = f"{origem_base} ({origem_detalhe})" if origem_detalhe else origem_base
+                update_login = {
+                    "ultimo_canal_acesso": origem_final,
+                    "ultimo_login_em": agora
+                }
+                if not user.get("origem_canal") or user.get("origem_canal") == "Não informado":
+                    update_login["origem_canal"] = origem_final
+                mongo.db.users.update_one({"_id": user["_id"]}, {"$set": update_login})
             
             if user['papel'] == 'admin':
                 return redirect(url_for('admin_imoveis'))
