@@ -518,7 +518,47 @@ def verificar_otp_e_liberar_imovel():
     slug_destino = imovel_doc.get("slug") if imovel_doc else ""
     return jsonify({"status": "success", "slug": slug_destino})
 
-# --- OTP PARA BUSCA PERSONALIZADA ---
+# --- BUSCA PERSONALIZADA (USUÁRIO LOGADO DIRETO E VISITANTE VIA OTP) ---
+@app.route('/api/salvar-busca-logado', methods=['POST'])
+def salvar_busca_logado():
+    uid = oid_seguro(session.get('user_id'))
+    if not uid:
+        return jsonify({"status": "error", "message": "Sessão expirada. Faça login novamente."}), 401
+
+    db = mongo.db
+    user = db.users.find_one({"_id": uid, "ativo": {"$ne": False}})
+    if not user:
+        session.clear()
+        return jsonify({"status": "error", "message": "Usuário não encontrado."}), 401
+
+    dados = request.json or {}
+    tipo_imovel = sanitizar_texto(dados.get('tipo'))
+    bairro = sanitizar_texto(dados.get('bairro'))
+    observacoes = sanitizar_texto(dados.get('observacoes'))
+
+    if not tipo_imovel or not bairro:
+        return jsonify({"status": "error", "message": "Informe o tipo de imóvel e a região."}), 400
+
+    nome = user.get("nome") or session.get("user_nome") or ""
+    email = user.get("email") or ""
+    telefone = user.get("telefone") or ""
+
+    lead_data = {
+        "cliente_id": user["_id"],
+        "nome": nome,
+        "email": email,
+        "telefone": telefone,
+        "whatsapp": telefone,
+        "tipo_imovel": tipo_imovel,
+        "bairro": bairro,
+        "observacoes": observacoes,
+        "origem": "Busca Personalizada Site (Usuário Logado)",
+        "verificado": True,
+        "criado_em": datetime.now(BR_TZ)
+    }
+    db.leads.insert_one(lead_data)
+    return jsonify({"status": "success"})
+
 @app.route('/api/enviar-otp-busca', methods=['POST'])
 def enviar_otp_busca():
     dados = request.json or {}
@@ -556,6 +596,7 @@ def verificar_otp_e_salvar_busca():
     lead_data = {
         "nome": nome,
         "email": email,
+        "telefone": whatsapp,
         "whatsapp": whatsapp,
         "tipo_imovel": sanitizar_texto(dados.get('tipo')),
         "bairro": sanitizar_texto(dados.get('bairro')),
@@ -599,7 +640,8 @@ def enviar_otp_cadastro():
     codigo = _salvar_otp(email, "cadastro", {
         "nome": sanitizar_texto(dados.get('nome')),
         "senha": dados.get('senha'),
-        "telefone": sanitizar_texto(dados.get('telefone'))
+        "telefone": sanitizar_texto(dados.get('telefone')),
+        "origem_canal": sanitizar_texto(dados.get('origem_canal')) or "Não informado"
     })
     enviar_email_mailgun(
         email,
@@ -624,6 +666,7 @@ def verificar_otp_e_cadastrar():
     nome = registro["nome"]
     senha = registro["senha"]
     telefone = registro["telefone"]
+    origem_canal = sanitizar_texto(registro.get("origem_canal")) or "Não informado"
     
     senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt())
     
@@ -632,6 +675,7 @@ def verificar_otp_e_cadastrar():
         "email": email,
         "senha_hash": senha_hash,
         "telefone": telefone,
+        "origem_canal": origem_canal,
         "papel": "cliente",
         "ativo": True,
         "favoritos": [],
@@ -1039,7 +1083,7 @@ def admin_painel():
     corretores = list(db.users.find({"papel": {"$in": ["corretor", "admin"]}, "ativo": {"$ne": False}}))
     
     pipeline_leads = [
-        {"$match": {"origem": {"$ne": "Busca Personalizada Site (OTP)"}}},
+        {"$match": {"origem": {"$nin": ["Busca Personalizada Site (OTP)", "Busca Personalizada Site (Usuário Logado)"]}}},
         {"$sort": {"criado_em": -1}},
         {"$lookup": {"from": "imoveis", "localField": "imovel_id", "foreignField": "_id", "as": "imovel_info"}},
         {"$unwind": {"path": "$imovel_info", "preserveNullAndEmptyArrays": True}},
@@ -1060,7 +1104,7 @@ def admin_painel():
     agendamentos = list(db.agendamentos.aggregate(pipeline_agendamentos)) if 'agendamentos' in db.list_collection_names() else []
     
     pipeline_buscas = [
-        {"$match": {"origem": "Busca Personalizada Site (OTP)"}},
+        {"$match": {"origem": {"$in": ["Busca Personalizada Site (OTP)", "Busca Personalizada Site (Usuário Logado)"]}}},
         {"$sort": {"criado_em": -1}},
         {"$lookup": {"from": "users", "localField": "corretor_responsavel_id", "foreignField": "_id", "as": "corretor_info"}},
         {"$unwind": {"path": "$corretor_info", "preserveNullAndEmptyArrays": True}}
@@ -1582,7 +1626,7 @@ def painel_corretor():
     hoje_str = datetime.now(BR_TZ).date().isoformat()
 
     query_leads_filtro = {
-        "origem": {"$ne": "Busca Personalizada Site (OTP)"}
+        "origem": {"$nin": ["Busca Personalizada Site (OTP)", "Busca Personalizada Site (Usuário Logado)"]}
     }
     if papel != 'admin':
         query_leads_filtro["$or"] = [
@@ -1623,7 +1667,7 @@ def painel_corretor():
             })
 
     query_buscas_filtro = {
-        "origem": "Busca Personalizada Site (OTP)",
+        "origem": {"$in": ["Busca Personalizada Site (OTP)", "Busca Personalizada Site (Usuário Logado)"]},
         "corretor_responsavel_id": corretor_id
     }
     pipeline_buscas_corretor = [

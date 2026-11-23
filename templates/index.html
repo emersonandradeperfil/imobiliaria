@@ -22,9 +22,6 @@
             TECA BORGES
         </h1>
         <div class="text-gray-200 uppercase tracking-wider space-y-1.5 drop-shadow">
-            <!-- <p class="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-amber-400">
-                Venda • Locação • Avaliação e Perícia Judicial
-            </p> -->
             <p class="text-[11px] sm:text-xs md:text-sm lg:text-base text-gray-200">
                 Administração de Bens Imóveis e Condomínios
             </p>
@@ -212,16 +209,12 @@
                         <div class="flex items-center gap-1.5" title="Vagas">
                             <svg class="w-6 h-6 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.6"
                                 viewBox="0 0 24 24">
-                                <!-- Telhado e estrutura da garagem -->
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.5 9.5 12 3.5l9.5 6" />
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 8.5V20h15V8.5" />
-                                <!-- Base inferior -->
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.5 20h19" />
-                                <!-- Vão do portão e ripas horizontais -->
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 20v-8.5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1V20" />
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 13.5h9M7.5 16.5h9" />
                             </svg>
-
 
                             <span>{{ imovel.caracteristicas.vagas }}</span>
                         </div>
@@ -292,7 +285,6 @@
 
             <!-- Coluna Direita: Imagem -->
             <div class="lg:col-span-5 min-h-[320px] sm:min-h-[420px] bg-slate-200 relative overflow-hidden">
-                <!-- Troque o arquivo abaixo pela foto da corretora ou da fachada/arquitetura quando quiser -->
                 <img src="{{ url_for('static', filename='img/info.webp') }}"
                     alt="Teca Borges - Imóveis, Avaliação, Perícia e Administração" class="w-full h-full object-cover">
             </div>
@@ -328,7 +320,8 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {% if not session.get('user_id') %}
+                <div id="campos-contato-busca" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm sm:text-base font-medium text-slate-900 mb-1">Seu Nome</label>
                         <input type="text" id="busca-nome" required placeholder="Nome completo"
@@ -346,6 +339,7 @@
                             class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
                     </div>
                 </div>
+                {% endif %}
 
                 <div>
                     <label class="block text-sm sm:text-base font-medium text-slate-900 mb-1">Observações</label>
@@ -463,7 +457,6 @@
     </div>
 </div>
 
-<!-- Scripts de Filtragem, Paginação (9 + Ver mais), Favoritos com OTP e Busca Personalizada com OTP -->
 <script>
     let imovelPendenteId = null;
     let usuarioLogadoDesteCliente = {{ 'true' if session.get('user_id') else 'false' }};
@@ -471,7 +464,6 @@
     const LIMITE_INICIAL = 9;
     let mostrarTodosImoveis = false;
 
-    // --- ABRIR / FECHAR PAINEL DE FILTROS ---
     function togglePainelFiltros() {
         const painel = document.getElementById('painel-filtros');
         const textoBtn = document.getElementById('texto-btn-filtrar');
@@ -486,13 +478,11 @@
         }
     }
 
-    // --- EXPANDIR TODOS OS IMÓVEIS ---
     function expandirTodosImoveis() {
         mostrarTodosImoveis = true;
         aplicarFiltros();
     }
 
-    // --- LÓGICA DE FILTRAGEM + LIMITE DE 9 IMÓVEIS ---
     function mudarFinalidade(novaFinalidade) {
         finalidadeSelecionada = novaFinalidade;
 
@@ -615,7 +605,6 @@
         }
     }
 
-    // Envio do OTP de Favorito (Com validação se e-mail já existe)
     async function enviarLeadModalParaOtp(event) {
         event.preventDefault();
         let nome = document.getElementById('lead-nome').value;
@@ -679,9 +668,35 @@
         }
     }
 
-    // --- FLUXO DE BUSCA PERSONALIZADA COM VERIFICAÇÃO OTP ---
+    // --- FLUXO DE BUSCA PERSONALIZADA (LOGADO DIRETO / VISITANTE COM OTP) ---
     async function iniciarBuscaPersonalizada(event) {
         event.preventDefault();
+        let tipo = document.getElementById('busca-tipo').value;
+        let bairro = document.getElementById('busca-bairro').value;
+        let observacoes = document.getElementById('busca-obs').value;
+
+        if (usuarioLogadoDesteCliente) {
+            try {
+                let response = await fetch('/api/salvar-busca-logado', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tipo, bairro, observacoes })
+                });
+                let data = await response.json();
+
+                if (data.status === 'success') {
+                    alert('Solicitação enviada com sucesso! Usamos os dados do seu cadastro.');
+                    document.getElementById('form-busca-personalizada').reset();
+                } else {
+                    alert(data.message || 'Não foi possível enviar sua busca.');
+                }
+            } catch (err) {
+                console.error('Erro:', err);
+                alert('Ocorreu um erro de conexão.');
+            }
+            return;
+        }
+
         let email = document.getElementById('busca-email').value;
 
         try {
