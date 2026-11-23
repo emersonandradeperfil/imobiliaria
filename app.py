@@ -2,6 +2,7 @@ import os
 import random
 import string
 import html
+import unicodedata
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from database import init_db, mongo
 import bcrypt
@@ -11,6 +12,7 @@ from functools import wraps
 from werkzeug.utils import secure_filename
 from bson.objectid import ObjectId
 from bson.errors import InvalidId
+from pymongo.errors import DuplicateKeyError
 import requests
 from dotenv import load_dotenv
 import re
@@ -54,6 +56,21 @@ def oid_seguro(valor_id):
     except (InvalidId, TypeError):
         return None
 
+def gerar_slug_base(texto, fallback="item"):
+    texto_norm = unicodedata.normalize("NFKD", str(texto or "").strip().lower())
+    texto_sem_acento = "".join(c for c in texto_norm if not unicodedata.combining(c))
+    slug = re.sub(r"[^a-z0-9]+", "-", texto_sem_acento).strip("-")
+    return slug or fallback
+
+def gerar_slug_unico_condominio(db, nome_limpo):
+    base_slug = gerar_slug_base(nome_limpo, fallback="condominio")
+    slug_candidato = base_slug
+    contador = 2
+    while db.condominios.find_one({"slug": slug_candidato}):
+        slug_candidato = f"{base_slug}-{contador}"
+        contador += 1
+    return slug_candidato
+
 def enviar_email_mailgun(para_email, assunto, corpo_texto):
     api_key = os.getenv('MAILGUN_API_KEY')
     domain = os.getenv('MAILGUN_DOMAIN')
@@ -86,12 +103,32 @@ def resolver_condominio(nome_raw):
         "nome": {"$regex": f"^{re.escape(nome_limpo)}$", "$options": "i"}
     })
     if existente:
+        if not existente.get("slug"):
+            slug_atualizado = gerar_slug_unico_condominio(db, existente.get("nome", nome_limpo))
+            db.condominios.update_one({"_id": existente["_id"]}, {"$set": {"slug": slug_atualizado}})
         return existente["_id"], existente.get("nome", nome_limpo)
-    res = db.condominios.insert_one({
-        "nome": nome_limpo,
-        "criado_em": datetime.now(BR_TZ)
-    })
-    return res.inserted_id, nome_limpo
+
+    slug_cond = gerar_slug_unico_condominio(db, nome_limpo)
+    try:
+        res = db.condominios.insert_one({
+            "nome": nome_limpo,
+            "slug": slug_cond,
+            "criado_em": datetime.now(BR_TZ)
+        })
+        return res.inserted_id, nome_limpo
+    except DuplicateKeyError:
+        existente_apos_conflito = db.condominios.find_one({
+            "nome": {"$regex": f"^{re.escape(nome_limpo)}$", "$options": "i"}
+        })
+        if existente_apos_conflito:
+            return existente_apos_conflito["_id"], existente_apos_conflito.get("nome", nome_limpo)
+        slug_retry = f"{slug_cond}-{random.randint(10, 99)}"
+        res = db.condominios.insert_one({
+            "nome": nome_limpo,
+            "slug": slug_retry,
+            "criado_em": datetime.now(BR_TZ)
+        })
+        return res.inserted_id, nome_limpo
 
 def excluir_dados_usuario_lgpd(user_doc):
     """Remove definitivamente o usuário e seus dados pessoais vinculados (LGPD), preservando imóveis."""
@@ -1198,7 +1235,7 @@ def admin_imovel_novo():
     if request.method == 'POST':
         codigo = gerar_proximo_codigo()
         titulo = sanitizar_texto(request.form.get('titulo'))
-        slug = sanitizar_texto(request.form.get('slug')) or titulo.lower().replace(" ", "-")
+        slug = sanitizar_texto(request.form.get('slug')) or gerar_slug_base(titulo, fallback=codigo.lower())
         
         condominio_oid, condominio_nome = resolver_condominio(request.form.get('condominio_nome'))
         proprietario_oid = oid_seguro(request.form.get('proprietario_id'))
@@ -1435,7 +1472,6 @@ def remover_foto_imovel(codigo):
 def admin_imovel_excluir(codigo):
     db = mongo.db
     db.imoveis.update_one({"codigo": codigo}, {"$set": {"status": "inativo", "desativado_em": datetime.now(BR_TZ)}})
-    # flash(f'Imóvel {codigo} desativado.', 'info')
     return redirect(url_for('admin_imoveis'))
 
 @app.route('/admin/usuarios', methods=['GET', 'POST'])
@@ -1467,7 +1503,6 @@ def admin_usuarios():
                 novo_usuario["codigo"] = gerar_codigo_proprietario(papel)
                 
             db.users.insert_one(novo_usuario)
-            # flash('Cadastrado com sucesso!', 'success')
             return redirect(url_for('admin_usuarios'))
             
     usuarios = list(db.users.find())
