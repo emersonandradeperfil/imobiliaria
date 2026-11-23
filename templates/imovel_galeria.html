@@ -16,11 +16,11 @@
         <div class="flex items-center gap-2">
             <button type="button" id="tab-btn-fotos" onclick="trocarAbaGaleria('fotos')"
                 class="px-4 py-2 text-xs font-bold uppercase tracking-wider border border-slate-900 bg-slate-900 text-white cursor-pointer">
-                Galeria de Fotos
+                Fotos
             </button>
             <button type="button" id="tab-btn-videos" onclick="trocarAbaGaleria('videos')"
                 class="px-4 py-2 text-xs font-bold uppercase tracking-wider border border-gray-300 bg-white text-slate-800 hover:border-slate-900 cursor-pointer">
-                Vídeos ({{ imovel.midia.videos|length if imovel.midia and imovel.midia.videos else 0 }})
+                Vídeos
             </button>
         </div>
     </div>
@@ -89,7 +89,7 @@
             </div>
         {% else %}
             <div class="bg-white border border-gray-200 p-10 text-center text-sm text-slate-500">
-                Nenhum vídeo do YouTube vinculado a este imóvel no momento.
+                Nenhum vídeo vinculado a este imóvel no momento.
             </div>
         {% endif %}
     </div>
