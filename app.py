@@ -76,6 +76,43 @@ def enviar_email_mailgun(para_email, assunto, corpo_texto):
         print(f"Erro ao enviar e-mail via Mailgun: {e}")
         return False
 
+def excluir_dados_usuario_lgpd(user_doc):
+    """Usuário removido com sucesso"""
+    db = mongo.db
+    uid = user_doc["_id"]
+    email = user_doc.get("email")
+
+    # 1. Remove agendamentos feitos como cliente e desvincula caso fosse corretor responsável
+    if 'agendamentos' in db.list_collection_names():
+        db.agendamentos.delete_many({"cliente_id": uid})
+        db.agendamentos.update_many(
+            {"corretor_responsavel_id": uid},
+            {"$set": {"corretor_responsavel_id": None}}
+        )
+
+    # 2. Remove leads pessoais pelo e-mail e desvincula caso fosse corretor responsável
+    if 'leads' in db.list_collection_names():
+        if email:
+            db.leads.delete_many({"email": email})
+        db.leads.update_many(
+            {"corretor_responsavel_id": uid},
+            {"$set": {"corretor_responsavel_id": None}}
+        )
+
+    # 3. Remove OTPs e tentativas de login vinculadas ao e-mail
+    if email:
+        if 'otps' in db.list_collection_names():
+            db.otps.delete_many({"email": email})
+        if 'login_tentativas' in db.list_collection_names():
+            db.login_tentativas.delete_many({"email": email})
+
+    # 4. Desvincula proprietário/criador nos imóveis sem apagar os imóveis
+    db.imoveis.update_many({"proprietario_id": uid}, {"$set": {"proprietario_id": None}})
+    db.imoveis.update_many({"criado_por": uid}, {"$set": {"criado_por": None}})
+
+    # 5. Exclui o registro do usuário
+    db.users.delete_one({"_id": uid})
+
 MAX_TENTATIVAS_LOGIN = 5
 BLOQUEIO_LOGIN_MINUTOS = 15
 MAX_TENTATIVAS_OTP = 5
@@ -850,6 +887,39 @@ def meu_perfil():
         
     return render_template('admin/perfil.html', user=user, active_tab='perfil')
 
+@app.route('/perfil/excluir', methods=['POST'])
+@login_required
+def excluir_propria_conta():
+    if session.get('papel') != 'cliente':
+        flash('Apenas contas de clientes podem ser excluídas por esta opção.', 'danger')
+        return redirect(url_for('meu_perfil'))
+
+    db = mongo.db
+    user_id = oid_seguro(session.get('user_id'))
+    user = db.users.find_one({"_id": user_id}) if user_id else None
+    if not user:
+        session.clear()
+        return redirect(url_for('index'))
+
+    senha_confirmacao = request.form.get('senha_confirmacao') or ""
+    senha_valida = False
+    if 'senha_hash' in user and senha_confirmacao:
+        hash_armazenado = user['senha_hash']
+        hash_bytes = hash_armazenado.encode('utf-8') if isinstance(hash_armazenado, str) else hash_armazenado
+        try:
+            senha_valida = bcrypt.checkpw(senha_confirmacao.encode('utf-8'), hash_bytes)
+        except Exception:
+            senha_valida = False
+
+    if not senha_valida:
+        flash('Senha incorreta. A exclusão da conta não foi realizada.', 'danger')
+        return redirect(url_for('meu_perfil'))
+
+    excluir_dados_usuario_lgpd(user)
+    session.clear()
+    flash('Sua conta e seus dados pessoais foram excluídos permanentemente.', 'success')
+    return redirect(url_for('index'))
+
 # --- PAINEL DO PROPRIETÁRIO / PARCEIRO ---
 @app.route('/proprietario/painel')
 @login_required
@@ -1388,11 +1458,17 @@ def excluir_usuario(user_id):
         flash('Usuário inválido.', 'danger')
         return redirect(url_for('admin_usuarios'))
 
-    db.users.update_one(
-        {"_id": uid},
-        {"$set": {"ativo": False, "desativado_em": datetime.now(BR_TZ)}}
-    )
-    flash('Usuário desativado com sucesso (Soft-Delete para preservar histórico).', 'info')
+    if str(uid) == str(session.get('user_id')):
+        flash('Você não pode excluir sua própria conta de administrador por aqui.', 'warning')
+        return redirect(url_for('admin_usuarios'))
+
+    user_alvo = db.users.find_one({"_id": uid})
+    if not user_alvo:
+        flash('Usuário não encontrado.', 'danger')
+        return redirect(url_for('admin_usuarios'))
+
+    excluir_dados_usuario_lgpd(user_alvo)
+    flash('Usuário removido com sucesso', 'success')
     return redirect(url_for('admin_usuarios'))
 
 @app.route('/corretor/painel')
