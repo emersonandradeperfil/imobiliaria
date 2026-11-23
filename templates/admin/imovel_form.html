@@ -6,7 +6,7 @@
         {% if editando %}Editar Imóvel: {{ imovel.codigo }}{% else %}Cadastrar Novo Imóvel{% endif %}
     </h1>
     
-    <form method="POST" enctype="multipart/form-data" class="space-y-6" onsubmit="prepararEnvioValores()">
+    <form method="POST" enctype="multipart/form-data" class="space-y-6" onsubmit="prepararEnvioFormulario()">
         
         <!-- SEÇÃO 1: DESCRIÇÃO -->
         <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2">Descrição</h2>
@@ -25,7 +25,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Proprietário</label>
-                <select name="proprietario_id" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm">
+                <select name="proprietario_id" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white">
                     <option value="">Nenhum</option>
                     {% for prop in proprietarios %}
                     <option value="{{ prop._id }}" {% if imovel and imovel.proprietario_id==prop._id %}selected{% endif %}>
@@ -36,16 +36,21 @@
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Condomínio</label>
-                <input type="text" name="condominio_nome" list="lista-condominios"
-                    placeholder="Selecione da lista ou digite um novo..."
-                    value="{% if editando and imovel.condominio_nome %}{{ imovel.condominio_nome }}{% endif %}"
-                    class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-white">
-            
-                <datalist id="lista-condominios">
+                {% set cond_atual = imovel.condominio_nome if editando and imovel.condominio_nome else '' %}
+                <select id="select-condominio" onchange="toggleNovoCondominio(this)" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white">
+                    <option value="">Nenhum</option>
                     {% for cond in condominios %}
-                    <option value="{{ cond.nome }}">
-                        {% endfor %}
-                </datalist>
+                    <option value="{{ cond.nome }}" {% if cond_atual == cond.nome %}selected{% endif %}>
+                        {{ cond.nome }}
+                    </option>
+                    {% endfor %}
+                    <option value="__novo__">+ Cadastrar novo condomínio...</option>
+                </select>
+                <input type="hidden" name="condominio_nome" id="condominio_nome_real" value="{{ cond_atual }}">
+                <div id="div-novo-condominio" class="hidden mt-2">
+                    <input type="text" id="input-novo-condominio" placeholder="Digite o nome do novo condomínio..."
+                        class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-slate-900 outline-none">
+                </div>
             </div>
         </div>
 
@@ -66,26 +71,38 @@
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Valor Venda (R$)</label>
-                <input type="text" id="preco_venda_fmt" oninput="mascaraMoeda(this)" value="{{ '%.2f'|format(imovel.precos.venda) if editando and imovel.precos and imovel.precos.venda else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
-                <input type="hidden" name="preco_venda" id="preco_venda_real" value="{{ imovel.precos.venda if editando and imovel.precos else 0 }}">
+                {% set v_venda = imovel.precos.venda if editando and imovel.precos and imovel.precos.venda else 0 %}
+                <input type="text" id="preco_venda_fmt" oninput="mascaraMoeda(this)"
+                    value="{% if v_venda > 0 %}{{ '{:,.2f}'.format(v_venda)|replace(',', 'v')|replace('.', ',')|replace('v', '.') }}{% endif %}"
+                    class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
+                <input type="hidden" name="preco_venda" id="preco_venda_real" value="{{ v_venda }}">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Valor Locação (R$)</label>
-                <input type="text" id="preco_locacao_fmt" oninput="mascaraMoeda(this)" value="{{ '%.2f'|format(imovel.precos.locacao) if editando and imovel.precos and imovel.precos.locacao else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
-                <input type="hidden" name="preco_locacao" id="preco_locacao_real" value="{{ imovel.precos.locacao if editando and imovel.precos else 0 }}">
+                {% set v_locacao = imovel.precos.locacao if editando and imovel.precos and imovel.precos.locacao else 0 %}
+                <input type="text" id="preco_locacao_fmt" oninput="mascaraMoeda(this)"
+                    value="{% if v_locacao > 0 %}{{ '{:,.2f}'.format(v_locacao)|replace(',', 'v')|replace('.', ',')|replace('v', '.') }}{% endif %}"
+                    class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
+                <input type="hidden" name="preco_locacao" id="preco_locacao_real" value="{{ v_locacao }}">
             </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Condomínio Mensal (R$)</label>
-                <input type="text" id="preco_condominio_fmt" oninput="mascaraMoeda(this)" value="{{ '%.2f'|format(imovel.precos.condominio) if editando and imovel.precos and imovel.precos.condominio else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
-                <input type="hidden" name="preco_condominio" id="preco_condominio_real" value="{{ imovel.precos.condominio if editando and imovel.precos else 0 }}">
+                {% set v_cond = imovel.precos.condominio if editando and imovel.precos and imovel.precos.condominio else 0 %}
+                <input type="text" id="preco_condominio_fmt" oninput="mascaraMoeda(this)"
+                    value="{% if v_cond > 0 %}{{ '{:,.2f}'.format(v_cond)|replace(',', 'v')|replace('.', ',')|replace('v', '.') }}{% endif %}"
+                    class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
+                <input type="hidden" name="preco_condominio" id="preco_condominio_real" value="{{ v_cond }}">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">IPTU Anual/Mensal (R$)</label>
-                <input type="text" id="preco_iptu_fmt" oninput="mascaraMoeda(this)" value="{{ '%.2f'|format(imovel.precos.iptu) if editando and imovel.precos and imovel.precos.iptu else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
-                <input type="hidden" name="preco_iptu" id="preco_iptu_real" value="{{ imovel.precos.iptu if editando and imovel.precos else 0 }}">
+                {% set v_iptu = imovel.precos.iptu if editando and imovel.precos and imovel.precos.iptu else 0 %}
+                <input type="text" id="preco_iptu_fmt" oninput="mascaraMoeda(this)"
+                    value="{% if v_iptu > 0 %}{{ '{:,.2f}'.format(v_iptu)|replace(',', 'v')|replace('.', ',')|replace('v', '.') }}{% endif %}"
+                    class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
+                <input type="hidden" name="preco_iptu" id="preco_iptu_real" value="{{ v_iptu }}">
             </div>
         </div>
 
@@ -278,6 +295,22 @@
 <script>
     let comodoIndex = 0;
 
+    function toggleNovoCondominio(selectEl) {
+        const divNovo = document.getElementById('div-novo-condominio');
+        const inputNovo = document.getElementById('input-novo-condominio');
+        const hiddenReal = document.getElementById('condominio_nome_real');
+
+        if (selectEl.value === '__novo__') {
+            divNovo.classList.remove('hidden');
+            inputNovo.focus();
+            hiddenReal.value = inputNovo.value.trim();
+        } else {
+            divNovo.classList.add('hidden');
+            inputNovo.value = '';
+            hiddenReal.value = selectEl.value;
+        }
+    }
+
     function adicionarComodo(catPredefinida = 'capa', nomeCustom = '') {
         let container = document.getElementById('container-comodos');
         let html = `
@@ -332,25 +365,42 @@
         }
     });
 
-    function mascaraMoeda(input) {
-        let value = input.value.replace(/\D/g, '');
-        if (value === "") {
-            input.value = "";
-            return;
-        }
-        value = (parseInt(value) / 100).toFixed(2);
-        value = value.replace('.', ',');
-        value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        input.value = value;
+    function formatarCentavosParaBRL(centavosStr) {
+        let limpo = centavosStr.replace(/\D/g, '').replace(/^0+/, '');
+        if (!limpo) return '';
+        limpo = limpo.padStart(3, '0');
+        let parteInteira = limpo.slice(0, -2);
+        let parteDecimal = limpo.slice(-2);
+        parteInteira = parteInteira.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return `${parteInteira},${parteDecimal}`;
     }
 
-    function prepararEnvioValores() {
+    function mascaraMoeda(input) {
+        input.value = formatarCentavosParaBRL(input.value);
+    }
+
+    function prepararEnvioFormulario() {
+        const selectCond = document.getElementById('select-condominio');
+        const inputNovoCond = document.getElementById('input-novo-condominio');
+        const hiddenCondReal = document.getElementById('condominio_nome_real');
+        if (selectCond && hiddenCondReal) {
+            hiddenCondReal.value = (selectCond.value === '__novo__')
+                ? (inputNovoCond ? inputNovoCond.value.trim() : '')
+                : selectCond.value;
+        }
+
         ['venda', 'locacao', 'condominio', 'iptu'].forEach(campo => {
             let fmtInput = document.getElementById(`preco_${campo}_fmt`);
             let realInput = document.getElementById(`preco_${campo}_real`);
             if (fmtInput && realInput) {
-                let valStr = fmtInput.value.replace(/\./g, '').replace(',', '.');
-                realInput.value = valStr ? parseFloat(valStr) : 0;
+                let texto = fmtInput.value.trim();
+                if (!texto) {
+                    realInput.value = 0;
+                    return;
+                }
+                let normalizado = texto.replace(/\./g, '').replace(',', '.');
+                let numero = parseFloat(normalizado);
+                realInput.value = Number.isNaN(numero) ? 0 : numero.toFixed(2);
             }
         });
     }
