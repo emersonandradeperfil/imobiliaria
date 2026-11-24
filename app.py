@@ -1374,18 +1374,35 @@ def extrair_youtube_embed(url_texto):
     if not url_texto:
         return None
     url_texto = url_texto.strip()
-    padroes = [
-        r"(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})"
-    ]
-    for padrao in padroes:
-        match = re.search(padrao, url_texto)
-        if match:
-            video_id = match.group(1)
-            return {
-                "url_original": url_texto,
-                "video_id": video_id,
-                "embed_url": f"https://www.youtube.com/embed/{video_id}"
-            }
+
+    # 1. YouTube
+    match_yt = re.search(
+        r"(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})",
+        url_texto
+    )
+    if match_yt:
+        video_id = match_yt.group(1)
+        return {
+            "url_original": url_texto,
+            "plataforma": "youtube",
+            "video_id": video_id,
+            "embed_url": f"https://www.youtube.com/embed/{video_id}"
+        }
+
+    # 2. Google Drive
+    match_drive = re.search(
+        r"drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([A-Za-z0-9_-]+)",
+        url_texto
+    )
+    if match_drive:
+        file_id = match_drive.group(1)
+        return {
+            "url_original": url_texto,
+            "plataforma": "google_drive",
+            "video_id": file_id,
+            "embed_url": f"https://drive.google.com/file/d/{file_id}/preview"
+        }
+
     return None
 
 @app.route('/admin/imoveis/editar/<codigo>', methods=['GET', 'POST'])
