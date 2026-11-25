@@ -105,7 +105,7 @@
                 <div class="sm:col-span-4">
                     <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Bairro ou Código</label>
                     <input type="text" id="input-busca" oninput="aplicarFiltros()"
-                        placeholder="Ex: Jardins, AP0001..."
+                        placeholder="Ex: Jardins, TB0001, PC0001..."
                         class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900">
                 </div>
             </div>
@@ -140,6 +140,7 @@
             <div id="imovel-{{ imovel._id }}"
                 onclick="window.location.href='{{ url_for('imovel_detalhe', slug=imovel.slug) }}'"
                 data-ordem-inicial="{{ ns.idx }}"
+                data-codigo="{{ (imovel.codigo or '')|upper }}"
                 data-tipo="{{ imovel.tipo|lower }}"
                 data-venda="{{ '1' if preco_v > 0 else '0' }}"
                 data-locacao="{{ '1' if preco_l > 0 else '0' }}"
@@ -512,6 +513,19 @@
     const LIMITE_INICIAL = 9;
     let mostrarTodosImoveis = false;
 
+    const PRIORIDADE_PREFIXO = {
+        'TB': 1,
+        'PC': 2,
+        'AD': 3
+    };
+
+    function obterPrioridadeCodigo(card) {
+        const codigo = (card.getAttribute('data-codigo') || '').trim().toUpperCase();
+        const match = codigo.match(/^([A-Z]{2})/);
+        const prefixo = match ? match[1] : '';
+        return PRIORIDADE_PREFIXO[prefixo] || 99;
+    }
+
     function togglePainelFiltros() {
         const painel = document.getElementById('painel-filtros');
         const textoBtn = document.getElementById('texto-btn-filtrar');
@@ -573,15 +587,23 @@
         const cards = Array.from(grid.querySelectorAll('.card-imovel'));
 
         cards.sort((a, b) => {
-            if (ordemSelecionada === 'preco_desc') {
-                return obterPrecoOrdenacao(b) - obterPrecoOrdenacao(a);
+            const prioA = obterPrioridadeCodigo(a);
+            const prioB = obterPrioridadeCodigo(b);
+            if (prioA !== prioB) {
+                return prioA - prioB;
             }
+
             if (ordemSelecionada === 'preco_asc') {
                 return obterPrecoOrdenacao(a) - obterPrecoOrdenacao(b);
             }
-            const idxA = parseInt(a.getAttribute('data-ordem-inicial'), 10) || 0;
-            const idxB = parseInt(b.getAttribute('data-ordem-inicial'), 10) || 0;
-            return idxA - idxB;
+            if (ordemSelecionada === 'padrao') {
+                const idxA = parseInt(a.getAttribute('data-ordem-inicial'), 10) || 0;
+                const idxB = parseInt(b.getAttribute('data-ordem-inicial'), 10) || 0;
+                return idxA - idxB;
+            }
+
+            // Padrão ('preco_desc' ou qualquer outro): maior para o menor valor dentro do grupo TB / PC / AD
+            return obterPrecoOrdenacao(b) - obterPrecoOrdenacao(a);
         });
 
         cards.forEach(card => grid.appendChild(card));

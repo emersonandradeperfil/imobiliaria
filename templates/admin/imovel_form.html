@@ -30,12 +30,26 @@
         <!-- SEÇÃO 1: DESCRIÇÃO -->
         <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2">Descrição</h2>
         
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            {% if not editando %}
+            <div>
+                <label class="block text-xs font-semibold mb-1 text-gray-700">Origem (Prefixo)</label>
+                {% set p_atual = prefixo_sugerido or 'TB' %}
+                <select name="prefixo_codigo" id="select-prefixo-codigo" onchange="atualizarPreviaCodigo()"
+                    class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-white font-semibold text-slate-900">
+                    <option value="TB" {% if p_atual == 'TB' %}selected{% endif %}>Teca Borges</option>
+                    <option value="PC" {% if p_atual == 'PC' %}selected{% endif %}>Parceiro</option>
+                    <option value="AD" {% if p_atual == 'AD' %}selected{% endif %}>Administrado</option>
+                </select>
+            </div>
+            {% endif %}
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Código</label>
-                <input type="text" value="{% if editando %}{{ imovel.codigo }}{% else %}{{ codigo_sugerido }}{% endif %}" readonly class="w-full p-2.5 bg-gray-100 font-bold border border-gray-300 rounded-lg text-sm text-gray-600 cursor-not-allowed">
+                <input type="text" id="input-codigo-preview"
+                    value="{% if editando %}{{ imovel.codigo }}{% else %}{{ codigo_sugerido }}{% endif %}"
+                    readonly class="w-full p-2.5 bg-gray-100 font-bold border border-gray-300 rounded-lg text-sm text-gray-600 cursor-not-allowed">
             </div>
-            <div class="sm:col-span-2">
+            <div class="{% if not editando %}sm:col-span-2{% else %}sm:col-span-3{% endif %}">
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Título do Anúncio</label>
                 <input type="text" name="titulo" value="{{ imovel.titulo if editando else '' }}" required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-900 outline-none" placeholder="Ex: Apartamento Luxuoso no Itaim Bibi">
             </div>
@@ -306,7 +320,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Bairro</label>
-                <input type="text" id="campo-bairro" name="bairro" value="{{ imovel.local_publico.bairro if editando and imovel.local_publico else '' }}" readonly required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-700 cursor-not-allowed">
+                <input type="text" id="campo-bairro" name="bairro" value="{{ imovel.local_publico.bairro if editando and imovel.local_publico else '' }}" required placeholder="Ex: Itaim Bibi" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-white text-slate-900">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Complemento</label>
@@ -361,6 +375,16 @@
 
 <script>
     let comodoIndex = 0;
+
+    function atualizarPreviaCodigo() {
+        const selectPref = document.getElementById('select-prefixo-codigo');
+        const preview = document.getElementById('input-codigo-preview');
+        if (!selectPref || !preview) return;
+        const pref = selectPref.value;
+        const atual = preview.value || 'TB0001';
+        const sufixo = /^\D*(\d+)$/.test(atual) ? atual.match(/\d+$/)[0] : '0001';
+        preview.value = `${pref}${sufixo}`;
+    }
 
     function toggleNovoCondominio(selectEl) {
         const divNovo = document.getElementById('div-novo-condominio');

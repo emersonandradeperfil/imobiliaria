@@ -191,6 +191,13 @@ def _obter_chave_tentativa_login(email):
     ip = request.headers.get('X-Forwarded-For', request.remote_addr or 'unknown').split(',')[0].strip()
     return f"{email.lower()}|{ip}"
 
+def _agendamento_e_imovel_pc(db, ag_id):
+    ag = db.agendamentos.find_one({"_id": ag_id})
+    if not ag or not ag.get("imovel_id"):
+        return False
+    imovel = db.imoveis.find_one({"_id": ag["imovel_id"]}, {"codigo": 1})
+    return bool(imovel and str(imovel.get("codigo", "")).upper().startswith("PC"))
+
 # --- DECORATORS DE SEGURANÇA ---
 def login_required(f):
     @wraps(f)
@@ -240,16 +247,26 @@ def proprietario_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def gerar_proximo_codigo():
-    ultimo_imovel = mongo.db.imoveis.find_one({}, sort=[("criado_em", -1)])
-    if ultimo_imovel and "codigo" in ultimo_imovel:
+def gerar_proximo_codigo(prefixo="TB"):
+    prefixo_limpo = re.sub(r"[^A-Za-z]", "", str(prefixo or "TB")).upper()[:2]
+    if prefixo_limpo not in ("TB", "PC", "AD"):
+        prefixo_limpo = "TB"
+
+    cursor = mongo.db.imoveis.find(
+        {"codigo": {"$regex": f"^{prefixo_limpo}\\d+$", "$options": "i"}},
+        {"codigo": 1}
+    )
+    maior_numero = 0
+    for doc in cursor:
+        cod = str(doc.get("codigo", "")).upper()
         try:
-            prefixo = ultimo_imovel["codigo"][:2]
-            numero = int(ultimo_imovel["codigo"][2:]) + 1
-            return f"{prefixo}{numero:04d}"
+            num = int(cod[2:])
+            if num > maior_numero:
+                maior_numero = num
         except ValueError:
-            pass
-    return "AP0001"
+            continue
+
+    return f"{prefixo_limpo}{(maior_numero + 1):04d}"
 
 def gerar_codigo_proprietario(papel="proprietario"):
     prefixo = "PA" if papel == "parceiro" else "PR"
@@ -1396,7 +1413,8 @@ def admin_imoveis():
 def admin_imovel_novo():
     db = mongo.db
     if request.method == 'POST':
-        codigo = gerar_proximo_codigo()
+        prefixo_codigo = sanitizar_texto(request.form.get('prefixo_codigo') or 'TB').upper()
+        codigo = gerar_proximo_codigo(prefixo_codigo)
         titulo = sanitizar_texto(request.form.get('titulo'))
         slug = sanitizar_texto(request.form.get('slug')) or gerar_slug_base(titulo, fallback=codigo.lower())
         
@@ -1467,13 +1485,22 @@ def admin_imovel_novo():
             "posicao_solar": sanitizar_texto(request.form.get('posicao_solar', ''))
         })
         
-        # flash(f'Imóvel {codigo} cadastrado com sucesso!', 'success')
         return redirect(url_for('admin_imoveis'))
         
     proprietarios = list(db.users.find({"papel": {"$in": ["proprietario", "parceiro"]}, "ativo": {"$ne": False}}))
     condominios = list(db.condominios.find().sort("nome", 1))
-    codigo_sugerido = gerar_proximo_codigo()
-    return render_template('admin/imovel_form.html', proprietarios=proprietarios, condominios=condominios, codigo_sugerido=codigo_sugerido, active_tab='imoveis')
+    prefixo_sugerido = request.args.get('prefixo', 'TB').upper()
+    if prefixo_sugerido not in ('TB', 'PC', 'AD'):
+        prefixo_sugerido = 'TB'
+    codigo_sugerido = gerar_proximo_codigo(prefixo_sugerido)
+    return render_template(
+        'admin/imovel_form.html',
+        proprietarios=proprietarios,
+        condominios=condominios,
+        codigo_sugerido=codigo_sugerido,
+        prefixo_sugerido=prefixo_sugerido,
+        active_tab='imoveis'
+    )
 
 def extrair_youtube_embed(url_texto):
     if not url_texto:
@@ -1763,6 +1790,11 @@ def painel_corretor():
         {"$unwind": {"path": "$endereco_privado", "preserveNullAndEmptyArrays": True}}
     ]
     agendamentos = list(db.agendamentos.aggregate(pipeline_agendamentos)) if 'agendamentos' in db.list_collection_names() else []
+    if papel != 'admin':
+        agendamentos = [
+            ag for ag in agendamentos
+            if str((ag.get("imovel_info") or {}).get("codigo", "")).upper().startswith("PC")
+        ]
     
     hoje_str = datetime.now(BR_TZ).date().isoformat()
 
@@ -1868,9 +1900,14 @@ def atender_lead(lead_id):
 def atender_agendamento(ag_id):
     db = mongo.db
     corretor_id = oid_seguro(session.get('user_id'))
+    papel = session.get('papel')
     aid = oid_seguro(ag_id)
     if not aid:
         flash('Agendamento inválido.', 'danger')
+        return redirect(url_for('painel_corretor'))
+
+    if papel != 'admin' and not _agendamento_e_imovel_pc(db, aid):
+        flash('Acesso permitido apenas a agendamentos de imóveis parceiros (PC).', 'warning')
         return redirect(url_for('painel_corretor'))
     
     resultado = db.agendamentos.find_one_and_update(
@@ -1907,6 +1944,10 @@ def alterar_status_agendamento_corretor(ag_id, novo_status):
         return redirect(url_for('painel_corretor'))
     
     papel = session.get('papel')
+    if papel != 'admin' and not _agendamento_e_imovel_pc(db, aid):
+        flash('Acesso permitido apenas a agendamentos de imóveis parceiros (PC).', 'warning')
+        return redirect(url_for('painel_corretor'))
+
     query = {"_id": aid}
     if papel != 'admin':
         query["corretor_responsavel_id"] = corretor_id
@@ -1934,6 +1975,11 @@ def reagendar_visita_corretor(ag_id):
         flash('Agendamento inválido.', 'danger')
         return redirect(url_for('painel_corretor'))
 
+    papel = session.get('papel')
+    if papel != 'admin' and not _agendamento_e_imovel_pc(db, aid):
+        flash('Acesso permitido apenas a agendamentos de imóveis parceiros (PC).', 'warning')
+        return redirect(url_for('painel_corretor'))
+
     nova_data = request.form.get('nova_data')
     nova_hora = request.form.get('nova_hora')
     
@@ -1954,7 +2000,6 @@ def reagendar_visita_corretor(ag_id):
         flash('Formato de data ou hora inválido.', 'danger')
         return redirect(url_for('painel_corretor'))
 
-    papel = session.get('papel')
     query = {"_id": aid}
     if papel != 'admin':
         query["corretor_responsavel_id"] = corretor_id
