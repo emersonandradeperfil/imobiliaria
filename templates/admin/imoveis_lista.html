@@ -46,6 +46,8 @@
         {% set nome_condominio = imovel.condominio_info.nome if imovel.condominio_info else 'N/D' %}
         {% set nome_proprietario = imovel.proprietario_info.nome if imovel.proprietario_info else '' %}
         {% set data_formatada = imovel.criado_em.strftime('%d/%m/%Y') if imovel.criado_em else '' %}
+        {% set esta_ativo = (imovel.status != 'inativo') and (imovel.ativo is not false) %}
+        {% set em_destaque = esta_ativo and (imovel.destaque is true) %}
 
         {% if session.get('papel') == 'admin' %}
             {% set string_busca = imovel.codigo ~ ' ' ~ imovel.local_publico.bairro ~ ' ' ~ nome_condominio ~ ' ' ~ nome_proprietario ~ ' ' ~ data_formatada %}
@@ -82,9 +84,22 @@
                         <span class="text-xs font-bold text-amber-600 uppercase tracking-wide">
                             CÓDIGO: {{ imovel.codigo }}
                         </span>
-                        <span class="bg-green-100 text-green-800 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
-                            {{ imovel.status }}
-                        </span>
+                        <div class="flex items-center gap-1 flex-wrap justify-end">
+                            {% if esta_ativo %}
+                            <span class="bg-green-100 text-green-800 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
+                                Ativo
+                            </span>
+                            {% if em_destaque %}
+                            <span class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
+                                Destaque
+                            </span>
+                            {% endif %}
+                            {% else %}
+                            <span class="bg-gray-100 text-gray-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
+                                {{ imovel.status or 'Inativo' }}
+                            </span>
+                            {% endif %}
+                        </div>
                     </div>
 
                     <h3 class="font-bold text-slate-900 text-sm leading-snug mt-0.5 truncate">
@@ -156,6 +171,8 @@
                 {% set nome_condominio = imovel.condominio_info.nome if imovel.condominio_info else 'N/D' %}
                 {% set nome_proprietario = imovel.proprietario_info.nome if imovel.proprietario_info else '' %}
                 {% set data_formatada = imovel.criado_em.strftime('%d/%m/%Y') if imovel.criado_em else '' %}
+                {% set esta_ativo = (imovel.status != 'inativo') and (imovel.ativo is not false) %}
+                {% set em_destaque = esta_ativo and (imovel.destaque is true) %}
 
                 {% if session.get('papel') == 'admin' %}
                     {% set string_busca_desk = imovel.codigo ~ ' ' ~ imovel.local_publico.bairro ~ ' ' ~ nome_condominio ~ ' ' ~ nome_proprietario ~ ' ' ~ data_formatada %}
@@ -184,7 +201,18 @@
                     </td>
                     {% endif %}
 
-                    <td class="p-4"><span class="bg-green-100 text-green-800 text-xs px-2.5 py-1 rounded-full font-semibold">{{ imovel.status }}</span></td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            {% if esta_ativo %}
+                            <span class="bg-green-100 text-green-800 text-xs px-2.5 py-1 rounded-full font-semibold">Ativo</span>
+                            {% if em_destaque %}
+                            <span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-semibold">Destaque</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="bg-gray-100 text-gray-700 text-xs px-2.5 py-1 rounded-full font-semibold">{{ imovel.status or 'Inativo' }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
 
                     <td class="p-4 text-right space-x-3">
                         <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" class="text-blue-600 hover:underline font-semibold text-xs">Detalhes</a>

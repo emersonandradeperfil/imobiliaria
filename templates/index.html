@@ -6,19 +6,16 @@
 <!-- ========================================== -->
 <div class="relative w-full h-[360px] sm:h-[440px] bg-slate-900 overflow-hidden flex items-center justify-center">
 
-    <!-- Vídeo de Fundo (Autoplay, Mudo, Loop e Playsinline para funcionar no iPhone/Android) -->
     <video autoplay loop muted playsinline poster="{{ url_for('static', filename='img/banner-fallback.jpg') }}"
         class="absolute inset-0 w-full h-full object-cover">
         <source src="{{ url_for('static', filename='movie/video.mp4') }}" type="video/mp4">
     </video>
 
-    <!-- Gradiente Escuro para Contraste Elegante -->
     <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-slate-950/60"></div>
 
-    <!-- Conteúdo Central sobreposto ao Vídeo -->
     <div class="relative z-10 max-w-5xl mx-auto px-4 text-center space-y-3 md:space-y-4">
         <h1
-            class=" fonte-marca text-5xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight drop-shadow-md">
+            class="fonte-marca text-5xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight drop-shadow-md">
             TECA BORGES
         </h1>
         <div class="text-gray-200 uppercase tracking-wider space-y-1.5 drop-shadow">
@@ -29,9 +26,100 @@
     </div>
 </div>
 
+<!-- ========================================== -->
+<!-- CARROSSEL DE IMÓVEIS EM DESTAQUE           -->
+<!-- ========================================== -->
+{% set ns_dest = namespace(lista=[]) %}
+{% for categoria, lista_imoveis in secoes.items() %}
+    {% for imovel in lista_imoveis %}
+        {% set is_ativo_dest = imovel.ativo is not false %}
+        {% if is_ativo_dest and imovel.destaque %}
+            {% set ns_dest.lista = ns_dest.lista + [imovel] %}
+        {% endif %}
+    {% endfor %}
+{% endfor %}
+
+{% if ns_dest.lista %}
+<section class="max-w-7xl mx-auto px-6 sm:px-8 pt-8">
+    <div class="flex items-center justify-between gap-4 mb-4">
+        <div>
+            <!-- <span class="text-[11px] font-bold uppercase tracking-widest text-amber-600 block">Seleção Especial</span> -->
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">Imóveis em Destaque</h2>
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="rolarCarrosselDestaque(-1)"
+                class="w-9 h-9 rounded-full bg-white hover:bg-slate-900 text-slate-900 hover:text-white border border-gray-300 flex items-center justify-center font-bold text-sm shadow-sm transition cursor-pointer"
+                aria-label="Anterior">‹</button>
+            <button type="button" onclick="rolarCarrosselDestaque(1)"
+                class="w-9 h-9 rounded-full bg-white hover:bg-slate-900 text-slate-900 hover:text-white border border-gray-300 flex items-center justify-center font-bold text-sm shadow-sm transition cursor-pointer"
+                aria-label="Próximo">›</button>
+        </div>
+    </div>
+
+    <div id="carrossel-destaque"
+        class="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-3">
+        {% for imovel in ns_dest.lista %}
+        {% set precos_d = imovel.precos if imovel.precos is mapping else {} %}
+        {% set carac_d = imovel.caracteristicas if imovel.caracteristicas is mapping else {} %}
+        {% set local_d = imovel.local_publico if imovel.local_publico is mapping else {} %}
+        {% set pv_d = (precos_d.get('venda') or 0)|float %}
+        {% set pl_d = (precos_d.get('locacao') or 0)|float %}
+        {% set fotos_d = imovel.midia.fotos if imovel.midia and imovel.midia.fotos else [] %}
+        {% set f0_d = fotos_d[0] if fotos_d|length > 0 else none %}
+        {% if f0_d is mapping and f0_d.get('url') %}
+            {% set capa_d = f0_d.get('url') %}
+        {% elif f0_d is mapping and f0_d.get('arquivo') %}
+            {% set capa_d = url_for('static', filename=f0_d.get('arquivo')) %}
+        {% elif f0_d is string and f0_d|trim != '' %}
+            {% set capa_d = url_for('static', filename=f0_d|trim) %}
+        {% else %}
+            {% set capa_d = url_for('static', filename='upload/default.jpg') %}
+        {% endif %}
+        {% set url_d = url_for('imovel_detalhe', slug=imovel.slug) if imovel.slug else '#' %}
+
+        <div {% if imovel.slug %}onclick="window.location.href='{{ url_d }}'"{% endif %}
+            class="snap-start flex-shrink-0 w-[85%] sm:w-[48%] lg:w-[32%] bg-white border border-gray-200 overflow-hidden flex flex-col justify-between hover:shadow-md transition cursor-pointer group">
+            <div>
+                <div class="relative h-48 w-full bg-slate-100 overflow-hidden">
+                    <img src="{{ capa_d }}" alt="{{ imovel.titulo or 'Destaque' }}"
+                        class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                    <span class="absolute top-3 left-3 bg-amber-400 text-slate-950 text-[10px] font-extrabold px-2.5 py-0.5 uppercase tracking-wider">
+                        Destaque
+                    </span>
+                </div>
+                <div class="p-4 space-y-1">
+                    <div class="flex items-center justify-between text-[11px] font-semibold uppercase text-slate-500">
+                        <span>{{ imovel.tipo or 'Imóvel' }}</span>
+                        <span class="text-slate-400">{{ imovel.codigo or '' }}</span>
+                    </div>
+                    <h3 class="font-semibold text-[16px] text-slate-900 leading-snug line-clamp-1">
+                        {{ imovel.titulo or 'Sem título' }}{% if local_d.get('bairro') %} - {{ local_d.get('bairro') }}{% endif %}
+                    </h3>
+                    <p class="text-xs text-slate-500">
+                        {{ carac_d.get('util') or 0 }} m² · {{ carac_d.get('quartos') or 0 }} quartos · {{ carac_d.get('vagas') or 0 }} vagas
+                    </p>
+                </div>
+            </div>
+            <div class="px-4 pb-4 pt-2 border-t border-gray-100">
+                {% if pv_d > 0 %}
+                <p class="text-[17px] font-bold text-slate-950">
+                    R$ {{ "{:,.2f}".format(pv_d).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+                </p>
+                {% endif %}
+                {% if pl_d > 0 %}
+                <p class="text-[13px] font-semibold text-emerald-800">
+                    R$ {{ "{:,.2f}".format(pl_d).replace(',', 'v').replace('.', ',').replace('v', '.') }} / mês
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
 <div class="max-w-7xl mx-auto px-6 sm:px-8 py-8 space-y-10">
 
-    <!-- Botão Gatilho para Abrir/Fechar os Filtros -->
     <div class="flex items-center justify-between gap-4 pt-1">
         <button type="button" onclick="togglePainelFiltros()" id="btn-toggle-filtros"
             class="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-900 text-slate-900 hover:text-white border border-gray-300 hover:border-slate-900 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm transition cursor-pointer">
@@ -39,14 +127,10 @@
         </button>
     </div>
 
-    <!-- ========================================== -->
-    <!-- BARRA DE FILTROS RETRÁTIL (INICIA OCULTA)  -->
-    <!-- ========================================== -->
     <div id="painel-filtros"
         class="hidden bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 max-w-5xl mx-auto transition-all">
         <div class="space-y-4">
 
-            <!-- Linha 1: Finalidade (Todos / Comprar / Alugar) -->
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
                 <div class="flex items-center gap-2 flex-wrap">
                     <button type="button" onclick="mudarFinalidade('')" id="btn-fin-todos"
@@ -64,16 +148,17 @@
                 </div>
             </div>
 
-            <!-- Linha 2: Tipo de Imóvel (Dinâmico conforme cadastro) + Ordenação + Busca em Tempo Real -->
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
                 <div class="sm:col-span-4">
                     <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Tipo de Imóvel</label>
                     {% set ns_tipos = namespace(lista=[]) %}
                     {% for categoria, lista_imoveis in secoes.items() %}
                         {% for imovel in lista_imoveis %}
-                            {% set t_norm = (imovel.tipo or '')|lower|trim %}
-                            {% if t_norm and t_norm not in ns_tipos.lista %}
-                                {% set ns_tipos.lista = ns_tipos.lista + [t_norm] %}
+                            {% if imovel.ativo is not false %}
+                                {% set t_norm = (imovel.tipo or '')|lower|trim %}
+                                {% if t_norm and t_norm not in ns_tipos.lista %}
+                                    {% set ns_tipos.lista = ns_tipos.lista + [t_norm] %}
+                                {% endif %}
                             {% endif %}
                         {% endfor %}
                     {% endfor %}
@@ -112,9 +197,6 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- MENSAGEM DE NENHUM RESULTADO (DINÂMICA)    -->
-    <!-- ========================================== -->
     <div id="mensagem-vazio"
         class="hidden bg-white rounded-2xl border border-gray-200 p-12 text-center max-w-xl mx-auto shadow-sm">
         <span class="text-4xl block mb-3">🔍</span>
@@ -126,14 +208,12 @@
         </button>
     </div>
 
-    <!-- ========================================== -->
-    <!-- VITRINE DE IMÓVEIS (3 POR LINHA, ATÉ 9)    -->
-    <!-- ========================================== -->
     <div id="container-vitrine" class="space-y-8">
         <div id="grid-imoveis" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
             {% set ns = namespace(idx=0) %}
             {% for categoria, lista_imoveis in secoes.items() %}
             {% for imovel in lista_imoveis %}
+            {% if imovel.ativo is not false %}
             {% set ns.idx = ns.idx + 1 %}
             {% set precos_imv = imovel.precos if imovel.precos is mapping else {} %}
             {% set carac_imv = imovel.caracteristicas if imovel.caracteristicas is mapping else {} %}
@@ -155,7 +235,6 @@
                 class="card-imovel bg-white rounded-none border border-gray-200 overflow-hidden flex flex-col justify-between hover:shadow-md transition cursor-pointer group">
 
                 <div>
-                    <!-- Foto de Capa (Cloudinary ou Fallback Local) -->
                     <div class="relative h-56 w-full bg-slate-100 overflow-hidden">
                         {% set fotos_imv = imovel.midia.fotos if imovel.midia and imovel.midia.fotos else [] %}
                         {% set foto0 = fotos_imv[0] if fotos_imv|length > 0 else none %}
@@ -191,7 +270,6 @@
                         </button>
                     </div>
 
-                    <!-- Cabeçalho: Tipo + Código e Título/Localização -->
                     <div class="px-5 pt-4 pb-3 space-y-1.5">
                         <div
                             class="flex items-center justify-between gap-2 text-[11px] font-semibold tracking-[0.08em] uppercase text-slate-500">
@@ -207,10 +285,8 @@
                 </div>
 
                 <div>
-                    <!-- 4 Especificações com Ícones: Metragem, Dormitório, Banheiro e Vaga -->
                     <div
                         class="border-t border-b border-gray-100 flex items-center justify-around py-2.5 text-[12px] text-slate-700 font-normal">
-                        <!-- 1. Metragem útil -->
                         <div class="flex items-center gap-1.5" title="Área útil">
                             <svg class="w-6 h-6 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor"
                                 stroke-width="1.6" viewBox="0 0 24 24">
@@ -220,18 +296,15 @@
                             <span class="truncate">{{ carac_imv.get('util') or 0 }} m²</span>
                         </div>
 
-                        <!-- 2. Dormitórios -->
                         <div class="flex items-center gap-1.5" title="Dormitórios">
                             <svg class="w-6 h-6 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor"
                                 stroke-width="1.6" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M3.75 19.5V13.5m16.5 6v-6M3.75 13.5h16.5m-16.5 0v-2.25A1.5 1.5 0 0 1 5.25 9.75h13.5a1.5 1.5 0 0 1 1.5 1.5v2.25M5.25 9.75V6.75A1.5 1.5 0 0 1 6.75 5.25h10.5a1.5 1.5 0 0 1 1.5 1.5v3M3.75 17.25h16.5M7.5 9.75V8.25a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 .75.75v1.5m1.5 0V8.25a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 .75.75v1.5" />
                             </svg>
-
                             <span>{{ carac_imv.get('quartos') or 0 }}</span>
                         </div>
 
-                        <!-- 3. Banheiros -->
                         <div class="flex items-center gap-1.5" title="Banheiros">
                             <svg class="w-6 h-6 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor"
                                 stroke-width="1.6" viewBox="0 0 24 24">
@@ -244,11 +317,9 @@
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M6.75 13.5v-1.5a1.5 1.5 0 0 1 1.5-1.5h.75a1.5 1.5 0 0 1 1.5 1.5v1.5" />
                             </svg>
-
                             <span>{{ carac_imv.get('banheiros') or 0 }}</span>
                         </div>
 
-                        <!-- 4. Vagas -->
                         <div class="flex items-center gap-1.5" title="Vagas">
                             <svg class="w-6 h-6 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.6"
                                 viewBox="0 0 24 24">
@@ -258,12 +329,10 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 20v-8.5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1V20" />
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 13.5h9M7.5 16.5h9" />
                             </svg>
-
                             <span>{{ carac_imv.get('vagas') or 0 }}</span>
                         </div>
                     </div>
 
-                    <!-- Preço -->
                     <div class="px-5 py-4 space-y-1">
                         {% if preco_v > 0 %}
                         <p class="text-[19px] font-semibold text-slate-950 tracking-[-0.02em]">
@@ -278,11 +347,11 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
             {% endfor %}
             {% endfor %}
         </div>
 
-        <!-- Botão Ver Mais Imóveis -->
         <div id="area-ver-mais" class="hidden pt-4 text-center">
             <button type="button" id="btn-ver-mais" onclick="expandirTodosImoveis()"
                 class="px-8 py-3 bg-white hover:bg-slate-900 text-slate-900 hover:text-white border border-slate-900 font-medium text-sm tracking-[-0.01em] transition shadow-sm cursor-pointer">
@@ -291,13 +360,9 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- QUEM É A CORRETORA (ESTILO EDITORIAL)      -->
-    <!-- ========================================== -->
     <section class="w-full max-w-6xl mx-auto px-4 sm:px-6 pt-4">
         <div class="bg-white border border-gray-200 overflow-hidden grid grid-cols-1 lg:grid-cols-12 shadow-sm">
 
-            <!-- Coluna Esquerda: Texto -->
             <div class="lg:col-span-7 p-8 sm:p-12 flex flex-col justify-center space-y-5 bg-stone-50/70">
                 <h2 class="fonte-marca text-3xl sm:text-4xl text-slate-900 leading-tight">
                     Teca Borges
@@ -324,7 +389,6 @@
                 </div>
             </div>
 
-            <!-- Coluna Direita: Imagem -->
             <div class="lg:col-span-5 min-h-[320px] sm:min-h-[420px] bg-slate-200 relative overflow-hidden">
                 <img src="{{ url_for('static', filename='img/info.webp') }}"
                     alt="Teca Borges - Imóveis, Avaliação, Perícia e Administração" class="w-full h-full object-cover">
@@ -333,9 +397,6 @@
         </div>
     </section>
 
-    <!-- ========================================== -->
-    <!-- FORMULÁRIO: NÃO ENCONTROU O QUE PROCURAVA? -->
-    <!-- ========================================== -->
     <div
         class="w-full max-w-5xl mx-auto px-4 sm:px-8 py-8 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col justify-between hover:shadow-md transition">
         <div class="w-full max-w-3xl mx-auto relative z-10 space-y-6">
@@ -401,7 +462,6 @@
 
 </div>
 
-<!-- MODAL DE CAPTAÇÃO DE LEAD (Favoritos) -->
 <div id="modal-lead"
     class="fixed inset-0 bg-slate-950/70 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative transform transition-all text-slate-900">
@@ -448,7 +508,6 @@
     </div>
 </div>
 
-<!-- MODAL DE VERIFICAÇÃO OTP PARA O FAVORITO -->
 <div id="modal-otp-favorito"
     class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-slate-900 relative">
@@ -477,7 +536,6 @@
     </div>
 </div>
 
-<!-- MODAL DE VERIFICAÇÃO DE E-MAIL (OTP) PARA BUSCA PERSONALIZADA -->
 <div id="modal-otp-busca"
     class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-slate-900 relative">
@@ -518,6 +576,13 @@
         'PC': 2,
         'AD': 3
     };
+
+    function rolarCarrosselDestaque(direcao) {
+        const track = document.getElementById('carrossel-destaque');
+        if (!track) return;
+        const passo = Math.max(track.clientWidth * 0.8, 300);
+        track.scrollBy({ left: direcao * passo, behavior: 'smooth' });
+    }
 
     function obterPrioridadeCodigo(card) {
         const codigo = (card.getAttribute('data-codigo') || '').trim().toUpperCase();
@@ -677,7 +742,6 @@
         aplicarFiltros();
     });
 
-    // --- FAVORITOS ---
     function formatarTelefoneModalLead(input) {
         const digitos = input.value.replace(/\D/g, '').slice(0, 11);
         if (digitos.length <= 2) {
@@ -799,7 +863,6 @@
         }
     }
 
-    // --- FLUXO DE BUSCA PERSONALIZADA (LOGADO DIRETO / VISITANTE COM OTP) ---
     async function iniciarBuscaPersonalizada(event) {
         event.preventDefault();
         let tipo = document.getElementById('busca-tipo').value;

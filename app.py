@@ -19,18 +19,13 @@ import re
 import cloudinary
 import cloudinary.uploader
 
-# Carrega as variáveis de ambiente do arquivo .env local
 load_dotenv()
 
 app = Flask(__name__)
 
-# Fuso horário padrão do Brasil (Brasília)
 BR_TZ = ZoneInfo("America/Sao_Paulo")
-
-# Limite máximo de upload (ex.: 15 MB por requisição)
 app.config['MAX_CONTENT_LENGTH'] = 15 * 1024 * 1024
 
-# SECRET_KEY
 secret_key_env = os.getenv("SECRET_KEY")
 if not secret_key_env:
     app.secret_key = "123456-trocar-em-producao"
@@ -39,12 +34,10 @@ else:
 
 init_db(app)
 
-# Configuração da pasta de uploads de imóveis (usada no modo 'local' ou como fallback)
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'upload')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Configuração do Cloudinary + chave de alternância ('cloudinary' | 'local')
 STORAGE_MODE = os.getenv("STORAGE_MODE", "cloudinary").strip().lower()
 CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "").strip()
 CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "").strip()
@@ -61,6 +54,30 @@ if CLOUDINARY_CONFIGURADO:
         api_secret=CLOUDINARY_API_SECRET,
         secure=True,
     )
+
+# --- FILTROS DE ATIVO / DESTAQUE ---
+QUERY_ATIVO = {"$and": [{"status": {"$ne": "inativo"}}, {"ativo": {"$ne": False}}]}
+QUERY_ATIVO_DESTAQUE = {
+    "$and": [
+        {"status": {"$ne": "inativo"}},
+        {"ativo": {"$ne": False}},
+        {"destaque": True}
+    ]
+}
+
+def _imovel_esta_ativo(imovel_doc):
+    if not imovel_doc:
+        return False
+    return imovel_doc.get("status") != "inativo" and imovel_doc.get("ativo") is not False
+
+def _usuario_pode_ver_imovel_inativo(db, imovel_doc):
+    papel = session.get("papel")
+    if papel in ["admin", "corretor"]:
+        return True
+    uid = oid_seguro(session.get("user_id"))
+    if uid and imovel_doc.get("proprietario_id") == uid:
+        return True
+    return False
 
 # --- FUNÇÕES AUXILIARES DE SEGURANÇA E INTEGRAÇÃO ---
 def sanitizar_texto(texto):
@@ -114,7 +131,6 @@ def enviar_email_mailgun(para_email, assunto, corpo_texto):
         return False
 
 def resolver_condominio(nome_raw):
-    """Busca ou cria o condomínio pelo nome e retorna (condominio_id, condominio_nome)."""
     nome_limpo = sanitizar_texto(nome_raw)
     if not nome_limpo:
         return None, ""
@@ -151,7 +167,6 @@ def resolver_condominio(nome_raw):
         return res.inserted_id, nome_limpo
 
 def excluir_dados_usuario_lgpd(user_doc):
-    """Remove definitivamente o usuário e seus dados pessoais vinculados (LGPD), preservando imóveis."""
     db = mongo.db
     uid = user_doc["_id"]
     email = user_doc.get("email")
@@ -279,7 +294,7 @@ def gerar_codigo_proprietario(papel="proprietario"):
             pass
     return f"{prefixo}0001"
 
-# --- FUNÇÕES AUXILIARES DE ARMAZENAMENTO DE FOTOS (CLOUDINARY + FALLBACK LOCAL) ---
+# --- FUNÇÕES AUXILIARES DE ARMAZENAMENTO DE FOTOS ---
 def _salvar_arquivo_local(file_storage, codigo, cat, ordem, extensao, pasta_imovel):
     os.makedirs(pasta_imovel, exist_ok=True)
     nome_arquivo = secure_filename(f"{codigo}_{cat}_{ordem}{extensao}")
@@ -308,7 +323,6 @@ def _excluir_recurso_foto(foto_dict):
             except Exception as e:
                 print(f"Erro ao deletar arquivo físico: {e}")
 
-# --- FUNÇÃO PARA PROCESSAR UPLOADS DINÂMICOS DE FOTOS ---
 def processar_upload_fotos_dinamicas(request_files, request_form, codigo, pasta_imovel, fotos_existentes=None):
     lista_fotos = list(fotos_existentes) if fotos_existentes else []
     contador_ordem = max([f.get("ordem", 0) for f in lista_fotos], default=0) + 1
@@ -398,7 +412,7 @@ def ping():
 @app.route('/')
 def index():
     db = mongo.db
-    imoveis_ativos = list(db.imoveis.find({"status": "ativo", "destaque": True}).sort("criado_em", -1))
+    imoveis_ativos = list(db.imoveis.find(QUERY_ATIVO).sort("criado_em", -1))
     
     secoes = {
         "Apartamentos": [i for i in imoveis_ativos if i.get('tipo') == 'apartamento'],
@@ -431,9 +445,13 @@ def cadastrar_cliente():
 @app.route('/imovel/<slug>')
 def imovel_detalhe(slug):
     db = mongo.db
-    imovel = db.imoveis.find_one({"slug": slug, "status": "ativo"})
+    imovel = db.imoveis.find_one({"slug": slug})
     if not imovel:
         return "Imóvel não encontrado", 404
+
+    if not _imovel_esta_ativo(imovel) and not _usuario_pode_ver_imovel_inativo(db, imovel):
+        flash("Este imóvel não está disponível no momento.", "warning")
+        return redirect(url_for('index'))
     
     condominio = db.condominios.find_one({"_id": imovel.get("condominio_id")})
     
@@ -444,9 +462,13 @@ def imovel_detalhe(slug):
     if bairro_atual:
         mesmo_bairro = list(
             db.imoveis.find({
-                "status": "ativo",
-                "_id": {"$nin": ids_excluidos},
-                "local_publico.bairro": {"$regex": f"^{re.escape(bairro_atual)}$", "$options": "i"}
+                "$and": [
+                    QUERY_ATIVO,
+                    {
+                        "_id": {"$nin": ids_excluidos},
+                        "local_publico.bairro": {"$regex": f"^{re.escape(bairro_atual)}$", "$options": "i"}
+                    }
+                ]
             }).sort("criado_em", -1).limit(5)
         )
         imoveis_destaque.extend(mesmo_bairro)
@@ -456,9 +478,10 @@ def imovel_detalhe(slug):
         faltam = 5 - len(imoveis_destaque)
         extras_home = list(
             db.imoveis.find({
-                "status": "ativo",
-                "destaque": True,
-                "_id": {"$nin": ids_excluidos}
+                "$and": [
+                    QUERY_ATIVO_DESTAQUE,
+                    {"_id": {"$nin": ids_excluidos}}
+                ]
             }).sort("criado_em", -1).limit(faltam)
         )
         imoveis_destaque.extend(extras_home)
@@ -484,9 +507,13 @@ def imovel_detalhe(slug):
 @app.route('/imovel/<slug>/galeria')
 def imovel_galeria(slug):
     db = mongo.db
-    imovel = db.imoveis.find_one({"slug": slug, "status": "ativo"})
+    imovel = db.imoveis.find_one({"slug": slug})
     if not imovel:
         return "Imóvel não encontrado", 404
+
+    if not _imovel_esta_ativo(imovel) and not _usuario_pode_ver_imovel_inativo(db, imovel):
+        flash("Este imóvel não está disponível no momento.", "warning")
+        return redirect(url_for('index'))
 
     if 'user_id' not in session:
         flash('Faça login ou libere seu acesso na página do imóvel para ver a galeria completa.', 'warning')
@@ -629,7 +656,7 @@ def verificar_otp_e_liberar_imovel():
     slug_destino = imovel_doc.get("slug") if imovel_doc else ""
     return jsonify({"status": "success", "slug": slug_destino})
 
-# --- BUSCA PERSONALIZADA (USUÁRIO LOGADO DIRETO E VISITANTE VIA OTP) ---
+# --- BUSCA PERSONALIZADA ---
 @app.route('/api/salvar-busca-logado', methods=['POST'])
 def salvar_busca_logado():
     uid = oid_seguro(session.get('user_id'))
@@ -803,7 +830,6 @@ def _url_retorno_segura(destino):
     if destino.startswith('/') and not destino.startswith('//'):
         return destino
     return None
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -1012,7 +1038,6 @@ def verificar_otp_e_salvar_favorito():
     db.otps.delete_one({"_id": registro["_id"]})
     return jsonify({"status": "success", "redirect_url": url_for('meus_favoritos')})
 
-# --- TRAVA DE SEGURANÇA DE DATA NO BACKEND PARA AGENDAMENTOS ---
 @app.route('/imovel/agendar/<imoid>', methods=['POST'])
 @login_required
 def agendar_visita(imoid):
@@ -1062,7 +1087,7 @@ def meus_favoritos():
     uid = oid_seguro(session.get('user_id'))
     user = db.users.find_one({"_id": uid}) if uid else None
     fav_ids = user.get("favoritos", []) if user else []
-    imoveis_favoritos = list(db.imoveis.find({"_id": {"$in": fav_ids}, "status": "ativo"}))
+    imoveis_favoritos = list(db.imoveis.find({"$and": [{"_id": {"$in": fav_ids}}, QUERY_ATIVO]}))
     return render_template('cliente/favoritos.html', imoveis=imoveis_favoritos, active_tab='favoritos')
 
 @app.route('/cliente/agendamentos')
@@ -1157,7 +1182,7 @@ def painel_proprietario():
     db = mongo.db
     proprietario_id = oid_seguro(session.get('user_id'))
     
-    imoveis_prop = list(db.imoveis.find({"proprietario_id": proprietario_id, "status": "ativo"}))
+    imoveis_prop = list(db.imoveis.find({"$and": [{"proprietario_id": proprietario_id}, QUERY_ATIVO]}))
     imovel_ids = [imv["_id"] for imv in imoveis_prop]
     
     imoveis_com_metricas = []
@@ -1251,7 +1276,7 @@ def admin_painel():
     curtidas_lista = []
     for u in usuarios_favoritos:
         favs = u.get("favoritos", [])
-        imoveis_favs = list(db.imoveis.find({"_id": {"$in": favs}, "status": "ativo"}))
+        imoveis_favs = list(db.imoveis.find({"$and": [{"_id": {"$in": favs}}, QUERY_ATIVO]}))
         for imv in imoveis_favs:
             curtidas_lista.append({
                 "cliente": u,
@@ -1390,12 +1415,12 @@ def admin_reagendar_visita(ag_id):
 def admin_imoveis():
     db = mongo.db
     tipo_filtro = request.args.get('tipo')
-    match_query = {"status": "ativo"}
+    filtros = [{"status": {"$ne": "excluido"}}]
     if tipo_filtro:
-        match_query["tipo"] = tipo_filtro
+        filtros.append({"tipo": tipo_filtro})
         
     pipeline = [
-        {"$match": match_query},
+        {"$match": {"$and": filtros}},
         {"$sort": {"criado_em": -1}},
         {"$lookup": {"from": "users", "localField": "proprietario_id", "foreignField": "_id", "as": "proprietario_info"}},
         {"$unwind": {"path": "$proprietario_info", "preserveNullAndEmptyArrays": True}},
@@ -1430,14 +1455,18 @@ def admin_imovel_novo():
             if v_info:
                 videos.append(v_info)
 
+        ativo_flag = request.form.get('ativo') == '1'
+        destaque_flag = request.form.get('destaque') == '1'
+
         imovel_doc = {
             "codigo": codigo,
             "slug": slug,
             "titulo": titulo,
             "descricao": sanitizar_texto(request.form.get('descricao')),
             "tipo": sanitizar_texto(request.form.get('tipo')),
-            "status": "ativo",
-            "destaque": True if request.form.get('destaque') == '1' else False,
+            "status": "ativo" if ativo_flag else "inativo",
+            "ativo": ativo_flag,
+            "destaque": destaque_flag,
             "precos": {
                 "venda": float(request.form.get('preco_venda') or 0),
                 "locacao": float(request.form.get('preco_locacao') or 0),
@@ -1507,7 +1536,6 @@ def extrair_youtube_embed(url_texto):
         return None
     url_texto = url_texto.strip()
 
-    # 1. YouTube
     match_yt = re.search(
         r"(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})",
         url_texto
@@ -1521,7 +1549,6 @@ def extrair_youtube_embed(url_texto):
             "embed_url": f"https://www.youtube.com/embed/{video_id}"
         }
 
-    # 2. Google Drive
     match_drive = re.search(
         r"drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([A-Za-z0-9_-]+)",
         url_texto
@@ -1564,6 +1591,9 @@ def editar_imovel(codigo):
             v_info = extrair_youtube_embed(request.form.get(campo_video))
             if v_info:
                 videos.append(v_info)
+
+        ativo_flag = request.form.get('ativo') == '1'
+        destaque_flag = request.form.get('destaque') == '1'
         
         db.imoveis.update_one(
             {"codigo": codigo},
@@ -1572,7 +1602,9 @@ def editar_imovel(codigo):
                     "titulo": titulo,
                     "descricao": descricao,
                     "tipo": tipo,
-                    "destaque": True if request.form.get('destaque') == '1' else False,
+                    "status": "ativo" if ativo_flag else "inativo",
+                    "ativo": ativo_flag,
+                    "destaque": destaque_flag,
                     "precos.venda": float(request.form.get('preco_venda') or 0),
                     "precos.locacao": float(request.form.get('preco_locacao') or 0),
                     "precos.condominio": float(request.form.get('preco_condominio') or 0),
@@ -1683,7 +1715,10 @@ def remover_foto_imovel(codigo):
 @admin_required
 def admin_imovel_excluir(codigo):
     db = mongo.db
-    db.imoveis.update_one({"codigo": codigo}, {"$set": {"status": "inativo", "desativado_em": datetime.now(BR_TZ)}})
+    db.imoveis.update_one(
+        {"codigo": codigo},
+        {"$set": {"ativo": False, "status": "inativo", "desativado_em": datetime.now(BR_TZ)}}
+    )
     return redirect(url_for('admin_imoveis'))
 
 @app.route('/admin/usuarios', methods=['GET', 'POST'])
@@ -1835,7 +1870,7 @@ def painel_corretor():
     
     imoveis_curtidos = []
     for item in ranking_curtidas:
-        imovel_doc = db.imoveis.find_one({"_id": item["_id"], "status": "ativo"})
+        imovel_doc = db.imoveis.find_one({"$and": [{"_id": item["_id"]}, QUERY_ATIVO]})
         if imovel_doc:
             if papel != 'admin' and not str(imovel_doc.get("codigo", "")).upper().startswith("PC"):
                 continue

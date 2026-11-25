@@ -16,7 +16,6 @@
         {% endif %}
     </div>
 
-    <!-- Banner de aviso pós-importação JSON -->
     <div id="alerta-json-aplicado" class="hidden mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-start justify-between gap-3">
         <div>
             <p class="font-bold text-emerald-950">Dados do JSON aplicados com sucesso!</p>
@@ -27,7 +26,6 @@
     
     <form method="POST" enctype="multipart/form-data" class="space-y-6" onsubmit="prepararEnvioFormulario()">
         
-        <!-- SEÇÃO 1: DESCRIÇÃO -->
         <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2">Descrição</h2>
         
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -170,14 +168,19 @@
             </div>
         </div>
 
-        <div class="flex items-center pt-1">
-            <input type="checkbox" name="destaque" id="destaque" value="1" {% if editando and imovel.destaque %}checked{% endif %} class="w-4 h-4 text-amber-500 rounded border-gray-300">
-            <label for="destaque" class="ml-2 text-sm font-semibold text-slate-800">Destacar na Home?</label>
+        <div class="flex flex-wrap items-center gap-6 pt-1">
+            {% set is_ativo = true if not editando else (imovel.ativo is not false) %}
+            <label for="ativo" class="inline-flex items-center cursor-pointer">
+                <input type="checkbox" name="ativo" id="ativo" value="1" {% if is_ativo %}checked{% endif %} class="w-4 h-4 text-emerald-600 rounded border-gray-300">
+                <span class="ml-2 text-sm font-semibold text-slate-800">Ativo</span>
+            </label>
+
+            <label for="destaque" class="inline-flex items-center cursor-pointer">
+                <input type="checkbox" name="destaque" id="destaque" value="1" {% if editando and imovel.destaque %}checked{% endif %} class="w-4 h-4 text-amber-500 rounded border-gray-300">
+                <span class="ml-2 text-sm font-semibold text-slate-800">Destaque</span>
+            </label>
         </div>
 
-        <!-- ========================================== -->
-        <!-- CARACTERÍSTICAS POR CATEGORIA             -->
-        <!-- ========================================== -->
         {% set feats = carac_imv.get('itens') if carac_imv.get('itens') is mapping else {} %}
         <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">Características</h2>
 
@@ -223,9 +226,6 @@
             </div>
         </div>
 
-        <!-- ========================================== -->
-        <!-- SEÇÃO 2: FOTOS (DINÂMICA COM SELECT/PERSONALIZADO) -->
-        <!-- ========================================== -->
         <div class="border-t pt-4 space-y-4">
             <div class="flex items-center justify-between border-b pb-2 pt-4">
                 <div>
@@ -236,7 +236,6 @@
                 </button>
             </div>
 
-            <!-- Container onde os blocos de cômodos dinâmicos entram -->
             <div id="container-comodos" class="space-y-3"></div>
         </div>
 
@@ -266,7 +265,6 @@
                         {{ (foto.legenda or foto.categoria) if foto is mapping else 'Foto' }}
                     </div>
         
-                    <!-- Botão de Remover Foto -->
                     <button type="button"
                         onclick="removerFotoCadastrada('{{ imovel.codigo }}', '{{ arq_param }}', 'foto-item-{{ loop.index0 }}', '{{ pid_param }}')"
                         class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition opacity-0 group-hover:opacity-100 cursor-pointer"
@@ -279,9 +277,6 @@
         </div>
         {% endif %}
 
-        <!-- ========================================== -->
-        <!-- VÍDEOS YOUTUBE (ÁREA PRIVADA DA GALERIA)   -->
-        <!-- ========================================== -->
         <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">Vídeos (YouTube)</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -300,9 +295,6 @@
             </div>
         </div>
 
-        <!-- ========================================== -->
-        <!-- SEÇÃO 3: ENDEREÇO                           -->
-        <!-- ========================================== -->
         <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">Endereço</h2>
         
         <div>
@@ -340,9 +332,6 @@
     </form>
 </div>
 
-<!-- ========================================== -->
-<!-- MODAL: PREENCHER FORMULÁRIO COM JSON       -->
-<!-- ========================================== -->
 <div id="modal-json-imovel" class="fixed inset-0 bg-slate-950/75 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 sm:p-7 relative text-slate-900 space-y-4">
         <div class="flex items-center justify-between border-b pb-3">
@@ -551,9 +540,6 @@
         }
     }
 
-    // ==========================================
-    // AUTO-PREENCHIMENTO VIA JSON
-    // ==========================================
     function abrirModalJson() {
         const modal = document.getElementById('modal-json-imovel');
         const erro = document.getElementById('erro-json-imovel');
@@ -575,6 +561,7 @@
             condominio_nome: "Alpha 2",
             descricao: "Casa ampla, reformada, com ambientes integrados, área gourmet e piscina.",
             tipo: "casa",
+            ativo: true,
             destaque: true,
             precos: {
                 venda: 6900000,
@@ -739,6 +726,12 @@
         setInputByName('suites', carac.suites ?? dados.suites ?? '');
         setInputByName('banheiros', carac.banheiros ?? dados.banheiros ?? '');
         setInputByName('vagas', carac.vagas ?? dados.vagas ?? '');
+
+        const chkAtivo = document.getElementById('ativo');
+        if (chkAtivo && typeof dados.ativo === 'boolean') {
+            chkAtivo.checked = dados.ativo;
+            chkAtivo.dispatchEvent(new Event('change', { bubbles: true }));
+        }
 
         const chkDestaque = document.getElementById('destaque');
         if (chkDestaque && typeof dados.destaque === 'boolean') {
