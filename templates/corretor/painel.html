@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
+{% set papel_usuario = session.get('papel') %}
+
 <div class="max-w-7xl mx-auto px-4 py-8 space-y-8">
 
     <!-- Cabeçalho do Painel -->
@@ -10,21 +12,21 @@
 
         <!-- Sistema de Abas (Botões de Navegação) alinhados à direita -->
         <div class="flex flex-wrap bg-gray-100 p-1 rounded-xl border border-gray-200 gap-1">
-            <button onclick="mudarAba('leads')" id="btn-aba-leads"
-                class="px-4 py-2 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm">
-                Leads ({{ leads|length }})
+            <button type="button" onclick="mudarAba('leads')" id="btn-aba-leads"
+                class="px-4 py-2 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm cursor-pointer">
+                Leads
             </button>
-            <button onclick="mudarAba('agendamentos')" id="btn-aba-agendamentos"
-                class="px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
-                Agenda ({{ agendamentos|length }})
+            <button type="button" onclick="mudarAba('agendamentos')" id="btn-aba-agendamentos"
+                class="px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900 cursor-pointer">
+                Agenda
             </button>
-            <button onclick="mudarAba('buscas')" id="btn-aba-buscas"
-                class="px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
-                Busca ({{ buscas_corretor|length }})
+            <button type="button" onclick="mudarAba('buscas')" id="btn-aba-buscas"
+                class="px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900 cursor-pointer">
+                Busca
             </button>
-            <button onclick="mudarAba('curtidas')" id="btn-aba-curtidas"
-                class="px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
-                Curtidas ({{ imoveis_curtidos|length }})
+            <button type="button" onclick="mudarAba('curtidas')" id="btn-aba-curtidas"
+                class="px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900 cursor-pointer">
+                Curtidas
             </button>
         </div>
     </div>
@@ -35,6 +37,8 @@
         {% if leads %}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {% for lead in leads %}
+            {% set cod_lead = (lead.imovel_info.codigo if lead.imovel_info and lead.imovel_info.codigo else '')|upper %}
+            {% if papel_usuario == 'admin' or cod_lead.startswith('PC') %}
             <div
                 class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
                 <div>
@@ -49,14 +53,23 @@
                         </div>
                     </div>
 
-                    <!-- Imóvel Curtido -->
+                    <!-- Imóvel do Lead -->
                     {% if lead.imovel_info %}
+                    {% set fotos_lead = lead.imovel_info.midia.fotos if lead.imovel_info.midia and lead.imovel_info.midia.fotos else [] %}
+                    {% set f0_lead = fotos_lead[0] if fotos_lead|length > 0 else none %}
+                    {% if f0_lead is mapping and f0_lead.get('url') %}
+                        {% set src_capa_lead = f0_lead.get('url') %}
+                    {% elif f0_lead is mapping and f0_lead.get('arquivo') %}
+                        {% set src_capa_lead = url_for('static', filename=f0_lead.get('arquivo')) %}
+                    {% elif f0_lead is string and f0_lead %}
+                        {% set src_capa_lead = url_for('static', filename=f0_lead) %}
+                    {% else %}
+                        {% set src_capa_lead = url_for('static', filename='upload/default.jpg') %}
+                    {% endif %}
                     <div
                         class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-between gap-3">
                         <div class="flex items-center gap-3 overflow-hidden">
-                            {% set foto_capa = lead.imovel_info.midia.fotos[0].arquivo if lead.imovel_info.midia and
-                            lead.imovel_info.midia.fotos else 'upload/default.jpg' %}
-                            <img src="{{ url_for('static', filename=foto_capa) }}"
+                            <img src="{{ src_capa_lead }}"
                                 class="w-12 h-12 object-cover rounded-md border flex-shrink-0" alt="Imóvel">
                             <div class="overflow-hidden">
                                 <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{
@@ -64,18 +77,19 @@
                                 <h4 class="text-xs font-bold text-slate-900 truncate">{{ lead.imovel_info.titulo }}</h4>
                                 {% if lead.endereco_privado %}
                                 <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ lead.endereco_privado.logradouro }},
-                                    {{
-                                    lead.endereco_privado.numero }}</p>
+                                    {{ lead.endereco_privado.numero }}</p>
                                 {% endif %}
                                 <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{
-                                    lead.imovel_info.local_publico.bairro
+                                    lead.imovel_info.local_publico.bairro if lead.imovel_info.local_publico else ''
                                     }}</p>
                             </div>
                         </div>
+                        {% if lead.imovel_info.slug %}
                         <a href="{{ url_for('imovel_detalhe', slug=lead.imovel_info.slug) }}" target="_blank"
                             class="bg-slate-900 hover:bg-amber-600 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition shadow-sm whitespace-nowrap flex-shrink-0">
                             IMÓVEL
                         </a>
+                        {% endif %}
                     </div>
                     {% endif %}
 
@@ -112,6 +126,7 @@
                 </div>
 
             </div>
+            {% endif %}
             {% endfor %}
         </div>
         {% else %}
@@ -128,6 +143,8 @@
         {% if agendamentos %}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {% for ag in agendamentos %}
+            {% set cod_ag = (ag.imovel_info.codigo if ag.imovel_info and ag.imovel_info.codigo else '')|upper %}
+            {% if papel_usuario == 'admin' or cod_ag.startswith('PC') %}
             <!-- Card do Agendamento -->
             <div id="agendamento-{{ ag._id }}"
                 class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
@@ -163,12 +180,21 @@
 
                     <!-- Imóvel do Agendamento -->
                     {% if ag.imovel_info %}
+                    {% set fotos_ag = ag.imovel_info.midia.fotos if ag.imovel_info.midia and ag.imovel_info.midia.fotos else [] %}
+                    {% set f0_ag = fotos_ag[0] if fotos_ag|length > 0 else none %}
+                    {% if f0_ag is mapping and f0_ag.get('url') %}
+                        {% set src_capa_ag = f0_ag.get('url') %}
+                    {% elif f0_ag is mapping and f0_ag.get('arquivo') %}
+                        {% set src_capa_ag = url_for('static', filename=f0_ag.get('arquivo')) %}
+                    {% elif f0_ag is string and f0_ag %}
+                        {% set src_capa_ag = url_for('static', filename=f0_ag) %}
+                    {% else %}
+                        {% set src_capa_ag = url_for('static', filename='upload/default.jpg') %}
+                    {% endif %}
                     <div
                         class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-between gap-3">
                         <div class="flex items-center gap-3 overflow-hidden">
-                            {% set foto_capa_ag = ag.imovel_info.midia.fotos[0].arquivo if ag.imovel_info.midia and
-                            ag.imovel_info.midia.fotos else 'upload/default.jpg' %}
-                            <img src="{{ url_for('static', filename=foto_capa_ag) }}"
+                            <img src="{{ src_capa_ag }}"
                                 class="w-12 h-12 object-cover rounded-md border flex-shrink-0" alt="Imóvel">
                             <div class="overflow-hidden">
                                 <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{
@@ -176,18 +202,19 @@
                                 <h4 class="text-xs font-bold text-slate-900 truncate">{{ ag.imovel_info.titulo }}</h4>
                                 {% if ag.endereco_privado %}
                                 <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ ag.endereco_privado.logradouro }},
-                                    {{
-                                    ag.endereco_privado.numero }}</p>
+                                    {{ ag.endereco_privado.numero }}</p>
                                 {% endif %}
                                 <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{
-                                    ag.imovel_info.local_publico.bairro
+                                    ag.imovel_info.local_publico.bairro if ag.imovel_info.local_publico else ''
                                     }}</p>
                             </div>
                         </div>
+                        {% if ag.imovel_info.slug %}
                         <a href="{{ url_for('imovel_detalhe', slug=ag.imovel_info.slug) }}" target="_blank"
                             class="bg-slate-900 hover:bg-amber-600 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition shadow-sm whitespace-nowrap flex-shrink-0">
                             IMÓVEL
                         </a>
+                        {% endif %}
                     </div>
                     {% endif %}
 
@@ -231,9 +258,9 @@
                                 responsável</span>
                             <div class="flex gap-1.5">
                                 <a href="{{ url_for('alterar_status_agendamento_corretor', ag_id=ag._id, novo_status='concluido') }}#agendamentos"
-                                    class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-2.5 py-1 rounded transition">Concluir</a>
+                                    class="btn-status bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-2.5 py-1 rounded transition">Concluir</a>
                                 <a href="{{ url_for('alterar_status_agendamento_corretor', ag_id=ag._id, novo_status='cancelado') }}#agendamentos"
-                                    class="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold px-2.5 py-1 rounded transition">Cancelar</a>
+                                    class="btn-status bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold px-2.5 py-1 rounded transition">Cancelar</a>
                             </div>
                         </div>
 
@@ -263,7 +290,7 @@
                             </select>
 
                             <button type="submit"
-                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] px-3 py-1 rounded w-full sm:w-1/6 transition">
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] px-3 py-1 rounded w-full sm:w-1/6 transition cursor-pointer">
                                 OK
                             </button>
                         </form>
@@ -271,6 +298,7 @@
                     {% endif %}
                 </div>
             </div>
+            {% endif %}
             {% endfor %}
         </div>
         {% else %}
@@ -335,6 +363,19 @@
         {% if imoveis_curtidos %}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {% for item in imoveis_curtidos %}
+            {% set cod_curt = (item.imovel.codigo if item.imovel and item.imovel.codigo else '')|upper %}
+            {% if papel_usuario == 'admin' or cod_curt.startswith('PC') %}
+            {% set fotos_curt = item.imovel.midia.fotos if item.imovel and item.imovel.midia and item.imovel.midia.fotos else [] %}
+            {% set f0_curt = fotos_curt[0] if fotos_curt|length > 0 else none %}
+            {% if f0_curt is mapping and f0_curt.get('url') %}
+                {% set src_capa_curt = f0_curt.get('url') %}
+            {% elif f0_curt is mapping and f0_curt.get('arquivo') %}
+                {% set src_capa_curt = url_for('static', filename=f0_curt.get('arquivo')) %}
+            {% elif f0_curt is string and f0_curt %}
+                {% set src_capa_curt = url_for('static', filename=f0_curt) %}
+            {% else %}
+                {% set src_capa_curt = url_for('static', filename='upload/default.jpg') %}
+            {% endif %}
             <div
                 class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
                 <div>
@@ -354,9 +395,7 @@
                     <div
                         class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-between gap-3">
                         <div class="flex items-center gap-3 overflow-hidden">
-                            {% set foto_capa_curt = item.imovel.midia.fotos[0].arquivo if item.imovel.midia and
-                            item.imovel.midia.fotos else 'upload/default.jpg' %}
-                            <img src="{{ url_for('static', filename=foto_capa_curt) }}"
+                            <img src="{{ src_capa_curt }}"
                                 class="w-12 h-12 object-cover rounded-md border flex-shrink-0" alt="Imóvel">
                             <div class="overflow-hidden">
                                 <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{
@@ -366,17 +405,21 @@
                                 <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ item.endereco.logradouro }}, {{
                                     item.endereco.numero }}</p>
                                 {% endif %}
-                                <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ item.imovel.local_publico.bairro
+                                <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{
+                                    item.imovel.local_publico.bairro if item.imovel.local_publico else ''
                                     }}</p>
                             </div>
                         </div>
+                        {% if item.imovel.slug %}
                         <a href="{{ url_for('imovel_detalhe', slug=item.imovel.slug) }}" target="_blank"
                             class="bg-slate-900 hover:bg-amber-600 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition shadow-sm whitespace-nowrap flex-shrink-0">
                             IMÓVEL
                         </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
+            {% endif %}
             {% endfor %}
         </div>
         {% else %}
@@ -389,19 +432,20 @@
 
 </div>
 
-<!-- Scripts de Abas e AJAX para Mudança de Status Sem Refresh -->
+<!-- Scripts de Abas e Scroll -->
 <script>
     function mudarAba(aba) {
         const secoes = ['leads', 'agendamentos', 'buscas', 'curtidas'];
         secoes.forEach(s => {
             const elSecao = document.getElementById(`secao-${s}`);
             const elBtn = document.getElementById(`btn-aba-${s}`);
+            if (!elSecao || !elBtn) return;
             if (s === aba) {
                 elSecao.classList.remove('hidden');
-                elBtn.className = "px-4 py-2 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm";
+                elBtn.className = "px-4 py-2 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm cursor-pointer";
             } else {
                 elSecao.classList.add('hidden');
-                elBtn.className = "px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900";
+                elBtn.className = "px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900 cursor-pointer";
             }
         });
         history.pushState(null, null, `#${aba}`);
@@ -415,7 +459,7 @@
 
         const scrollSalvo = localStorage.getItem('scroll_painel_corretor');
         if (scrollSalvo !== null) {
-            window.scrollTo(0, parseInt(scrollSalvo));
+            window.scrollTo(0, parseInt(scrollSalvo, 10));
             localStorage.removeItem('scroll_painel_corretor');
         }
 
