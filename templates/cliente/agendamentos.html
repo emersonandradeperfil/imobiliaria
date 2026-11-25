@@ -22,35 +22,53 @@
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
                 
                 <div>
+                    <!-- Badge de Status para o Cliente -->
+                    <div class="flex justify-between items-start">
+                        {% set st = ag.status|default('pendente') %}
+                        {% if st == 'pendente' %}
+                            <span class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 font-bold px-2.5 py-1 rounded-full uppercase">Pendente</span>
+                        {% elif st == 'agendado' or st == 'em_andamento' %}
+                            <span class="text-[10px] bg-blue-50 text-blue-800 border border-blue-200 font-bold px-2.5 py-1 rounded-full uppercase">{{ 'Agendado' if st == 'agendado' else (st | replace('_', ' ')) }}</span>
+                        {% elif st == 'concluido' %}
+                            <span class="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold px-2.5 py-1 rounded-full uppercase">Concluído</span>
+                        {% elif st == 'reagendado' %}
+                            <span class="text-[10px] bg-purple-50 text-purple-800 border border-purple-200 font-bold px-2.5 py-1 rounded-full uppercase">Reagendado</span>
+                        {% else %}
+                            <span class="text-[10px] bg-red-50 text-red-800 border border-red-200 font-bold px-2.5 py-1 rounded-full uppercase">Cancelado</span>
+                        {% endif %}
+                    </div>
 
-                        <!-- Badge de Status para o Cliente -->
-                        <div class="flex justify-between items-start">
-                            {% set st = ag.status|default('pendente') %}
-                            {% if st == 'pendente' %}
-                                <span class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 font-bold px-2.5 py-1 rounded-full uppercase">Pendente</span>
-                            {% elif st == 'agendado' %}
-                                <span class="text-[10px] bg-blue-50 text-blue-800 border border-blue-200 font-bold px-2.5 py-1 rounded-full uppercase">Agendado</span>
-                            {% elif st == 'concluido' %}
-                                <span class="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold px-2.5 py-1 rounded-full uppercase">Concluído</span>
-                            {% else %}
-                                <span class="text-[10px] bg-red-50 text-red-800 border border-red-200 font-bold px-2.5 py-1 rounded-full uppercase">Cancelado</span>
-                            {% endif %}
-                        </div>
-                    
-
-                    <!-- Imóvel do Agendamento (Mesmo formato do corretor) -->
+                    <!-- Imóvel do Agendamento -->
                     {% if ag.imovel_info %}
-                    <div class="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-3">
-                        {% set foto_capa_ag = ag.imovel_info.midia.fotos[0].arquivo if ag.imovel_info.midia and ag.imovel_info.midia.fotos else 'upload/default.jpg' %}
-                        <img src="{{ url_for('static', filename=foto_capa_ag) }}" class="w-12 h-12 object-cover rounded-md border" alt="Imóvel">
-                        <div class="overflow-hidden">
-                            <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{ ag.imovel_info.codigo }}</span>
-                            <h4 class="text-xs font-bold text-slate-900 truncate">{{ ag.imovel_info.titulo }}</h4>
-                            {% if ag.endereco_privado %}
-                            <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ ag.endereco_privado.logradouro }}, {{ ag.endereco_privado.numero }}</p>
-                            {% endif %}
-                            <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ ag.imovel_info.local_publico.bairro }}</p>
+                    {% set fotos_ag = ag.imovel_info.midia.fotos if ag.imovel_info.midia and ag.imovel_info.midia.fotos else [] %}
+                    {% set f0_ag = fotos_ag[0] if fotos_ag|length > 0 else none %}
+                    {% if f0_ag is mapping and f0_ag.get('url') %}
+                        {% set src_capa_ag = f0_ag.get('url') %}
+                    {% elif f0_ag is mapping and f0_ag.get('arquivo') %}
+                        {% set src_capa_ag = url_for('static', filename=f0_ag.get('arquivo')) %}
+                    {% elif f0_ag is string and f0_ag %}
+                        {% set src_capa_ag = url_for('static', filename=f0_ag) %}
+                    {% else %}
+                        {% set src_capa_ag = url_for('static', filename='upload/default.jpg') %}
+                    {% endif %}
+                    <div class="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <img src="{{ src_capa_ag }}" class="w-12 h-12 object-cover rounded-md border flex-shrink-0" alt="Imóvel">
+                            <div class="overflow-hidden">
+                                <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{ ag.imovel_info.codigo }}</span>
+                                <h4 class="text-xs font-bold text-slate-900 truncate">{{ ag.imovel_info.titulo }}</h4>
+                                {% if ag.endereco_privado %}
+                                <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ ag.endereco_privado.logradouro }}, {{ ag.endereco_privado.numero }}</p>
+                                {% endif %}
+                                <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ ag.imovel_info.local_publico.bairro if ag.imovel_info.local_publico else '' }}</p>
+                            </div>
                         </div>
+                        {% if ag.imovel_info.slug %}
+                        <a href="{{ url_for('imovel_detalhe', slug=ag.imovel_info.slug) }}" target="_blank"
+                            class="bg-slate-900 hover:bg-amber-600 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition shadow-sm whitespace-nowrap flex-shrink-0">
+                            IMÓVEL
+                        </a>
+                        {% endif %}
                     </div>
                     {% endif %}
 
@@ -66,7 +84,6 @@
                     <span class="font-extrabold text-slate-900 bg-slate-100 px-3 py-1.5 rounded-lg">
                         📅 {{ ag.data_hora.strftime('%d/%m/%Y às %H:%M') if ag.data_hora else 'A definir' }}
                     </span>
-                    
                 </div>
             </div>
             {% endfor %}
