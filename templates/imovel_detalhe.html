@@ -22,7 +22,7 @@
             {% endif %}
             <div class="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent"></div>
 
-            <span class="absolute bottom-4 left-6 text-xs font-semibold bg-amber-400 text-slate-950 px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
+            <span class="absolute top-4 left-6 text-xs font-semibold bg-amber-400 text-slate-950 px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
                 {{ imovel.tipo }}
             </span>
 
@@ -68,7 +68,7 @@
         <div class="p-6 sm:p-8 space-y-8">
             
             <!-- Título e Preços -->
-            <div class="flex flex-col md:flex-row justify-between items-start gap-4">
+            <div class="flex flex-col gap-4">
                 <div>
                     <h1 class="fonte-marca text-2xl sm:text-4xl uppercase text-slate-950 leading-snug">
                         {{ imovel.titulo }}
@@ -81,7 +81,7 @@
                     </p>
                 </div>
                 
-                <div class="text-left md:text-right bg-slate-50 p-4 rounded-xl border border-gray-200 w-full md:w-auto">
+                <div class="text-left bg-slate-50 p-4 rounded-xl border border-gray-200 w-full">
                     {% if imovel.precos.venda and imovel.precos.venda > 0 %}
                     <span class="text-xs text-gray-500 uppercase block font-semibold tracking-wider">Valor de Venda</span>
                     <span class="text-2xl font-extrabold text-slate-900 block mb-1">
@@ -91,7 +91,7 @@
 
                     {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
                     <span class="text-xs text-gray-500 uppercase block font-semibold tracking-wider">Valor de Locação</span>
-                    <span class="text-xl font-bold text-amber-600 block mb-1">
+                    <span class="text-2xl font-extrabold text-emerald-800 block mb-1">
                         R$ {{ "{:,.2f}".format(imovel.precos.locacao).replace(',', 'v').replace('.', ',').replace('v', '.') }} / mês
                     </span>
                     {% endif %}
@@ -299,18 +299,18 @@
                         Preencher Dados
                     </button>
 
-                    <a href="{{ url_for('login') }}"
+                    <a href="{{ url_for('login', next=request.path) }}"
                         class="bg-amber-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-amber-500 transition shadow">
                         Fazer Login
                     </a>
                 </div>
             </div>
 
-            <!-- MODAL DE CAPTURA DE LEAD (Passo 1) -->
-            <div id="modal-lead" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
-                <div class="bg-white text-slate-950 rounded-2xl p-6 sm:p-8 max-w-md w-full mx-4 shadow-2xl border border-gray-100 relative">
+            <!-- MODAL DE CAPTURA DE LEAD (Passo 1) - TELA INTEIRA SEM VAZADO NO TOPO -->
+            <div id="modal-lead" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden">
+                <div class="bg-white text-slate-950 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-gray-100 relative">
                     
-                    <button type="button" onclick="fecharModalLead()" class="absolute top-4 right-4 text-gray-400 hover:text-slate-950 text-xl font-bold">×</button>
+                    <button type="button" onclick="fecharModalLead()" class="absolute top-4 right-4 text-gray-400 hover:text-slate-950 text-xl font-bold cursor-pointer">×</button>
 
                     <form id="form-lead-imovel" onsubmit="enviarOtpImovel(event, '{{ imovel._id }}')" class="space-y-4 text-left">
                         <div>
@@ -332,11 +332,16 @@
                                 class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
                         </div>
 
-                        <div class="pt-2">
+                        <div class="pt-2 flex flex-col gap-2.5">
                             <button type="submit"
                                 class="w-full bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold py-3 rounded-xl transition text-xs shadow-md cursor-pointer">
                                 Enviar
                             </button>
+
+                            <a href="{{ url_for('login', next=request.path) }}"
+                                class="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold py-3 rounded-xl transition text-xs text-center border border-gray-300">
+                                Logar
+                            </a>
                         </div>
                     </form>
                 </div>

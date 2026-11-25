@@ -771,6 +771,15 @@ def verificar_otp_e_cadastrar():
     db.otps.delete_one({"_id": registro["_id"]})
     return jsonify({"status": "success"})
 
+def _url_retorno_segura(destino):
+    if not destino or not isinstance(destino, str):
+        return None
+    destino = destino.strip()
+    if destino.startswith('/') and not destino.startswith('//'):
+        return destino
+    return None
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     proxima_pagina = request.args.get('next') or request.form.get('next')
@@ -817,15 +826,19 @@ def login():
                 if not user.get("origem_canal") or user.get("origem_canal") == "Não informado":
                     update_login["origem_canal"] = origem_final
                 mongo.db.users.update_one({"_id": user["_id"]}, {"$set": update_login})
-            
+
+            destino_seguro = _url_retorno_segura(proxima_pagina)
+            if destino_seguro and '/imovel/' in destino_seguro:
+                return redirect(destino_seguro)
+
             if user['papel'] == 'admin':
                 return redirect(url_for('admin_imoveis'))
             elif user['papel'] == 'corretor':
                 return redirect(url_for('painel_corretor'))
             elif user['papel'] in ['proprietario', 'parceiro']:
                 return redirect(url_for('painel_proprietario'))
-            if proxima_pagina:
-                return redirect(proxima_pagina)
+            if destino_seguro:
+                return redirect(destino_seguro)
             return redirect(url_for('index'))
         else:
             falhas_atuais = (registro_tentativa.get("falhas", 0) if registro_tentativa else 0) + 1
