@@ -11,22 +11,27 @@
 
         <!-- Sistema de Abas (Navegação) -->
         <div class="flex flex-wrap bg-gray-100 p-1 rounded-xl border border-gray-200 gap-1">
-            <button onclick="mudarAba('leads')" id="btn-aba-leads"
-                class="px-1 py-1 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm">
-                Leads ({{ leads|length }})
-            </button>
-            <button onclick="mudarAba('agendamentos')" id="btn-aba-agendamentos"
-                class="px-1 py-1 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
-                Agenda ({{ agendamentos|length }})
-            </button>
-            <button onclick="mudarAba('buscas')" id="btn-aba-buscas"
-                class="px-1 py-1 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
-                Busca ({{ buscas|length }})
-            </button>
+            
             <button onclick="mudarAba('curtidas')" id="btn-aba-curtidas"
                 class="px-1 py-1 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
                 Curtidas ({{ curtidas|length }})
             </button>
+
+            <button onclick="mudarAba('agendamentos')" id="btn-aba-agendamentos"
+                class="px-1 py-1 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
+                Agenda ({{ agendamentos|length }})
+            </button>
+
+            <button onclick="mudarAba('buscas')" id="btn-aba-buscas"
+                class="px-1 py-1 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
+                Solicitações ({{ buscas|length }})
+            </button>
+
+            <button onclick="mudarAba('leads')" id="btn-aba-leads"
+                class="px-1 py-1 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm">
+                Leads ({{ leads|length }})
+            </button>
+
         </div>
     </div>
 
