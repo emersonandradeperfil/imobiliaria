@@ -135,44 +135,48 @@
             {% for categoria, lista_imoveis in secoes.items() %}
             {% for imovel in lista_imoveis %}
             {% set ns.idx = ns.idx + 1 %}
-            {% set preco_v = imovel.precos.venda if imovel.precos and imovel.precos.venda else 0 %}
-            {% set preco_l = imovel.precos.locacao if imovel.precos and imovel.precos.locacao else 0 %}
+            {% set precos_imv = imovel.precos if imovel.precos is mapping else {} %}
+            {% set carac_imv = imovel.caracteristicas if imovel.caracteristicas is mapping else {} %}
+            {% set local_imv = imovel.local_publico if imovel.local_publico is mapping else {} %}
+            {% set preco_v = (precos_imv.get('venda') or 0)|float %}
+            {% set preco_l = (precos_imv.get('locacao') or 0)|float %}
+            {% set url_detalhe = url_for('imovel_detalhe', slug=imovel.slug) if imovel.slug else '#' %}
+
             <div id="imovel-{{ imovel._id }}"
-                onclick="window.location.href='{{ url_for('imovel_detalhe', slug=imovel.slug) }}'"
+                {% if imovel.slug %}onclick="window.location.href='{{ url_detalhe }}'"{% endif %}
                 data-ordem-inicial="{{ ns.idx }}"
                 data-codigo="{{ (imovel.codigo or '')|upper }}"
-                data-tipo="{{ imovel.tipo|lower }}"
+                data-tipo="{{ (imovel.tipo or '')|lower }}"
                 data-venda="{{ '1' if preco_v > 0 else '0' }}"
                 data-locacao="{{ '1' if preco_l > 0 else '0' }}"
                 data-preco-venda="{{ preco_v }}"
                 data-preco-locacao="{{ preco_l }}"
-                data-busca="{{ (imovel.titulo ~ ' ' ~ imovel.local_publico.bairro ~ ' ' ~ imovel.codigo ~ ' ' ~ imovel.tipo)|lower }}"
+                data-busca="{{ ((imovel.titulo or '') ~ ' ' ~ (local_imv.get('bairro') or '') ~ ' ' ~ (imovel.codigo or '') ~ ' ' ~ (imovel.tipo or ''))|lower }}"
                 class="card-imovel bg-white rounded-none border border-gray-200 overflow-hidden flex flex-col justify-between hover:shadow-md transition cursor-pointer group">
 
                 <div>
                     <!-- Foto de Capa (Cloudinary ou Fallback Local) -->
                     <div class="relative h-56 w-full bg-slate-100 overflow-hidden">
-                        {% if imovel.midia and imovel.midia.fotos and imovel.midia.fotos|length > 0 %}
-                            {% set foto0 = imovel.midia.fotos[0] %}
-                            {% if foto0 is mapping and foto0.get('url') %}
-                                {% set capa = foto0.get('url') %}
-                            {% elif foto0 is mapping and foto0.get('arquivo') %}
-                                {% set capa = url_for('static', filename=foto0.get('arquivo')) %}
-                            {% else %}
-                                {% set capa = url_for('static', filename=foto0) %}
-                            {% endif %}
+                        {% set fotos_imv = imovel.midia.fotos if imovel.midia and imovel.midia.fotos else [] %}
+                        {% set foto0 = fotos_imv[0] if fotos_imv|length > 0 else none %}
+                        {% if foto0 is mapping and foto0.get('url') %}
+                            {% set capa = foto0.get('url') %}
+                        {% elif foto0 is mapping and foto0.get('arquivo') %}
+                            {% set capa = url_for('static', filename=foto0.get('arquivo')) %}
+                        {% elif foto0 is string and foto0|trim != '' %}
+                            {% set capa = url_for('static', filename=foto0|trim) %}
                         {% else %}
                             {% set capa = url_for('static', filename='upload/default.jpg') %}
                         {% endif %}
-                        <img src="{{ capa }}" alt="{{ imovel.titulo }}"
+                        <img src="{{ capa }}" alt="{{ imovel.titulo or 'Capa do imóvel' }}"
                             class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
 
                         <div class="absolute top-3 left-3 flex flex-col gap-1">
-                            {% if imovel.precos.venda and imovel.precos.venda > 0 %}
+                            {% if preco_v > 0 %}
                             <span
                                 class="bg-slate-900/90 text-white text-[10px] font-semibold px-2.5 py-0.5 uppercase tracking-widest">Venda</span>
                             {% endif %}
-                            {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
+                            {% if preco_l > 0 %}
                             <span
                                 class="bg-emerald-800/90 text-white text-[10px] font-semibold px-2.5 py-0.5 uppercase tracking-widest">Locação</span>
                             {% endif %}
@@ -182,8 +186,7 @@
                             class="absolute top-3 right-3 bg-white/90 hover:bg-white w-8 h-8 rounded-full flex items-center justify-center text-sm shadow transition transform active:scale-125 focus:outline-none cursor-pointer"
                             title="Favoritar">
                             <span id="coracao-{{ imovel._id }}">
-                                {% if session.get('user_id') and imovel._id|string in favoritos_ids %}❤️{% else %}🤍{%
-                                endif %}
+                                {% if session.get('user_id') and imovel._id|string in favoritos_ids %}❤️{% else %}🤍{% endif %}
                             </span>
                         </button>
                     </div>
@@ -192,14 +195,13 @@
                     <div class="px-5 pt-4 pb-3 space-y-1.5">
                         <div
                             class="flex items-center justify-between gap-2 text-[11px] font-semibold tracking-[0.08em] uppercase text-slate-500">
-                            <span>{{ imovel.tipo }}</span>
-                            <span class="font-medium text-slate-400">{{ imovel.codigo }}</span>
+                            <span>{{ imovel.tipo or 'Imóvel' }}</span>
+                            <span class="font-medium text-slate-400">{{ imovel.codigo or '' }}</span>
                         </div>
 
                         <h3
                             class="font-medium text-[17px] text-slate-900 leading-[1.35] tracking-[-0.01em] line-clamp-2">
-                            {{ imovel.titulo }}{% if imovel.local_publico and imovel.local_publico.bairro %} - {{
-                            imovel.local_publico.bairro }}{% endif %}
+                            {{ imovel.titulo or 'Sem título' }}{% if local_imv.get('bairro') %} - {{ local_imv.get('bairro') }}{% endif %}
                         </h3>
                     </div>
                 </div>
@@ -215,7 +217,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
                             </svg>
-                            <span class="truncate">{{ imovel.caracteristicas.util }} m²</span>
+                            <span class="truncate">{{ carac_imv.get('util') or 0 }} m²</span>
                         </div>
 
                         <!-- 2. Dormitórios -->
@@ -226,7 +228,7 @@
                                     d="M3.75 19.5V13.5m16.5 6v-6M3.75 13.5h16.5m-16.5 0v-2.25A1.5 1.5 0 0 1 5.25 9.75h13.5a1.5 1.5 0 0 1 1.5 1.5v2.25M5.25 9.75V6.75A1.5 1.5 0 0 1 6.75 5.25h10.5a1.5 1.5 0 0 1 1.5 1.5v3M3.75 17.25h16.5M7.5 9.75V8.25a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 .75.75v1.5m1.5 0V8.25a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 .75.75v1.5" />
                             </svg>
 
-                            <span>{{ imovel.caracteristicas.quartos }}</span>
+                            <span>{{ carac_imv.get('quartos') or 0 }}</span>
                         </div>
 
                         <!-- 3. Banheiros -->
@@ -243,7 +245,7 @@
                                     d="M6.75 13.5v-1.5a1.5 1.5 0 0 1 1.5-1.5h.75a1.5 1.5 0 0 1 1.5 1.5v1.5" />
                             </svg>
 
-                            <span>{{ imovel.caracteristicas.banheiros }}</span>
+                            <span>{{ carac_imv.get('banheiros') or 0 }}</span>
                         </div>
 
                         <!-- 4. Vagas -->
@@ -257,22 +259,20 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 13.5h9M7.5 16.5h9" />
                             </svg>
 
-                            <span>{{ imovel.caracteristicas.vagas }}</span>
+                            <span>{{ carac_imv.get('vagas') or 0 }}</span>
                         </div>
                     </div>
 
                     <!-- Preço -->
                     <div class="px-5 py-4 space-y-1">
-                        {% if imovel.precos.venda and imovel.precos.venda > 0 %}
+                        {% if preco_v > 0 %}
                         <p class="text-[19px] font-semibold text-slate-950 tracking-[-0.02em]">
-                            R$ {{ "{:,.2f}".format(imovel.precos.venda).replace(',', 'v').replace('.', ',').replace('v',
-                            '.') }}
+                            R$ {{ "{:,.2f}".format(preco_v).replace(',', 'v').replace('.', ',').replace('v', '.') }}
                         </p>
                         {% endif %}
-                        {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
+                        {% if preco_l > 0 %}
                         <p class="text-[14px] font-medium text-emerald-800 tracking-[-0.01em]">
-                            R$ {{ "{:,.2f}".format(imovel.precos.locacao).replace(',', 'v').replace('.',
-                            ',').replace('v', '.') }} / mês
+                            R$ {{ "{:,.2f}".format(preco_l).replace(',', 'v').replace('.', ',').replace('v', '.') }} / mês
                         </p>
                         {% endif %}
                     </div>
@@ -557,8 +557,10 @@
 
         Object.keys(botoes).forEach(chave => {
             const btn = botoes[chave].el;
-            btn.className = 'btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ' +
-                (chave === finalidadeSelecionada ? botoes[chave].ativa : classeInativa);
+            if (btn) {
+                btn.className = 'btn-finalidade px-4 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ' +
+                    (chave === finalidadeSelecionada ? botoes[chave].ativa : classeInativa);
+            }
         });
 
         mostrarTodosImoveis = false;
@@ -579,11 +581,12 @@
     }
 
     function aplicarFiltros() {
-        const tipoSelecionado = document.getElementById('select-tipo').value.toLowerCase();
-        const ordemSelecionada = document.getElementById('select-ordem').value;
-        const termoBusca = document.getElementById('input-busca').value.toLowerCase().trim();
+        const tipoSelecionado = (document.getElementById('select-tipo')?.value || '').toLowerCase();
+        const ordemSelecionada = document.getElementById('select-ordem')?.value || 'preco_desc';
+        const termoBusca = (document.getElementById('input-busca')?.value || '').toLowerCase().trim();
 
         const grid = document.getElementById('grid-imoveis');
+        if (!grid) return;
         const cards = Array.from(grid.querySelectorAll('.card-imovel'));
 
         cards.sort((a, b) => {
@@ -602,7 +605,6 @@
                 return idxA - idxB;
             }
 
-            // Padrão ('preco_desc' ou qualquer outro): maior para o menor valor dentro do grupo TB / PC / AD
             return obterPrecoOrdenacao(b) - obterPrecoOrdenacao(a);
         });
 
@@ -644,18 +646,22 @@
         const btnVerMais = document.getElementById('btn-ver-mais');
         const restantes = totalCompativeis - LIMITE_INICIAL;
 
-        if (!mostrarTodosImoveis && restantes > 0) {
-            areaVerMais.classList.remove('hidden');
-            btnVerMais.textContent = `Ver mais ${restantes} ${restantes === 1 ? 'imóvel' : 'imóveis'}`;
-        } else {
-            areaVerMais.classList.add('hidden');
+        if (areaVerMais && btnVerMais) {
+            if (!mostrarTodosImoveis && restantes > 0) {
+                areaVerMais.classList.remove('hidden');
+                btnVerMais.textContent = `Ver mais ${restantes} ${restantes === 1 ? 'imóvel' : 'imóveis'}`;
+            } else {
+                areaVerMais.classList.add('hidden');
+            }
         }
 
         const msgVazio = document.getElementById('mensagem-vazio');
-        if (totalCompativeis === 0) {
-            msgVazio.classList.remove('hidden');
-        } else {
-            msgVazio.classList.add('hidden');
+        if (msgVazio) {
+            if (totalCompativeis === 0) {
+                msgVazio.classList.remove('hidden');
+            } else {
+                msgVazio.classList.add('hidden');
+            }
         }
     }
 
@@ -822,13 +828,23 @@
             return;
         }
 
-        let email = document.getElementById('busca-email').value;
+        let emailEl = document.getElementById('busca-email');
+        let telEl = document.getElementById('busca-whatsapp');
+        let email = emailEl ? emailEl.value : '';
+        let whatsapp = telEl ? telEl.value.replace(/\D/g, '').slice(0, 11) : '';
+
+        if (telEl && whatsapp.length !== 11) {
+            telEl.setCustomValidity('Informe DDD (2 dígitos) + celular (9 dígitos).');
+            telEl.reportValidity();
+            return;
+        }
+        if (telEl) telEl.setCustomValidity('');
 
         try {
             let response = await fetch('/api/enviar-otp-busca', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email })
+                body: JSON.stringify({ email: email, whatsapp: whatsapp })
             });
             let data = await response.json();
 
@@ -860,7 +876,7 @@
         let codigo = document.getElementById('input-codigo-otp').value;
         let email = document.getElementById('busca-email').value;
         let nome = document.getElementById('busca-nome').value;
-        let whatsapp = document.getElementById('busca-whatsapp').value;
+        let whatsapp = document.getElementById('busca-whatsapp').value.replace(/\D/g, '').slice(0, 11);
         let tipo = document.getElementById('busca-tipo').value;
         let bairro = document.getElementById('busca-bairro').value;
         let observacoes = document.getElementById('busca-obs').value;

@@ -21,55 +21,64 @@
         {% if imoveis %}
         <div id="grid-favoritos" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {% for imovel in imoveis %}
+            {% set precos = imovel.precos if imovel.precos is mapping else {} %}
+            {% set venda_val = (precos.get('venda') or 0)|float %}
+            {% set locacao_val = (precos.get('locacao') or 0)|float %}
+            {% set local_pub = imovel.local_publico if imovel.local_publico is mapping else {} %}
+            {% set fotos_lista = imovel.midia.fotos if imovel.midia and imovel.midia.fotos else [] %}
+            {% set foto0 = fotos_lista[0] if fotos_lista|length > 0 else none %}
+
+            {% if foto0 is mapping and foto0.get('url') %}
+                {% set capa_src = foto0.get('url') %}
+            {% elif foto0 is mapping and foto0.get('arquivo') %}
+                {% set capa_src = url_for('static', filename=foto0.get('arquivo')) %}
+            {% elif foto0 is string and foto0|trim != '' %}
+                {% set capa_src = url_for('static', filename=foto0|trim) %}
+            {% else %}
+                {% set capa_src = url_for('static', filename='upload/default.jpg') %}
+            {% endif %}
+
             <div id="card-favorito-{{ imovel._id }}"
                 class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col justify-between hover:shadow-md transition">
 
                 <div>
                     <div class="relative">
-                        {% if imovel.midia and imovel.midia.fotos and imovel.midia.fotos|length > 0 %}
-                            {% set foto0 = imovel.midia.fotos[0] %}
-                            {% if foto0 is mapping and foto0.get('url') %}
-                                {% set capa_src = foto0.get('url') %}
-                            {% elif foto0 is mapping and foto0.get('arquivo') %}
-                                {% set capa_src = url_for('static', filename=foto0.get('arquivo')) %}
-                            {% else %}
-                                {% set capa_src = url_for('static', filename=foto0) %}
-                            {% endif %}
-                        {% else %}
-                            {% set capa_src = url_for('static', filename='upload/default.jpg') %}
-                        {% endif %}
-                        <img src="{{ capa_src }}" alt="Capa" class="w-full h-48 object-cover">
+                        <img src="{{ capa_src }}" alt="{{ imovel.titulo or 'Capa do imóvel' }}" class="w-full h-48 object-cover">
 
                         <!-- Etiquetas de Venda / Locação -->
                         <div class="absolute top-2.5 left-2.5 flex flex-col gap-1">
-                            {% if imovel.precos.venda and imovel.precos.venda > 0 %}
+                            {% if venda_val > 0 %}
                             <span class="bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded shadow uppercase">Venda</span>
                             {% endif %}
-                            {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
+                            {% if locacao_val > 0 %}
                             <span class="bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded shadow uppercase">Locação</span>
                             {% endif %}
                         </div>
 
                         <!-- Código do Imóvel -->
+                        {% if imovel.codigo %}
                         <span class="absolute top-2.5 right-2.5 bg-slate-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm">
                             {{ imovel.codigo }}
                         </span>
+                        {% endif %}
                     </div>
 
                     <div class="p-4">
-                        <span class="text-xs font-bold text-amber-600 uppercase">{{ imovel.tipo }}</span>
-                        <h3 class="font-bold text-base text-slate-900 mt-1 truncate">{{ imovel.titulo }}</h3>
-                        <p class="text-xs text-gray-500 mt-1">{{ imovel.local_publico.bairro }} - São Paulo/SP</p>
+                        <span class="text-xs font-bold text-amber-600 uppercase">{{ imovel.tipo or 'Imóvel' }}</span>
+                        <h3 class="font-bold text-base text-slate-900 mt-1 truncate">{{ imovel.titulo or 'Sem título' }}</h3>
+                        <p class="text-xs text-gray-500 mt-1">
+                            {{ local_pub.get('bairro') or 'Bairro não informado' }} - {{ local_pub.get('cidade') or 'São Paulo' }}/{{ local_pub.get('estado') or 'SP' }}
+                        </p>
 
                         <div class="mt-3 space-y-1">
-                            {% if imovel.precos.venda and imovel.precos.venda > 0 %}
+                            {% if venda_val > 0 %}
                             <p class="text-sm font-extrabold text-slate-900">
-                                Venda: R$ {{ "{:,.2f}".format(imovel.precos.venda).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+                                Venda: R$ {{ "{:,.2f}".format(venda_val).replace(',', 'v').replace('.', ',').replace('v', '.') }}
                             </p>
                             {% endif %}
-                            {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
+                            {% if locacao_val > 0 %}
                             <p class="text-xs font-bold text-emerald-600">
-                                Locação: R$ {{ "{:,.2f}".format(imovel.precos.locacao).replace(',', 'v').replace('.', ',').replace('v', '.') }}/mês
+                                Locação: R$ {{ "{:,.2f}".format(locacao_val).replace(',', 'v').replace('.', ',').replace('v', '.') }}/mês
                             </p>
                             {% endif %}
                         </div>
@@ -77,10 +86,14 @@
                 </div>
 
                 <div class="p-4 bg-gray-50 border-t flex justify-between items-center">
+                    {% if imovel.slug %}
                     <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}"
                         class="w-32 h-10 bg-slate-900 hover:bg-amber-600 text-white font-bold text-xs uppercase flex items-center justify-center transition rounded-lg">Ver Detalhes</a>
+                    {% else %}
+                    <span class="w-32 h-10 bg-gray-200 text-gray-500 font-bold text-xs uppercase flex items-center justify-center rounded-lg cursor-not-allowed">Sem link</span>
+                    {% endif %}
 
-                    <button onclick="removerFavorito('{{ imovel._id }}')"
+                    <button type="button" onclick="removerFavorito('{{ imovel._id }}', this)"
                         class="text-xl transition transform active:scale-125 focus:outline-none p-1 hover:opacity-80 cursor-pointer"
                         title="Remover dos favoritos">
                         <span id="coracao-{{ imovel._id }}">❤️</span>
@@ -103,31 +116,38 @@
 </div>
 
 <script>
-    async function removerFavorito(imoid) {
+    async function removerFavorito(imoid, btnEl) {
+        if (btnEl && btnEl.dataset.removendo === "1") return;
+        if (btnEl) btnEl.dataset.removendo = "1";
+
         try {
-            let response = await fetch(`/imovel/favoritar/${imoid}`, {
+            const response = await fetch(`/imovel/favoritar/${imoid}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
-            let data = await response.json();
+            const data = await response.json();
 
             if (data.status === 'success') {
-                let card = document.getElementById(`card-favorito-${imoid}`);
+                const card = document.getElementById(`card-favorito-${imoid}`);
                 if (card) {
+                    card.style.pointerEvents = "none";
                     card.style.transition = "all 0.3s ease";
                     card.style.opacity = "0";
                     setTimeout(() => {
                         card.remove();
 
-                        let grid = document.getElementById('grid-favoritos');
+                        const grid = document.getElementById('grid-favoritos');
                         if (grid && grid.children.length === 0) {
                             location.reload();
                         }
                     }, 300);
                 }
+            } else if (btnEl) {
+                btnEl.dataset.removendo = "0";
             }
         } catch (error) {
             console.error('Erro ao remover favorito:', error);
+            if (btnEl) btnEl.dataset.removendo = "0";
         }
     }
 </script>

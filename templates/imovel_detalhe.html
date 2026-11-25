@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
+{% set precos_imv = imovel.precos if imovel.precos is mapping else {} %}
+{% set venda_imv = (precos_imv.get('venda') or 0)|float %}
+{% set locacao_imv = (precos_imv.get('locacao') or 0)|float %}
+{% set cond_imv = (precos_imv.get('condominio') or 0)|float %}
+{% set iptu_imv = (precos_imv.get('iptu') or 0)|float %}
+{% set carac_imv = imovel.caracteristicas if imovel.caracteristicas is mapping else {} %}
+{% set local_imv = imovel.local_publico if imovel.local_publico is mapping else {} %}
+
 <div class="max-w-5xl mx-auto my-6 px-4 sm:px-6 space-y-10">
 
     <!-- CARD PRINCIPAL DO IMÓVEL -->
@@ -7,28 +15,32 @@
         
         <!-- BANNER DA FOTO PRINCIPAL NO TOPO -->
         <div class="w-full h-72 sm:h-96 bg-slate-900 relative">
-            {% if imovel.midia and imovel.midia.fotos and imovel.midia.fotos|length > 0 %}
-                {% set foto_capa = imovel.midia.fotos[0] %}
-                {% if foto_capa is mapping and foto_capa.get('url') %}
-                    {% set src_capa = foto_capa.get('url') %}
-                {% elif foto_capa is mapping and foto_capa.get('arquivo') %}
-                    {% set src_capa = url_for('static', filename=foto_capa.get('arquivo')) %}
-                {% else %}
-                    {% set src_capa = url_for('static', filename=foto_capa) %}
-                {% endif %}
-                <img src="{{ src_capa }}" class="w-full h-full object-cover">
+            {% set fotos_imv = imovel.midia.fotos if imovel.midia and imovel.midia.fotos else [] %}
+            {% set foto_capa = fotos_imv[0] if fotos_imv|length > 0 else none %}
+            {% if foto_capa is mapping and foto_capa.get('url') %}
+                {% set src_capa = foto_capa.get('url') %}
+            {% elif foto_capa is mapping and foto_capa.get('arquivo') %}
+                {% set src_capa = url_for('static', filename=foto_capa.get('arquivo')) %}
+            {% elif foto_capa is string and foto_capa|trim != '' %}
+                {% set src_capa = url_for('static', filename=foto_capa|trim) %}
+            {% else %}
+                {% set src_capa = none %}
+            {% endif %}
+
+            {% if src_capa %}
+                <img src="{{ src_capa }}" alt="{{ imovel.titulo or 'Foto principal do imóvel' }}" class="w-full h-full object-cover">
             {% else %}
                 <div class="w-full h-full flex items-center justify-center text-gray-400">Sem Foto Principal</div>
             {% endif %}
             <div class="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent"></div>
 
             <span class="absolute top-4 left-6 text-xs font-semibold bg-amber-400 text-slate-950 px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
-                {{ imovel.tipo }}
+                {{ imovel.tipo or 'Imóvel' }}
             </span>
 
             <!-- ATALHOS SOBRE A CAPA: GALERIA DE FOTOS E VÍDEOS -->
             <div class="absolute bottom-4 right-6 flex items-center gap-2 z-10">
-                {% if session.get('user_id') %}
+                {% if session.get('user_id') and imovel.slug %}
                     <a href="{{ url_for('imovel_galeria', slug=imovel.slug, aba='fotos') }}"
                        class="inline-flex items-center gap-2 bg-slate-950/80 hover:bg-slate-950 text-white text-[11px] font-bold uppercase tracking-widest px-3.5 py-2 rounded-lg backdrop-blur-xs transition shadow-md">
                         <span>Fotos</span>
@@ -44,7 +56,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" />
                         </svg>
                     </a>
-                {% else %}
+                {% elif not session.get('user_id') %}
                     <button type="button" onclick="abrirModalLead()"
                         class="inline-flex items-center gap-2 bg-slate-950/80 hover:bg-slate-950 text-white text-[11px] font-bold uppercase tracking-widest px-3.5 py-2 rounded-lg backdrop-blur-xs transition shadow-md cursor-pointer">
                         <span>Fotos</span>
@@ -75,33 +87,33 @@
                     </h1>
                     <p class="text-gray-500 text-xs uppercase tracking-widest mt-2">
                         Código: <span class="font-semibold text-slate-800">{{ imovel.codigo }}</span>
-                        {% if imovel.local_publico and imovel.local_publico.bairro %}
-                        • <span class="font-semibold text-slate-800">{{ imovel.local_publico.bairro }}</span>
+                        {% if local_imv.get('bairro') %}
+                        • <span class="font-semibold text-slate-800">{{ local_imv.get('bairro') }}</span>
                         {% endif %}
                     </p>
                 </div>
                 
                 <div class="text-left bg-slate-50 p-4 rounded-xl border border-gray-200 w-full">
-                    {% if imovel.precos.venda and imovel.precos.venda > 0 %}
+                    {% if venda_imv > 0 %}
                     <span class="text-xs text-gray-500 uppercase block font-semibold tracking-wider">Valor de Venda</span>
                     <span class="text-2xl font-extrabold text-slate-900 block mb-1">
-                        R$ {{ "{:,.2f}".format(imovel.precos.venda).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+                        R$ {{ "{:,.2f}".format(venda_imv).replace(',', 'v').replace('.', ',').replace('v', '.') }}
                     </span>
                     {% endif %}
 
-                    {% if imovel.precos.locacao and imovel.precos.locacao > 0 %}
+                    {% if locacao_imv > 0 %}
                     <span class="text-xs text-gray-500 uppercase block font-semibold tracking-wider">Valor de Locação</span>
                     <span class="text-2xl font-extrabold text-emerald-800 block mb-1">
-                        R$ {{ "{:,.2f}".format(imovel.precos.locacao).replace(',', 'v').replace('.', ',').replace('v', '.') }} / mês
+                        R$ {{ "{:,.2f}".format(locacao_imv).replace(',', 'v').replace('.', ',').replace('v', '.') }} / mês
                     </span>
                     {% endif %}
 
                     <div class="text-xs text-gray-500 flex flex-wrap gap-3 mt-2 pt-2 border-t border-gray-200">
-                        {% if imovel.precos.condominio and imovel.precos.condominio > 0 %}
-                        <span>Cond: R$ {{ "{:,.2f}".format(imovel.precos.condominio).replace(',', 'v').replace('.', ',').replace('v', '.') }}</span>
+                        {% if cond_imv > 0 %}
+                        <span>Cond: R$ {{ "{:,.2f}".format(cond_imv).replace(',', 'v').replace('.', ',').replace('v', '.') }}</span>
                         {% endif %}
-                        {% if imovel.precos.iptu and imovel.precos.iptu > 0 %}
-                        <span>IPTU: R$ {{ "{:,.2f}".format(imovel.precos.iptu).replace(',', 'v').replace('.', ',').replace('v', '.') }}</span>
+                        {% if iptu_imv > 0 %}
+                        <span>IPTU: R$ {{ "{:,.2f}".format(iptu_imv).replace(',', 'v').replace('.', ',').replace('v', '.') }}</span>
                         {% endif %}
                     </div>
                 </div>
@@ -111,19 +123,19 @@
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg text-center border border-gray-200">
                 <div>
                     <span class="block text-xs text-gray-500 uppercase tracking-wider">Área Útil</span>
-                    <span class="font-bold text-slate-800">{{ imovel.caracteristicas.util }} m²</span>
+                    <span class="font-bold text-slate-800">{{ carac_imv.get('util') or 0 }} m²</span>
                 </div>
                 <div>
                     <span class="block text-xs text-gray-500 uppercase tracking-wider">Quartos / Suítes</span>
-                    <span class="font-bold text-slate-800">{{ imovel.caracteristicas.quartos }} ({{ imovel.caracteristicas.suites }} suítes)</span>
+                    <span class="font-bold text-slate-800">{{ carac_imv.get('quartos') or 0 }} ({{ carac_imv.get('suites') or 0 }} suítes)</span>
                 </div>
                 <div>
                     <span class="block text-xs text-gray-500 uppercase tracking-wider">Banheiros</span>
-                    <span class="font-bold text-slate-800">{{ imovel.caracteristicas.banheiros }}</span>
+                    <span class="font-bold text-slate-800">{{ carac_imv.get('banheiros') or 0 }}</span>
                 </div>
                 <div>
                     <span class="block text-xs text-gray-500 uppercase tracking-wider">Vagas</span>
-                    <span class="font-bold text-slate-800">{{ imovel.caracteristicas.vagas }}</span>
+                    <span class="font-bold text-slate-800">{{ carac_imv.get('vagas') or 0 }}</span>
                 </div>
             </div>
 
@@ -139,7 +151,7 @@
                 </span>
 
                 {% set url_imovel = request.url | urlencode %}
-                {% set texto_compartilhar = ("Confira este imóvel: " ~ imovel.titulo ~ " (" ~ imovel.codigo ~ ")") | urlencode %}
+                {% set texto_compartilhar = ("Confira este imóvel: " ~ (imovel.titulo or '') ~ " (" ~ (imovel.codigo or '') ~ ")") | urlencode %}
 
                 <div class="flex items-center gap-2.5">
                     <!-- WhatsApp -->
@@ -195,12 +207,15 @@
             <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-xl space-y-6">
                 <div>
                     {% if endereco_privado %}
+                        {% set bairro_str = local_imv.get('bairro') or '' %}
+                        {% set cidade_str = local_imv.get('cidade') or 'São Paulo' %}
+                        {% set estado_str = local_imv.get('estado') or 'SP' %}
                         {% if session.get('papel') in ['admin', 'corretor'] %}
-                            {% set endereco_exibicao = endereco_privado.logradouro ~ ', nº ' ~ endereco_privado.numero ~ ((' - ' ~ endereco_privado.complemento) if endereco_privado.complemento else '') ~ ' - ' ~ imovel.local_publico.bairro ~ ' - CEP: ' ~ endereco_privado.cep %}
-                            {% set endereco_mapa = endereco_privado.logradouro ~ ', ' ~ endereco_privado.numero ~ ' - ' ~ imovel.local_publico.bairro ~ ' - São Paulo - SP' %}
+                            {% set endereco_exibicao = (endereco_privado.logradouro or '') ~ ', nº ' ~ (endereco_privado.numero or '') ~ ((' - ' ~ endereco_privado.complemento) if endereco_privado.complemento else '') ~ ' - ' ~ bairro_str ~ ' - CEP: ' ~ (endereco_privado.cep or '') %}
+                            {% set endereco_mapa = (endereco_privado.logradouro or '') ~ ', ' ~ (endereco_privado.numero or '') ~ ' - ' ~ bairro_str ~ ' - ' ~ cidade_str ~ ' - ' ~ estado_str %}
                         {% else %}
-                            {% set endereco_exibicao = endereco_privado.logradouro ~ ' - ' ~ imovel.local_publico.bairro ~ ' - CEP: ' ~ endereco_privado.cep %}
-                            {% set endereco_mapa = endereco_privado.logradouro ~ ' - ' ~ imovel.local_publico.bairro ~ ' - São Paulo - SP' %}
+                            {% set endereco_exibicao = (endereco_privado.logradouro or '') ~ ' - ' ~ bairro_str ~ ' - CEP: ' ~ (endereco_privado.cep or '') %}
+                            {% set endereco_mapa = (endereco_privado.logradouro or '') ~ ' - ' ~ bairro_str ~ ' - ' ~ cidade_str ~ ' - ' ~ estado_str %}
                         {% endif %}
 
                     <p class="text-sm text-gray-300">
@@ -278,7 +293,7 @@
                 
                         <div class="pt-2">
                             <button type="submit"
-                                class="w-full bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold py-3 rounded-xl transition text-sm shadow-md">
+                                class="w-full bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold py-3 rounded-xl transition text-sm shadow-md cursor-pointer">
                                 Agendar
                             </button>
                         </div>
@@ -350,7 +365,7 @@
             <!-- MODAL DE VERIFICAÇÃO OTP PARA O IMÓVEL (Passo 2) -->
             <div id="modal-otp-imovel" class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
                 <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-slate-900 relative">
-                    <button onclick="fecharModalOtpImovel()" class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold">×</button>
+                    <button type="button" onclick="fecharModalOtpImovel()" class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold cursor-pointer">×</button>
                     
                     <div class="text-center mb-6">
                         <span class="text-3xl">✉️</span>
@@ -386,22 +401,28 @@
              class="flex overflow-x-auto gap-6 pb-3 scroll-smooth no-scrollbar"
              style="scrollbar-width: none; -ms-overflow-style: none;">
             {% for dest in imoveis_destaque %}
-            <div onclick="window.location.href='{{ url_for('imovel_detalhe', slug=dest.slug) }}'"
+            {% set fotos_dest = dest.midia.fotos if dest.midia and dest.midia.fotos else [] %}
+            {% set f_dest = fotos_dest[0] if fotos_dest|length > 0 else none %}
+            {% if f_dest is mapping and f_dest.get('url') %}
+                {% set src_dest = f_dest.get('url') %}
+            {% elif f_dest is mapping and f_dest.get('arquivo') %}
+                {% set src_dest = url_for('static', filename=f_dest.get('arquivo')) %}
+            {% elif f_dest is string and f_dest|trim != '' %}
+                {% set src_dest = url_for('static', filename=f_dest|trim) %}
+            {% else %}
+                {% set src_dest = url_for('static', filename='upload/default.jpg') %}
+            {% endif %}
+
+            {% set carac_dest = dest.caracteristicas if dest.caracteristicas is mapping else {} %}
+            {% set precos_dest = dest.precos if dest.precos is mapping else {} %}
+            {% set local_dest = dest.local_publico if dest.local_publico is mapping else {} %}
+            {% set venda_dest = (precos_dest.get('venda') or 0)|float %}
+            {% set locacao_dest = (precos_dest.get('locacao') or 0)|float %}
+
+            <div {% if dest.slug %}onclick="window.location.href='{{ url_for('imovel_detalhe', slug=dest.slug) }}'"{% endif %}
                  class="min-w-[280px] sm:min-w-[340px] max-w-[340px] flex-shrink-0 bg-white border border-gray-200 overflow-hidden cursor-pointer group hover:shadow-md transition">
                 <div class="h-52 bg-slate-100 overflow-hidden relative">
-                    {% if dest.midia and dest.midia.fotos and dest.midia.fotos|length > 0 %}
-                        {% set f_dest = dest.midia.fotos[0] %}
-                        {% if f_dest is mapping and f_dest.get('url') %}
-                            {% set src_dest = f_dest.get('url') %}
-                        {% elif f_dest is mapping and f_dest.get('arquivo') %}
-                            {% set src_dest = url_for('static', filename=f_dest.get('arquivo')) %}
-                        {% else %}
-                            {% set src_dest = url_for('static', filename=f_dest) %}
-                        {% endif %}
-                    {% else %}
-                        {% set src_dest = url_for('static', filename='upload/default.jpg') %}
-                    {% endif %}
-                    <img src="{{ src_dest }}" alt="{{ dest.titulo }}"
+                    <img src="{{ src_dest }}" alt="{{ dest.titulo or 'Imóvel em destaque' }}"
                          class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                     {% if dest.destaque %}
                     <span class="absolute top-3 left-3 bg-slate-900/85 text-white text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1">
@@ -412,29 +433,29 @@
 
                 <div class="p-4 space-y-1.5">
                     <div class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        <span>{{ dest.tipo }}</span>
-                        <span>{{ dest.codigo }}</span>
+                        <span>{{ dest.tipo or 'Imóvel' }}</span>
+                        <span>{{ dest.codigo or '' }}</span>
                     </div>
 
                     <p class="text-xs font-medium text-slate-700 truncate">
-                        {{ dest.titulo }}{% if dest.local_publico and dest.local_publico.bairro %} - {{ dest.local_publico.bairro }}{% endif %}
+                        {{ dest.titulo or 'Sem título' }}{% if local_dest.get('bairro') %} - {{ local_dest.get('bairro') }}{% endif %}
                     </p>
 
                     <div class="flex flex-wrap items-center gap-3 text-xs text-slate-600 pt-1">
-                        <span>{{ dest.caracteristicas.util if dest.caracteristicas else 0 }} m²</span>
+                        <span>{{ carac_dest.get('util') or 0 }} m²</span>
                         <span>•</span>
-                        <span>{{ dest.caracteristicas.quartos if dest.caracteristicas else 0 }} dorm.</span>
+                        <span>{{ carac_dest.get('quartos') or 0 }} dorm.</span>
                         <span>•</span>
-                        <span>{{ dest.caracteristicas.vagas if dest.caracteristicas else 0 }} vagas</span>
+                        <span>{{ carac_dest.get('vagas') or 0 }} vagas</span>
                     </div>
 
-                    {% if dest.precos and dest.precos.venda and dest.precos.venda > 0 %}
+                    {% if venda_dest > 0 %}
                     <p class="text-base font-bold text-slate-950 pt-2">
-                        R$ {{ "{:,.2f}".format(dest.precos.venda).replace(',', 'v').replace('.', ',').replace('v', '.') }}
+                        R$ {{ "{:,.2f}".format(venda_dest).replace(',', 'v').replace('.', ',').replace('v', '.') }}
                     </p>
-                    {% elif dest.precos and dest.precos.locacao and dest.precos.locacao > 0 %}
+                    {% elif locacao_dest > 0 %}
                     <p class="text-base font-bold text-amber-600 pt-2">
-                        R$ {{ "{:,.2f}".format(dest.precos.locacao).replace(',', 'v').replace('.', ',').replace('v', '.') }} / mês
+                        R$ {{ "{:,.2f}".format(locacao_dest).replace(',', 'v').replace('.', ',').replace('v', '.') }} / mês
                     </p>
                     {% endif %}
                 </div>
@@ -477,6 +498,29 @@
     }
     function fecharModalLead() {
         document.getElementById('modal-lead')?.classList.add('hidden');
+    }
+
+    function validarHorario(event) {
+        const inputData = document.getElementById('campo-data');
+        const selectHora = document.getElementById('select-hora');
+        const inputHoraFinal = document.getElementById('campo-hora-final');
+
+        if (!inputData || !inputData.value) {
+            alert('Por favor, selecione a data da visita.');
+            if (event) event.preventDefault();
+            return false;
+        }
+
+        if (!selectHora || !selectHora.value) {
+            alert('Por favor, selecione o horário da visita.');
+            if (event) event.preventDefault();
+            return false;
+        }
+
+        if (inputHoraFinal) {
+            inputHoraFinal.value = selectHora.value + ':00';
+        }
+        return true;
     }
 
     async function enviarOtpImovel(event, imoid) {

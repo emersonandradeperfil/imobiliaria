@@ -1818,6 +1818,11 @@ def painel_corretor():
         {"$unwind": {"path": "$endereco_privado", "preserveNullAndEmptyArrays": True}}
     ]
     leads = list(db.leads.aggregate(pipeline_leads))
+    if papel != 'admin':
+        leads = [
+            lead for lead in leads
+            if str((lead.get("imovel_info") or {}).get("codigo", "")).upper().startswith("PC")
+        ]
     
     curtidas_pipeline = [
         {"$match": {"ativo": {"$ne": False}}},
@@ -1832,6 +1837,8 @@ def painel_corretor():
     for item in ranking_curtidas:
         imovel_doc = db.imoveis.find_one({"_id": item["_id"], "status": "ativo"})
         if imovel_doc:
+            if papel != 'admin' and not str(imovel_doc.get("codigo", "")).upper().startswith("PC"):
+                continue
             endereco_doc = db.imoveis_enderecos.find_one({"imovel_id": imovel_doc["_id"]})
             imoveis_curtidos.append({
                 "imovel": imovel_doc,
@@ -1863,10 +1870,18 @@ def painel_corretor():
 def atender_lead(lead_id):
     db = mongo.db
     corretor_id = oid_seguro(session.get('user_id'))
+    papel = session.get('papel')
     lid = oid_seguro(lead_id)
     if not lid:
         flash('Lead inválido.', 'danger')
         return redirect(url_for('painel_corretor') + '#leads')
+
+    if papel != 'admin':
+        lead_atual = db.leads.find_one({"_id": lid}, {"imovel_id": 1})
+        imv_lead = db.imoveis.find_one({"_id": lead_atual.get("imovel_id")}, {"codigo": 1}) if lead_atual and lead_atual.get("imovel_id") else None
+        if not imv_lead or not str(imv_lead.get("codigo", "")).upper().startswith("PC"):
+            flash('Acesso permitido apenas a leads de imóveis parceiros (PC).', 'warning')
+            return redirect(url_for('painel_corretor') + '#leads')
     
     resultado = db.leads.find_one_and_update(
         {

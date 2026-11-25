@@ -1,15 +1,57 @@
 {% extends "base.html" %}
 {% block content %}
+{% set local_imv = imovel.local_publico if imovel.local_publico is mapping else {} %}
+{% set fotos_raw = imovel.midia.fotos if imovel.midia and imovel.midia.fotos else [] %}
+{% set videos_raw = imovel.midia.videos if imovel.midia and imovel.midia.videos else [] %}
+
+{# Normaliza as fotos e agrupa por categoria de forma segura para grade e lightbox #}
+{% set ns_norm = namespace(fotos=[], categorias=[]) %}
+{% for f in fotos_raw %}
+    {% if f is mapping %}
+        {% set cat_val = (f.get('categoria') or 'outros')|string %}
+        {% set leg_val = f.get('legenda') or '' %}
+        {% if f.get('url') %}
+            {% set url_val = f.get('url') %}
+        {% elif f.get('arquivo') %}
+            {% set url_val = url_for('static', filename=f.get('arquivo')) %}
+        {% else %}
+            {% set url_val = url_for('static', filename='upload/default.jpg') %}
+        {% endif %}
+    {% elif f is string and f|trim != '' %}
+        {% set cat_val = 'outros' %}
+        {% set leg_val = '' %}
+        {% set url_val = url_for('static', filename=f|trim) %}
+    {% else %}
+        {% set cat_val = 'outros' %}
+        {% set leg_val = '' %}
+        {% set url_val = url_for('static', filename='upload/default.jpg') %}
+    {% endif %}
+
+    {% set _ = ns_norm.fotos.append({'url': url_val, 'categoria': cat_val, 'legenda': leg_val}) %}
+    {% if cat_val not in ns_norm.categorias %}
+        {% set _ = ns_norm.categorias.append(cat_val) %}
+    {% endif %}
+{% endfor %}
+{% set categorias_ordenadas = ns_norm.categorias | reverse | list %}
+
 <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
 
     <!-- Topo e Navegação -->
     <div class="bg-white border border-gray-200 p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm">
         <div>
+            {% if imovel.slug %}
             <a href="{{ url_for('imovel_detalhe', slug=imovel.slug) }}" class="text-xs font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-900">
                 ← Voltar para o imóvel
             </a>
-            <h1 class="fonte-marca text-2xl sm:text-3xl text-slate-900 mt-1">{{ imovel.titulo }}</h1>
-            <p class="text-xs text-slate-500 uppercase tracking-wider mt-0.5">Código {{ imovel.codigo }} • {{ imovel.local_publico.bairro }}</p>
+            {% else %}
+            <a href="{{ url_for('index') }}" class="text-xs font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-900">
+                ← Voltar para imóveis
+            </a>
+            {% endif %}
+            <h1 class="fonte-marca text-2xl sm:text-3xl text-slate-900 mt-1">{{ imovel.titulo or 'Galeria do Imóvel' }}</h1>
+            <p class="text-xs text-slate-500 uppercase tracking-wider mt-0.5">
+                Código {{ imovel.codigo or '' }}{% if local_imv.get('bairro') %} • {{ local_imv.get('bairro') }}{% endif %}
+            </p>
         </div>
 
         <!-- Alternância: Galeria de Fotos / Vídeos -->
@@ -27,12 +69,11 @@
 
     <!-- ABA 1: FOTOS SEPARADAS POR CÔMODO (DO ÚLTIMO PARA O PRIMEIRO) -->
     <div id="secao-fotos-galeria" class="space-y-8">
-        {% if imovel.midia and imovel.midia.fotos %}
-            {% set categorias_encontradas = imovel.midia.fotos | map(attribute='categoria') | unique | list | reverse | list %}
+        {% if ns_norm.fotos %}
             {% set ns = namespace(indice_global=0) %}
 
-            {% for cat in categorias_encontradas %}
-                {% set fotos_cat = imovel.midia.fotos | selectattr('categoria', 'equalto', cat) | list | reverse | list %}
+            {% for cat in categorias_ordenadas %}
+                {% set fotos_cat = ns_norm.fotos | selectattr('categoria', 'equalto', cat) | list | reverse | list %}
                 {% if fotos_cat %}
                     {% if cat == 'capa' %}{% set nome_comodo = 'Fachada / Geral' %}
                     {% elif cat == 'sala' %}{% set nome_comodo = 'Sala / Living' %}
@@ -50,16 +91,9 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {% for foto in fotos_cat %}
-                            {% if foto is mapping and foto.get('url') %}
-                                {% set src_foto = foto.get('url') %}
-                            {% elif foto is mapping and foto.get('arquivo') %}
-                                {% set src_foto = url_for('static', filename=foto.get('arquivo')) %}
-                            {% else %}
-                                {% set src_foto = url_for('static', filename=foto) %}
-                            {% endif %}
                             <div onclick="abrirLightboxGaleria({{ ns.indice_global }})"
                                 class="h-56 bg-slate-100 overflow-hidden border border-gray-100 cursor-pointer group relative">
-                                <img src="{{ src_foto }}" alt="{{ nome_comodo }}"
+                                <img src="{{ foto.url }}" alt="{{ nome_comodo }}"
                                     class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                                 <div class="absolute bottom-0 inset-x-0 bg-slate-950/70 text-white text-[11px] px-3 py-1.5 flex justify-between items-center">
                                     <span>{{ nome_comodo }}</span>
@@ -79,22 +113,27 @@
         {% endif %}
     </div>
 
-    <!-- ABA 2: VÍDEOS (YOUTUBE) -->
+    <!-- ABA 2: VÍDEOS (YOUTUBE / DRIVE) -->
     <div id="secao-videos-galeria" class="hidden space-y-6">
-        {% if imovel.midia and imovel.midia.videos and imovel.midia.videos|length > 0 %}
+        {% set ns_vid = namespace(tem_video=false) %}
+        {% if videos_raw %}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {% for vid in imovel.midia.videos %}
+                {% for vid in videos_raw %}
+                {% if vid is mapping and vid.get('embed_url') %}
+                {% set ns_vid.tem_video = true %}
                 <div class="bg-white border border-gray-200 p-4 shadow-sm space-y-3">
                     <div class="aspect-video w-full bg-slate-950 overflow-hidden">
-                        <iframe src="{{ vid.embed_url }}" title="Vídeo do imóvel {{ imovel.codigo }}"
+                        <iframe src="{{ vid.get('embed_url') }}" title="Vídeo do imóvel {{ imovel.codigo or '' }}"
                             class="w-full h-full" frameborder="0"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowfullscreen></iframe>
                     </div>
                 </div>
+                {% endif %}
                 {% endfor %}
             </div>
-        {% else %}
+        {% endif %}
+        {% if not ns_vid.tem_video %}
             <div class="bg-white border border-gray-200 p-10 text-center text-sm text-slate-500">
                 Nenhum vídeo vinculado a este imóvel no momento.
             </div>
@@ -109,7 +148,7 @@
     <button type="button" onclick="navegarLightboxGaleria(-1)" class="absolute left-4 sm:left-8 bg-white/10 hover:bg-white/20 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold cursor-pointer">❮</button>
 
     <div class="max-w-5xl flex flex-col items-center justify-center text-center">
-        <img id="lb-galeria-img" src="" class="max-h-[75vh] max-w-full object-contain shadow-2xl">
+        <img id="lb-galeria-img" src="" alt="Foto ampliada" class="max-h-[75vh] max-w-full object-contain shadow-2xl">
         <p id="lb-galeria-comodo" class="text-sm font-semibold text-amber-400 uppercase tracking-widest mt-4"></p>
         <span id="lb-galeria-contador" class="text-xs text-slate-300 mt-1"></span>
     </div>
@@ -119,10 +158,9 @@
 
 <script>
     const todasFotosGaleria = [
-        {% if imovel.midia and imovel.midia.fotos %}
-            {% set categorias_lista = imovel.midia.fotos | map(attribute='categoria') | unique | list | reverse | list %}
-            {% for cat in categorias_lista %}
-                {% set fotos_cat = imovel.midia.fotos | selectattr('categoria', 'equalto', cat) | list | reverse | list %}
+        {% if ns_norm.fotos %}
+            {% for cat in categorias_ordenadas %}
+                {% set fotos_cat = ns_norm.fotos | selectattr('categoria', 'equalto', cat) | list | reverse | list %}
                 {% if fotos_cat %}
                     {% if cat == 'capa' %}{% set rotulo_comodo = 'Fachada / Geral' %}
                     {% elif cat == 'sala' %}{% set rotulo_comodo = 'Sala / Living' %}
@@ -133,15 +171,8 @@
                     {% else %}{% set rotulo_comodo = fotos_cat[0].legenda or cat|replace('_', ' ')|title %}{% endif %}
 
                     {% for foto in fotos_cat %}
-                    {% if foto is mapping and foto.get('url') %}
-                        {% set src_lb = foto.get('url') %}
-                    {% elif foto is mapping and foto.get('arquivo') %}
-                        {% set src_lb = url_for('static', filename=foto.get('arquivo')) %}
-                    {% else %}
-                        {% set src_lb = url_for('static', filename=foto) %}
-                    {% endif %}
                     {
-                        url: {{ src_lb | tojson | safe }},
+                        url: {{ foto.url | tojson | safe }},
                         comodo: {{ rotulo_comodo | tojson | safe }}
                     },
                     {% endfor %}
@@ -213,7 +244,7 @@
             }, { passive: true });
         }
 
-        trocarAbaGaleria('{{ aba_inicial or "fotos" }}');
+        trocarAbaGaleria({{ (aba_inicial or 'fotos') | tojson | safe }});
     });
 
     document.addEventListener('keydown', (e) => {

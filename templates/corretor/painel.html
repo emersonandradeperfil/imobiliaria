@@ -33,23 +33,26 @@
 
     <!-- CONTEÚDO DA ABA: LEADS -->
     <div id="secao-leads" class="space-y-4">
-
+        {% set ns_leads = namespace(visiveis=0) %}
         {% if leads %}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {% for lead in leads %}
             {% set cod_lead = (lead.imovel_info.codigo if lead.imovel_info and lead.imovel_info.codigo else '')|upper %}
             {% if papel_usuario == 'admin' or cod_lead.startswith('PC') %}
+            {% set ns_leads.visiveis = ns_leads.visiveis + 1 %}
+            {% set tel_lead_raw = lead.telefone or '' %}
+            {% set tel_lead_limpo = tel_lead_raw | replace('(', '') | replace(')', '') | replace(' ', '') | replace('-', '') %}
             <div
                 class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
                 <div>
 
                     <div class="flex justify-between items-start">
                         <div>
-                            <h3 class="font-bold text-slate-900 text-base">{{ lead.nome }}</h3>
+                            <h3 class="font-bold text-slate-900 text-base">{{ lead.nome or 'Lead' }}</h3>
                             <p class="text-xs text-gray-500 mt-0.5">Contato: <span
-                                    class="font-semibold text-slate-700">{{ lead.telefone }}</span></p>
-                            <p class="text-xs text-gray-600 mt-2">E-mail: <a href="mailto:{{ lead.email }}"
-                                    class="text-blue-600 hover:underline">{{ lead.email }}</a></p>
+                                    class="font-semibold text-slate-700">{{ tel_lead_raw or 'Não informado' }}</span></p>
+                            <p class="text-xs text-gray-600 mt-2">E-mail: <a href="mailto:{{ lead.email or '' }}"
+                                    class="text-blue-600 hover:underline">{{ lead.email or '' }}</a></p>
                         </div>
                     </div>
 
@@ -61,8 +64,8 @@
                         {% set src_capa_lead = f0_lead.get('url') %}
                     {% elif f0_lead is mapping and f0_lead.get('arquivo') %}
                         {% set src_capa_lead = url_for('static', filename=f0_lead.get('arquivo')) %}
-                    {% elif f0_lead is string and f0_lead %}
-                        {% set src_capa_lead = url_for('static', filename=f0_lead) %}
+                    {% elif f0_lead is string and f0_lead|trim != '' %}
+                        {% set src_capa_lead = url_for('static', filename=f0_lead|trim) %}
                     {% else %}
                         {% set src_capa_lead = url_for('static', filename='upload/default.jpg') %}
                     {% endif %}
@@ -73,11 +76,11 @@
                                 class="w-12 h-12 object-cover rounded-md border flex-shrink-0" alt="Imóvel">
                             <div class="overflow-hidden">
                                 <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{
-                                    lead.imovel_info.codigo }}</span>
-                                <h4 class="text-xs font-bold text-slate-900 truncate">{{ lead.imovel_info.titulo }}</h4>
+                                    lead.imovel_info.codigo or '' }}</span>
+                                <h4 class="text-xs font-bold text-slate-900 truncate">{{ lead.imovel_info.titulo or '' }}</h4>
                                 {% if lead.endereco_privado %}
-                                <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ lead.endereco_privado.logradouro }},
-                                    {{ lead.endereco_privado.numero }}</p>
+                                <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ lead.endereco_privado.logradouro or '' }},
+                                    {{ lead.endereco_privado.numero or '' }}</p>
                                 {% endif %}
                                 <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{
                                     lead.imovel_info.local_publico.bairro if lead.imovel_info.local_publico else ''
@@ -99,11 +102,13 @@
                     <div class="flex justify-between items-center text-xs text-gray-400">
                         <span>Cadastrado em: {{ lead.criado_em.strftime('%d/%m/%Y %H:%M') if lead.criado_em else ''
                             }}</span>
-                        <a href="https://api.whatsapp.com/send?phone=55{{ lead.telefone | replace('(', '') | replace(')', '') | replace(' ', '') | replace('-', '') }}"
+                        {% if tel_lead_limpo %}
+                        <a href="https://api.whatsapp.com/send?phone=55{{ tel_lead_limpo }}"
                             target="_blank"
                             class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1">
                             WhatsApp
                         </a>
+                        {% endif %}
                     </div>
 
                     {% set meu_id = session.get('user_id') %}
@@ -129,7 +134,9 @@
             {% endif %}
             {% endfor %}
         </div>
-        {% else %}
+        {% endif %}
+
+        {% if ns_leads.visiveis == 0 %}
         <div class="bg-white border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-500">
             <span class="text-3xl block mb-2">📭</span>
             Nenhum lead capturado até o momento.
@@ -139,12 +146,15 @@
 
     <!-- CONTEÚDO DA ABA: AGENDAMENTOS -->
     <div id="secao-agendamentos" class="space-y-4 hidden">
-
+        {% set ns_ag = namespace(visiveis=0) %}
         {% if agendamentos %}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {% for ag in agendamentos %}
             {% set cod_ag = (ag.imovel_info.codigo if ag.imovel_info and ag.imovel_info.codigo else '')|upper %}
             {% if papel_usuario == 'admin' or cod_ag.startswith('PC') %}
+            {% set ns_ag.visiveis = ns_ag.visiveis + 1 %}
+            {% set tel_ag_raw = ag.cliente_info.telefone if ag.cliente_info and ag.cliente_info.telefone else '' %}
+            {% set tel_ag_limpo = tel_ag_raw | replace('(', '') | replace(')', '') | replace(' ', '') | replace('-', '') %}
             <!-- Card do Agendamento -->
             <div id="agendamento-{{ ag._id }}"
                 class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
@@ -156,8 +166,7 @@
                                 {{ ag.cliente_info.nome if ag.cliente_info else 'Cliente' }}
                             </h3>
                             <p class="text-xs text-gray-500 mt-0.5">Contato: <span
-                                    class="font-semibold text-slate-700">{{ ag.cliente_info.telefone if ag.cliente_info
-                                    else 'Não informado' }}</span></p>
+                                    class="font-semibold text-slate-700">{{ tel_ag_raw or 'Não informado' }}</span></p>
                             <p class="text-xs text-gray-600 mt-2">E-mail: <a
                                     href="mailto:{{ ag.cliente_info.email if ag.cliente_info else '' }}"
                                     class="text-blue-600 hover:underline">{{ ag.cliente_info.email if ag.cliente_info
@@ -186,8 +195,8 @@
                         {% set src_capa_ag = f0_ag.get('url') %}
                     {% elif f0_ag is mapping and f0_ag.get('arquivo') %}
                         {% set src_capa_ag = url_for('static', filename=f0_ag.get('arquivo')) %}
-                    {% elif f0_ag is string and f0_ag %}
-                        {% set src_capa_ag = url_for('static', filename=f0_ag) %}
+                    {% elif f0_ag is string and f0_ag|trim != '' %}
+                        {% set src_capa_ag = url_for('static', filename=f0_ag|trim) %}
                     {% else %}
                         {% set src_capa_ag = url_for('static', filename='upload/default.jpg') %}
                     {% endif %}
@@ -198,11 +207,11 @@
                                 class="w-12 h-12 object-cover rounded-md border flex-shrink-0" alt="Imóvel">
                             <div class="overflow-hidden">
                                 <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{
-                                    ag.imovel_info.codigo }}</span>
-                                <h4 class="text-xs font-bold text-slate-900 truncate">{{ ag.imovel_info.titulo }}</h4>
+                                    ag.imovel_info.codigo or '' }}</span>
+                                <h4 class="text-xs font-bold text-slate-900 truncate">{{ ag.imovel_info.titulo or '' }}</h4>
                                 {% if ag.endereco_privado %}
-                                <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ ag.endereco_privado.logradouro }},
-                                    {{ ag.endereco_privado.numero }}</p>
+                                <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ ag.endereco_privado.logradouro or '' }},
+                                    {{ ag.endereco_privado.numero or '' }}</p>
                                 {% endif %}
                                 <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{
                                     ag.imovel_info.local_publico.bairro if ag.imovel_info.local_publico else ''
@@ -233,11 +242,13 @@
                         <span class="font-extrabold text-slate-900 bg-slate-100 px-3 py-1.5 rounded-lg">
                             📅 {{ ag.data_hora.strftime('%d/%m/%Y às %H:%M') if ag.data_hora else 'A definir' }}
                         </span>
-                        <a href="https://api.whatsapp.com/send?phone=55{{ ag.cliente_info.telefone | replace('(', '') | replace(')', '') | replace(' ', '') | replace('-', '') if ag.cliente_info and ag.cliente_info.telefone else '' }}"
+                        {% if tel_ag_limpo %}
+                        <a href="https://api.whatsapp.com/send?phone=55{{ tel_ag_limpo }}"
                             target="_blank"
                             class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1">
                             WhatsApp
                         </a>
+                        {% endif %}
                     </div>
 
                     {% set meu_id = session.get('user_id') %}
@@ -268,7 +279,7 @@
                         <form action="{{ url_for('reagendar_visita_corretor', ag_id=ag._id) }}" method="POST"
                             class="flex flex-wrap sm:flex-nowrap gap-2 pt-2 border-t border-gray-200">
                             <input type="date" name="nova_data" min="{{ today }}" required
-                                class="bg-white border rounded px-2 py-1 text-xs text-slate-800 w-full sm:w-1/2"
+                                class="campo-data-reagendamento bg-white border rounded px-2 py-1 text-xs text-slate-800 w-full sm:w-1/2"
                                 style="color-scheme: light;">
 
                             <select name="nova_hora" required
@@ -301,7 +312,9 @@
             {% endif %}
             {% endfor %}
         </div>
-        {% else %}
+        {% endif %}
+
+        {% if ns_ag.visiveis == 0 %}
         <div class="bg-white border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-500">
             <span class="text-3xl block mb-2">📅</span>
             Nenhum agendamento de visita registrado até o momento.
@@ -314,13 +327,15 @@
         {% if buscas_corretor %}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {% for busca in buscas_corretor %}
+            {% set tel_busca_raw = busca.whatsapp or busca.telefone or '' %}
+            {% set tel_busca_limpo = tel_busca_raw | replace('(', '') | replace(')', '') | replace(' ', '') | replace('-', '') %}
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between space-y-4 hover:shadow-md transition">
                 <div>
                     <div class="flex justify-between items-start">
                         <div>
-                            <h3 class="font-bold text-slate-900 text-base">{{ busca.nome }}</h3>
-                            <p class="text-xs text-gray-500 mt-0.5"><span class="font-semibold text-slate-700">{{ busca.whatsapp or busca.telefone }}</span></p>
-                            <p class="text-xs text-gray-600 mt-1"><a href="mailto:{{ busca.email }}" class="text-blue-600 hover:underline">{{ busca.email }}</a></p>
+                            <h3 class="font-bold text-slate-900 text-base">{{ busca.nome or 'Cliente' }}</h3>
+                            <p class="text-xs text-gray-500 mt-0.5"><span class="font-semibold text-slate-700">{{ tel_busca_raw or 'Não informado' }}</span></p>
+                            <p class="text-xs text-gray-600 mt-1"><a href="mailto:{{ busca.email or '' }}" class="text-blue-600 hover:underline">{{ busca.email or '' }}</a></p>
                         </div>
                         <span class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase bg-purple-50 text-purple-800 border border-purple-200 whitespace-nowrap">
                             Busca
@@ -341,11 +356,13 @@
                 <!-- Botão de Ação rápida para o WhatsApp do cliente -->
                 <div class="pt-3 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400">
                     <span>Recebido em: {{ busca.criado_em.strftime('%d/%m/%Y %H:%M') if busca.criado_em else '' }}</span>
-                    <a href="https://api.whatsapp.com/send?phone=55{{ (busca.whatsapp or busca.telefone) | replace('(', '') | replace(')', '') | replace(' ', '') | replace('-', '') }}"
+                    {% if tel_busca_limpo %}
+                    <a href="https://api.whatsapp.com/send?phone=55{{ tel_busca_limpo }}"
                         target="_blank"
                         class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1">
                         WhatsApp
                     </a>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
@@ -360,19 +377,21 @@
 
     <!-- CONTEÚDO DA ABA: CURTIDAS (Imóveis com 1 ou mais curtidas) -->
     <div id="secao-curtidas" class="space-y-4 hidden">
+        {% set ns_curt = namespace(visiveis=0) %}
         {% if imoveis_curtidos %}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {% for item in imoveis_curtidos %}
             {% set cod_curt = (item.imovel.codigo if item.imovel and item.imovel.codigo else '')|upper %}
             {% if papel_usuario == 'admin' or cod_curt.startswith('PC') %}
+            {% set ns_curt.visiveis = ns_curt.visiveis + 1 %}
             {% set fotos_curt = item.imovel.midia.fotos if item.imovel and item.imovel.midia and item.imovel.midia.fotos else [] %}
             {% set f0_curt = fotos_curt[0] if fotos_curt|length > 0 else none %}
             {% if f0_curt is mapping and f0_curt.get('url') %}
                 {% set src_capa_curt = f0_curt.get('url') %}
             {% elif f0_curt is mapping and f0_curt.get('arquivo') %}
                 {% set src_capa_curt = url_for('static', filename=f0_curt.get('arquivo')) %}
-            {% elif f0_curt is string and f0_curt %}
-                {% set src_capa_curt = url_for('static', filename=f0_curt) %}
+            {% elif f0_curt is string and f0_curt|trim != '' %}
+                {% set src_capa_curt = url_for('static', filename=f0_curt|trim) %}
             {% else %}
                 {% set src_capa_curt = url_for('static', filename='upload/default.jpg') %}
             {% endif %}
@@ -382,8 +401,8 @@
                     <div class="flex justify-between items-start">
                         <div>
                             <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{
-                                item.imovel.codigo }}</span>
-                            <h3 class="font-bold text-slate-900 text-base mt-0.5">{{ item.imovel.titulo }}</h3>
+                                item.imovel.codigo or '' }}</span>
+                            <h3 class="font-bold text-slate-900 text-base mt-0.5">{{ item.imovel.titulo or '' }}</h3>
                         </div>
                         <span
                             class="bg-amber-50 text-amber-800 border border-amber-200 text-xs font-extrabold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm whitespace-nowrap">
@@ -399,11 +418,11 @@
                                 class="w-12 h-12 object-cover rounded-md border flex-shrink-0" alt="Imóvel">
                             <div class="overflow-hidden">
                                 <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{
-                                    item.imovel.codigo }}</span>
-                                <h4 class="text-xs font-bold text-slate-900 truncate">{{ item.imovel.titulo }}</h4>
+                                    item.imovel.codigo or '' }}</span>
+                                <h4 class="text-xs font-bold text-slate-900 truncate">{{ item.imovel.titulo or '' }}</h4>
                                 {% if item.endereco %}
-                                <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ item.endereco.logradouro }}, {{
-                                    item.endereco.numero }}</p>
+                                <p class="text-[11px] text-gray-500 mt-0.5">Rua: {{ item.endereco.logradouro or '' }}, {{
+                                    item.endereco.numero or '' }}</p>
                                 {% endif %}
                                 <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{
                                     item.imovel.local_publico.bairro if item.imovel.local_publico else ''
@@ -422,7 +441,9 @@
             {% endif %}
             {% endfor %}
         </div>
-        {% else %}
+        {% endif %}
+
+        {% if ns_curt.visiveis == 0 %}
         <div class="bg-white border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-500">
             <span class="text-3xl block mb-2">❤️</span>
             Nenhum imóvel possui curtidas no momento.
@@ -452,6 +473,11 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+        const hoje = new Date().toISOString().split('T')[0];
+        document.querySelectorAll('.campo-data-reagendamento').forEach(el => {
+            if (!el.min) el.min = hoje;
+        });
+
         const hash = window.location.hash.replace('#', '');
         if (['leads', 'agendamentos', 'buscas', 'curtidas'].includes(hash)) {
             mudarAba(hash);

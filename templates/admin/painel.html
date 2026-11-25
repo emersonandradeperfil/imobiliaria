@@ -12,23 +12,23 @@
         <!-- Sistema de Abas (Navegação) -->
         <div class="flex flex-wrap bg-gray-100 p-1 rounded-xl border border-gray-200 gap-1">
             
-            <button onclick="mudarAba('curtidas')" id="btn-aba-curtidas"
-                class="px-1 py-1 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
+            <button type="button" onclick="mudarAba('curtidas')" id="btn-aba-curtidas"
+                class="px-3 py-1.5 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900 cursor-pointer">
                 Curtidas ({{ curtidas|length }})
             </button>
 
-            <button onclick="mudarAba('agendamentos')" id="btn-aba-agendamentos"
-                class="px-1 py-1 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
+            <button type="button" onclick="mudarAba('agendamentos')" id="btn-aba-agendamentos"
+                class="px-3 py-1.5 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900 cursor-pointer">
                 Agenda ({{ agendamentos|length }})
             </button>
 
-            <button onclick="mudarAba('buscas')" id="btn-aba-buscas"
-                class="px-1 py-1 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900">
+            <button type="button" onclick="mudarAba('buscas')" id="btn-aba-buscas"
+                class="px-3 py-1.5 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900 cursor-pointer">
                 Solicitações ({{ buscas|length }})
             </button>
 
-            <button onclick="mudarAba('leads')" id="btn-aba-leads"
-                class="px-1 py-1 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm">
+            <button type="button" onclick="mudarAba('leads')" id="btn-aba-leads"
+                class="px-3 py-1.5 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm cursor-pointer">
                 Leads ({{ leads|length }})
             </button>
 
@@ -45,11 +45,11 @@
                 <div>
                     <div class="flex justify-between items-start">
                         <div>
-                            <h3 class="font-bold text-slate-900 text-base">{{ lead.nome }}</h3>
+                            <h3 class="font-bold text-slate-900 text-base">{{ lead.nome or 'Lead' }}</h3>
                             <p class="text-xs text-gray-500 mt-0.5">Contato: <span
-                                    class="font-semibold text-slate-700">{{ lead.telefone }}</span></p>
-                            <p class="text-xs text-gray-600 mt-1">E-mail: <a href="mailto:{{ lead.email }}"
-                                    class="text-blue-600 hover:underline">{{ lead.email }}</a></p>
+                                    class="font-semibold text-slate-700">{{ lead.telefone or 'Não informado' }}</span></p>
+                            <p class="text-xs text-gray-600 mt-1">E-mail: <a href="mailto:{{ lead.email or '' }}"
+                                    class="text-blue-600 hover:underline">{{ lead.email or '' }}</a></p>
                         </div>
                         <span
                             class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase {% if lead.corretor_responsavel_id %} bg-blue-50 text-blue-800 border border-blue-200 {% else %} bg-amber-50 text-amber-800 border border-amber-200 {% endif %}">
@@ -58,17 +58,26 @@
                     </div>
 
                     {% if lead.imovel_info %}
+                    {% set fotos_lead = lead.imovel_info.midia.fotos if lead.imovel_info.midia and lead.imovel_info.midia.fotos else [] %}
+                    {% set f0_lead = fotos_lead[0] if fotos_lead|length > 0 else none %}
+                    {% if f0_lead is mapping and f0_lead.get('url') %}
+                        {% set src_capa_lead = f0_lead.get('url') %}
+                    {% elif f0_lead is mapping and f0_lead.get('arquivo') %}
+                        {% set src_capa_lead = url_for('static', filename=f0_lead.get('arquivo')) %}
+                    {% elif f0_lead is string and f0_lead|trim != '' %}
+                        {% set src_capa_lead = url_for('static', filename=f0_lead|trim) %}
+                    {% else %}
+                        {% set src_capa_lead = url_for('static', filename='upload/default.jpg') %}
+                    {% endif %}
+                    {% set local_lead = lead.imovel_info.local_publico if lead.imovel_info.local_publico is mapping else {} %}
                     <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-3">
-                        {% set foto_capa = lead.imovel_info.midia.fotos[0].arquivo if lead.imovel_info.midia and
-                        lead.imovel_info.midia.fotos else 'upload/default.jpg' %}
-                        <img src="{{ url_for('static', filename=foto_capa) }}"
-                            class="w-12 h-12 object-cover rounded-md border" alt="Imóvel">
+                        <img src="{{ src_capa_lead }}"
+                            class="w-12 h-12 object-cover rounded-md border flex-shrink-0" alt="Imóvel">
                         <div class="overflow-hidden">
                             <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{
-                                lead.imovel_info.codigo }}</span>
-                            <h4 class="text-xs font-bold text-slate-900 truncate">{{ lead.imovel_info.titulo }}</h4>
-                            <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ lead.imovel_info.local_publico.bairro
-                                }}</p>
+                                lead.imovel_info.codigo or '' }}</span>
+                            <h4 class="text-xs font-bold text-slate-900 truncate">{{ lead.imovel_info.titulo or '' }}</h4>
+                            <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ local_lead.get('bairro') or '' }}</p>
                         </div>
                     </div>
                     {% endif %}
@@ -89,7 +98,7 @@
                             {% endfor %}
                         </select>
                         <button type="submit"
-                            class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-1.5 rounded transition">Salvar</button>
+                            class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-1.5 rounded transition cursor-pointer">Salvar</button>
                     </form>
                 </div>
             </div>
@@ -120,20 +129,29 @@
                         </div>
                         <span
                             class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase bg-blue-50 text-blue-800 border border-blue-200">
-                            {{ ag.status|replace('_', ' ') }}
+                            {{ (ag.status or 'pendente')|replace('_', ' ') }}
                         </span>
                     </div>
 
                     {% if ag.imovel_info %}
+                    {% set fotos_ag = ag.imovel_info.midia.fotos if ag.imovel_info.midia and ag.imovel_info.midia.fotos else [] %}
+                    {% set f0_ag = fotos_ag[0] if fotos_ag|length > 0 else none %}
+                    {% if f0_ag is mapping and f0_ag.get('url') %}
+                        {% set src_capa_ag = f0_ag.get('url') %}
+                    {% elif f0_ag is mapping and f0_ag.get('arquivo') %}
+                        {% set src_capa_ag = url_for('static', filename=f0_ag.get('arquivo')) %}
+                    {% elif f0_ag is string and f0_ag|trim != '' %}
+                        {% set src_capa_ag = url_for('static', filename=f0_ag|trim) %}
+                    {% else %}
+                        {% set src_capa_ag = url_for('static', filename='upload/default.jpg') %}
+                    {% endif %}
                     <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-3">
-                        {% set foto_capa_ag = ag.imovel_info.midia.fotos[0].arquivo if ag.imovel_info.midia and
-                        ag.imovel_info.midia.fotos else 'upload/default.jpg' %}
-                        <img src="{{ url_for('static', filename=foto_capa_ag) }}"
-                            class="w-12 h-12 object-cover rounded-md border" alt="Imóvel">
+                        <img src="{{ src_capa_ag }}"
+                            class="w-12 h-12 object-cover rounded-md border flex-shrink-0" alt="Imóvel">
                         <div class="overflow-hidden">
                             <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{
-                                ag.imovel_info.codigo }}</span>
-                            <h4 class="text-xs font-bold text-slate-900 truncate">{{ ag.imovel_info.titulo }}</h4>
+                                ag.imovel_info.codigo or '' }}</span>
+                            <h4 class="text-xs font-bold text-slate-900 truncate">{{ ag.imovel_info.titulo or '' }}</h4>
                         </div>
                     </div>
                     {% endif %}
@@ -160,14 +178,14 @@
                             {% endfor %}
                         </select>
                         <button type="submit"
-                            class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-1.5 rounded transition">Atribuir</button>
+                            class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-1.5 rounded transition cursor-pointer">Atribuir</button>
                     </form>
 
                     <!-- Reagendar Visita -->
                     <form action="{{ url_for('admin_reagendar_visita', ag_id=ag._id) }}" method="POST"
                         class="flex gap-2 pt-2 border-t border-gray-100">
                         <input type="date" name="nova_data" min="{{ today }}" required
-                            class="bg-white border rounded px-2 py-1 text-xs text-slate-800 w-1/2"
+                            class="campo-data-admin bg-white border rounded px-2 py-1 text-xs text-slate-800 w-1/2"
                             style="color-scheme: light;">
                         <select name="nova_hora" required
                             class="bg-white border rounded px-2 py-1 text-xs text-slate-800 w-1/3">
@@ -178,7 +196,7 @@
                             {% endfor %}
                         </select>
                         <button type="submit"
-                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] px-3 py-1 rounded w-1/6 transition">Reagendar</button>
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] px-3 py-1 rounded w-1/6 transition cursor-pointer">Reagendar</button>
                     </form>
                 </div>
             </div>
@@ -201,12 +219,12 @@
                 <div>
                     <div class="flex justify-between items-start">
                         <div>
-                            <h3 class="font-bold text-slate-900 text-base">{{ busca.nome }}</h3>
+                            <h3 class="font-bold text-slate-900 text-base">{{ busca.nome or 'Cliente' }}</h3>
                             <p class="text-xs text-gray-500 mt-0.5">Contato: <span
-                                    class="font-semibold text-slate-700">{{ busca.whatsapp or busca.telefone }}</span>
+                                    class="font-semibold text-slate-700">{{ busca.whatsapp or busca.telefone or 'Não informado' }}</span>
                             </p>
-                            <p class="text-xs text-gray-600 mt-1">E-mail: <a href="mailto:{{ busca.email }}"
-                                    class="text-blue-600 hover:underline">{{ busca.email }}</a></p>
+                            <p class="text-xs text-gray-600 mt-1">E-mail: <a href="mailto:{{ busca.email or '' }}"
+                                    class="text-blue-600 hover:underline">{{ busca.email or '' }}</a></p>
                         </div>
                         <span
                             class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase bg-purple-50 text-purple-800 border border-purple-200">
@@ -238,7 +256,7 @@
                             {% endfor %}
                         </select>
                         <button type="submit"
-                            class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-1.5 rounded transition">Encaminhar</button>
+                            class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-1.5 rounded transition cursor-pointer">Encaminhar</button>
                     </form>
                 </div>
             </div>
@@ -262,26 +280,34 @@
                     <!-- Cabeçalho do Card: Informações do Cliente -->
                     <div class="flex justify-between items-start pb-3 border-b border-gray-100">
                         <div>
-                            
-                            <h3 class="font-bold text-slate-900 text-base">{{ item.cliente.nome }}</h3>
-                            <p class="text-xs text-gray-500 mt-1">{{ item.cliente.telefone or 'Não informado' }}</p>
-                            <p class="text-xs text-blue-600 mt-0.5"><a href="mailto:{{ item.cliente.email }}"
-                                    class="hover:underline">{{ item.cliente.email }}</a></p>
+                            <h3 class="font-bold text-slate-900 text-base">{{ item.cliente.nome if item.cliente else 'Cliente' }}</h3>
+                            <p class="text-xs text-gray-500 mt-1">{{ (item.cliente.telefone if item.cliente else '') or 'Não informado' }}</p>
+                            <p class="text-xs text-blue-600 mt-0.5"><a href="mailto:{{ item.cliente.email if item.cliente else '' }}"
+                                    class="hover:underline">{{ item.cliente.email if item.cliente else '' }}</a></p>
                         </div>
                     </div>
     
                     <!-- Imóvel Curtido -->
                     {% if item.imovel %}
+                    {% set fotos_curt = item.imovel.midia.fotos if item.imovel.midia and item.imovel.midia.fotos else [] %}
+                    {% set f0_curt = fotos_curt[0] if fotos_curt|length > 0 else none %}
+                    {% if f0_curt is mapping and f0_curt.get('url') %}
+                        {% set src_capa_curt = f0_curt.get('url') %}
+                    {% elif f0_curt is mapping and f0_curt.get('arquivo') %}
+                        {% set src_capa_curt = url_for('static', filename=f0_curt.get('arquivo')) %}
+                    {% elif f0_curt is string and f0_curt|trim != '' %}
+                        {% set src_capa_curt = url_for('static', filename=f0_curt|trim) %}
+                    {% else %}
+                        {% set src_capa_curt = url_for('static', filename='upload/default.jpg') %}
+                    {% endif %}
+                    {% set local_curt = item.imovel.local_publico if item.imovel.local_publico is mapping else {} %}
                     <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-3">
-                        {% set foto_curtida = item.imovel.midia.fotos[0].arquivo if item.imovel.midia and
-                        item.imovel.midia.fotos else 'upload/default.jpg' %}
-                        <img src="{{ url_for('static', filename=foto_curtida) }}"
+                        <img src="{{ src_capa_curt }}"
                             class="w-14 h-14 object-cover rounded-md border flex-shrink-0" alt="Imóvel">
                         <div class="overflow-hidden">
-                            <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{ item.imovel.codigo
-                                }}</span>
-                            <h4 class="text-xs font-bold text-slate-900 truncate">{{ item.imovel.titulo }}</h4>
-                            <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ item.imovel.local_publico.bairro }}</p>
+                            <span class="text-[10px] uppercase font-bold text-amber-600 block">Código: {{ item.imovel.codigo or '' }}</span>
+                            <h4 class="text-xs font-bold text-slate-900 truncate">{{ item.imovel.titulo or '' }}</h4>
+                            <p class="text-[11px] text-gray-500 mt-0.5">Bairro: {{ local_curt.get('bairro') or '' }}</p>
                         </div>
                     </div>
                     {% endif %}
@@ -289,6 +315,7 @@
     
                 <!-- Ações: Gerar Lead e Ver Imóvel -->
                 <div class="pt-3 border-t border-gray-100 space-y-3">
+                    {% if item.cliente and item.imovel %}
                     <form action="{{ url_for('admin_gerar_lead_de_curtida') }}" method="POST" class="space-y-2">
                         <input type="hidden" name="user_id" value="{{ item.cliente._id }}">
                         <input type="hidden" name="imovel_id" value="{{ item.imovel._id }}">
@@ -303,18 +330,21 @@
                             </select>
     
                             <button type="submit"
-                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition shadow-sm whitespace-nowrap">
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition shadow-sm whitespace-nowrap cursor-pointer">
                                 GERAR LEAD
                             </button>
                         </div>
                     </form>
+                    {% endif %}
     
+                    {% if item.imovel and item.imovel.slug %}
                     <div class="flex flex-col sm:flex-row">
                         <a href="{{ url_for('imovel_detalhe', slug=item.imovel.slug) }}" target="_blank"
-                            class="bg-gray-300 hover:bg-emerald-700 text-gray-500 font-bold text-center text-xs px-4 py-2 rounded-lg transition shadow-sm whitespace-nowrap">
+                            class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-center text-xs px-4 py-2 rounded-lg border border-gray-300 transition whitespace-nowrap">
                             DETALHES
                         </a>
                     </div>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
@@ -334,18 +364,24 @@
         ['leads', 'agendamentos', 'buscas', 'curtidas'].forEach(item => {
             const secao = document.getElementById(`secao-${item}`);
             const btn = document.getElementById(`btn-aba-${item}`);
+            if (!secao || !btn) return;
             if (item === aba) {
                 secao.classList.remove('hidden');
-                btn.className = "px-4 py-2 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm";
+                btn.className = "px-3 py-1.5 rounded-lg font-bold text-xs transition bg-slate-900 text-white shadow-sm cursor-pointer";
                 history.pushState(null, null, `#${aba}`);
             } else {
                 secao.classList.add('hidden');
-                btn.className = "px-4 py-2 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900";
+                btn.className = "px-3 py-1.5 rounded-lg font-bold text-xs transition text-gray-600 hover:text-slate-900 cursor-pointer";
             }
         });
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+        const hoje = new Date().toISOString().split('T')[0];
+        document.querySelectorAll('.campo-data-admin').forEach(el => {
+            if (!el.min) el.min = hoje;
+        });
+
         const hash = window.location.hash.replace('#', '');
         if (['leads', 'agendamentos', 'buscas', 'curtidas'].includes(hash)) {
             mudarAba(hash);

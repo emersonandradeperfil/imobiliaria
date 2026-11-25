@@ -81,7 +81,7 @@
                 </select>
                 <input type="hidden" name="condominio_nome" id="condominio_nome_real" value="{{ cond_atual }}">
                 <div id="div-novo-condominio" class="hidden mt-2">
-                    <input type="text" id="input-novo-condominio" placeholder="Digite o nome do novo condomínio..."
+                    <input type="text" id="input-novo-condominio" oninput="sincronizarNovoCondominio()" placeholder="Digite o nome do novo condomínio..."
                         class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-slate-900 outline-none">
                 </div>
             </div>
@@ -91,6 +91,10 @@
             <label class="block text-xs font-semibold mb-1 text-gray-700">Descrição Longa</label>
             <textarea name="descricao" rows="4" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-slate-900 outline-none" placeholder="Detalhes e diferenciais do imóvel...">{% if editando %}{{ imovel.descricao }}{% endif %}</textarea>
         </div>
+
+        {% set precos_imv = imovel.precos if editando and imovel.precos is mapping else {} %}
+        {% set carac_imv = imovel.caracteristicas if editando and imovel.caracteristicas is mapping else {} %}
+        {% set local_imv = imovel.local_publico if editando and imovel.local_publico is mapping else {} %}
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
@@ -104,7 +108,7 @@
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Valor Venda (R$)</label>
-                {% set v_venda = imovel.precos.venda if editando and imovel.precos and imovel.precos.venda else 0 %}
+                {% set v_venda = (precos_imv.get('venda') or 0)|float %}
                 <input type="text" id="preco_venda_fmt" oninput="mascaraMoeda(this)"
                     value="{% if v_venda > 0 %}{{ '{:,.2f}'.format(v_venda)|replace(',', 'v')|replace('.', ',')|replace('v', '.') }}{% endif %}"
                     class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
@@ -112,7 +116,7 @@
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Valor Locação (R$)</label>
-                {% set v_locacao = imovel.precos.locacao if editando and imovel.precos and imovel.precos.locacao else 0 %}
+                {% set v_locacao = (precos_imv.get('locacao') or 0)|float %}
                 <input type="text" id="preco_locacao_fmt" oninput="mascaraMoeda(this)"
                     value="{% if v_locacao > 0 %}{{ '{:,.2f}'.format(v_locacao)|replace(',', 'v')|replace('.', ',')|replace('v', '.') }}{% endif %}"
                     class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
@@ -123,7 +127,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Condomínio Mensal (R$)</label>
-                {% set v_cond = imovel.precos.condominio if editando and imovel.precos and imovel.precos.condominio else 0 %}
+                {% set v_cond = (precos_imv.get('condominio') or 0)|float %}
                 <input type="text" id="preco_condominio_fmt" oninput="mascaraMoeda(this)"
                     value="{% if v_cond > 0 %}{{ '{:,.2f}'.format(v_cond)|replace(',', 'v')|replace('.', ',')|replace('v', '.') }}{% endif %}"
                     class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
@@ -131,7 +135,7 @@
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">IPTU Anual/Mensal (R$)</label>
-                {% set v_iptu = imovel.precos.iptu if editando and imovel.precos and imovel.precos.iptu else 0 %}
+                {% set v_iptu = (precos_imv.get('iptu') or 0)|float %}
                 <input type="text" id="preco_iptu_fmt" oninput="mascaraMoeda(this)"
                     value="{% if v_iptu > 0 %}{{ '{:,.2f}'.format(v_iptu)|replace(',', 'v')|replace('.', ',')|replace('v', '.') }}{% endif %}"
                     class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0,00">
@@ -142,27 +146,27 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Área Útil (m²)</label>
-                <input type="number" step="0.01" name="area_util" value="{{ imovel.caracteristicas.util if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
+                <input type="number" step="0.01" name="area_util" value="{{ carac_imv.get('util') if carac_imv.get('util') is not none else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Área Total (m²)</label>
-                <input type="number" step="0.01" name="area_total" value="{{ imovel.caracteristicas.total if editando and imovel.caracteristicas and imovel.caracteristicas.total else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
+                <input type="number" step="0.01" name="area_total" value="{{ carac_imv.get('total') if carac_imv.get('total') is not none else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Quartos</label>
-                <input type="number" name="quartos" value="{{ imovel.caracteristicas.quartos if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
+                <input type="number" name="quartos" value="{{ carac_imv.get('quartos') if carac_imv.get('quartos') is not none else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Suítes</label>
-                <input type="number" name="suites" value="{{ imovel.caracteristicas.suites if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
+                <input type="number" name="suites" value="{{ carac_imv.get('suites') if carac_imv.get('suites') is not none else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Banheiros</label>
-                <input type="number" name="banheiros" value="{{ imovel.caracteristicas.banheiros if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
+                <input type="number" name="banheiros" value="{{ carac_imv.get('banheiros') if carac_imv.get('banheiros') is not none else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Vagas</label>
-                <input type="number" name="vagas" value="{{ imovel.caracteristicas.vagas if editando and imovel.caracteristicas else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
+                <input type="number" name="vagas" value="{{ carac_imv.get('vagas') if carac_imv.get('vagas') is not none else '' }}" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="0">
             </div>
         </div>
 
@@ -174,7 +178,7 @@
         <!-- ========================================== -->
         <!-- CARACTERÍSTICAS POR CATEGORIA             -->
         <!-- ========================================== -->
-        {% set feats = imovel.caracteristicas.itens if editando and imovel.caracteristicas and imovel.caracteristicas.itens else {} %}
+        {% set feats = carac_imv.get('itens') if carac_imv.get('itens') is mapping else {} %}
         <h2 class="font-bold text-amber-600 text-sm uppercase tracking-wider border-b pb-2 pt-4">Características</h2>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-xs text-slate-800 bg-gray-50 p-4 rounded-xl border border-gray-200">
@@ -182,7 +186,7 @@
                 <p class="font-bold uppercase text-slate-700">Facilidades</p>
                 {% for item in ['Portaria 24h', 'Vaga demarcada', 'Acessibilidade', 'Vaga carro elétrico', 'Gerador', 'Próximo ao metrô'] %}
                 <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="feat_facilidades" value="{{ item }}" {% if item in (feats.facilidades or []) %}checked{% endif %} class="rounded border-gray-300">
+                    <input type="checkbox" name="feat_facilidades" value="{{ item }}" {% if item in (feats.get('facilidades') or []) %}checked{% endif %} class="rounded border-gray-300">
                     <span>{{ item }}</span>
                 </label>
                 {% endfor %}
@@ -192,7 +196,7 @@
                 <p class="font-bold uppercase text-slate-700">Diferenciais</p>
                 {% for item in ['Reformado', 'Depósito privativo', 'Ar-condicionado', 'Pet place', 'Um por andar', 'Permite animais', 'Aquecimento à gás', 'Hall privativo'] %}
                 <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="feat_diferenciais" value="{{ item }}" {% if item in (feats.diferenciais or []) %}checked{% endif %} class="rounded border-gray-300">
+                    <input type="checkbox" name="feat_diferenciais" value="{{ item }}" {% if item in (feats.get('diferenciais') or []) %}checked{% endif %} class="rounded border-gray-300">
                     <span>{{ item }}</span>
                 </label>
                 {% endfor %}
@@ -202,7 +206,7 @@
                 <p class="font-bold uppercase text-slate-700">Área externa</p>
                 {% for item in ['Churrasqueira', 'Academia', 'Piscina', 'Sauna', 'Área verde', 'Bicicletário', 'Salão de festas', 'Piscina aquecida'] %}
                 <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="feat_area_externa" value="{{ item }}" {% if item in (feats.area_externa or []) %}checked{% endif %} class="rounded border-gray-300">
+                    <input type="checkbox" name="feat_area_externa" value="{{ item }}" {% if item in (feats.get('area_externa') or []) %}checked{% endif %} class="rounded border-gray-300">
                     <span>{{ item }}</span>
                 </label>
                 {% endfor %}
@@ -212,7 +216,7 @@
                 <p class="font-bold uppercase text-slate-700">Cômodos</p>
                 {% for item in ['Home office', 'Área de serviço', 'Lavabo', 'Closet', 'Varanda / Terraço', 'Copa'] %}
                 <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="feat_comodos" value="{{ item }}" {% if item in (feats.comodos or []) %}checked{% endif %} class="rounded border-gray-300">
+                    <input type="checkbox" name="feat_comodos" value="{{ item }}" {% if item in (feats.get('comodos') or []) %}checked{% endif %} class="rounded border-gray-300">
                     <span>{{ item }}</span>
                 </label>
                 {% endfor %}
@@ -246,18 +250,20 @@
                     {% set src_thumb = foto.get('url') %}
                 {% elif foto is mapping and foto.get('arquivo') %}
                     {% set src_thumb = url_for('static', filename=foto.get('arquivo')) %}
+                {% elif foto is string and foto|trim != '' %}
+                    {% set src_thumb = url_for('static', filename=foto|trim) %}
                 {% else %}
-                    {% set src_thumb = url_for('static', filename=foto) %}
+                    {% set src_thumb = url_for('static', filename='upload/default.jpg') %}
                 {% endif %}
                 {% set arq_param = foto.get('arquivo') if foto is mapping and foto.get('arquivo') else '' %}
                 {% set pid_param = foto.get('public_id') if foto is mapping and foto.get('public_id') else '' %}
                 <div id="foto-item-{{ loop.index0 }}"
                     class="relative rounded-xl overflow-hidden shadow-sm border bg-white h-32 group">
-                    <img src="{{ src_thumb }}" class="w-full h-full object-cover">
+                    <img src="{{ src_thumb }}" alt="Foto do imóvel" class="w-full h-full object-cover">
         
                     <div
                         class="absolute bottom-0 inset-x-0 bg-slate-950/70 text-white text-[10px] font-bold text-center py-0.5 uppercase">
-                        {{ foto.legenda or foto.categoria }}
+                        {{ (foto.legenda or foto.categoria) if foto is mapping else 'Foto' }}
                     </div>
         
                     <!-- Botão de Remover Foto -->
@@ -320,7 +326,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Bairro</label>
-                <input type="text" id="campo-bairro" name="bairro" value="{{ imovel.local_publico.bairro if editando and imovel.local_publico else '' }}" required placeholder="Ex: Itaim Bibi" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-white text-slate-900">
+                <input type="text" id="campo-bairro" name="bairro" value="{{ local_imv.get('bairro') or '' }}" required placeholder="Ex: Itaim Bibi" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-white text-slate-900">
             </div>
             <div>
                 <label class="block text-xs font-semibold mb-1 text-gray-700">Complemento</label>
@@ -384,6 +390,18 @@
         const atual = preview.value || 'TB0001';
         const sufixo = /^\D*(\d+)$/.test(atual) ? atual.match(/\d+$/)[0] : '0001';
         preview.value = `${pref}${sufixo}`;
+    }
+
+    function sincronizarNovoCondominio() {
+        const selectCond = document.getElementById('select-condominio');
+        const inputNovo = document.getElementById('input-novo-condominio');
+        const hiddenReal = document.getElementById('condominio_nome_real');
+        if (!selectCond || !hiddenReal) return;
+        if (selectCond.value === '__novo__') {
+            hiddenReal.value = inputNovo ? inputNovo.value.trim() : '';
+        } else {
+            hiddenReal.value = selectCond.value;
+        }
     }
 
     function toggleNovoCondominio(selectEl) {
@@ -471,14 +489,7 @@
     }
 
     function prepararEnvioFormulario() {
-        const selectCond = document.getElementById('select-condominio');
-        const inputNovoCond = document.getElementById('input-novo-condominio');
-        const hiddenCondReal = document.getElementById('condominio_nome_real');
-        if (selectCond && hiddenCondReal) {
-            hiddenCondReal.value = (selectCond.value === '__novo__')
-                ? (inputNovoCond ? inputNovoCond.value.trim() : '')
-                : selectCond.value;
-        }
+        sincronizarNovoCondominio();
 
         ['venda', 'locacao', 'condominio', 'iptu'].forEach(campo => {
             let fmtInput = document.getElementById(`preco_${campo}_fmt`);
@@ -684,7 +695,6 @@
         const erroEl = document.getElementById('erro-json-imovel');
         let textoBruto = (textarea.value || '').trim();
 
-        // Remove cercas markdown ```json ... ``` caso o usuário cole direto da IA
         textoBruto = textoBruto.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
 
         let dados;
@@ -704,7 +714,6 @@
             el.dispatchEvent(new Event('change', { bubbles: true }));
         };
 
-        // 1. Campos principais
         setInputByName('titulo', dados.titulo || dados.title || '');
         setInputByName('descricao', dados.descricao || dados.description || '');
 
@@ -714,18 +723,15 @@
             selectTipo.dispatchEvent(new Event('change', { bubbles: true }));
         }
 
-        // 2. Condomínio
         const nomeCond = dados.condominio_nome ?? dados.condominio ?? '';
         preencherCondominioJson(nomeCond);
 
-        // 3. Preços (aceita tanto objeto "precos" quanto chaves na raiz)
         const precos = dados.precos || {};
         preencherCampoMoeda('venda', precos.venda ?? dados.preco_venda ?? dados.valor_venda);
         preencherCampoMoeda('locacao', precos.locacao ?? dados.preco_locacao ?? dados.valor_locacao);
         preencherCampoMoeda('condominio', precos.condominio ?? dados.preco_condominio ?? dados.valor_condominio);
         preencherCampoMoeda('iptu', precos.iptu ?? dados.preco_iptu ?? dados.valor_iptu);
 
-        // 4. Medidas e quantidades (aceita objeto "caracteristicas" ou raiz)
         const carac = dados.caracteristicas || {};
         setInputByName('area_util', carac.util ?? carac.area_util ?? dados.area_util ?? '');
         setInputByName('area_total', carac.total ?? carac.area_total ?? dados.area_total ?? '');
@@ -734,14 +740,12 @@
         setInputByName('banheiros', carac.banheiros ?? dados.banheiros ?? '');
         setInputByName('vagas', carac.vagas ?? dados.vagas ?? '');
 
-        // 5. Destaque
         const chkDestaque = document.getElementById('destaque');
         if (chkDestaque && typeof dados.destaque === 'boolean') {
             chkDestaque.checked = dados.destaque;
             chkDestaque.dispatchEvent(new Event('change', { bubbles: true }));
         }
 
-        // 6. Checkboxes de características (reseta antes e marca os presentes no JSON)
         const itens = carac.itens || dados.itens || {};
         const todosSelecionadosNorm = new Set();
         ['facilidades', 'diferenciais', 'area_externa', 'comodos'].forEach(grupo => {
@@ -760,7 +764,6 @@
             cb.dispatchEvent(new Event('change', { bubbles: true }));
         });
 
-        // 7. Endereço opcional (se vier CEP no JSON, dispara blur para consultar o ViaCEP)
         const end = dados.endereco || {};
         const cepVal = end.cep ?? dados.cep ?? '';
         const numeroVal = end.numero ?? dados.numero ?? '';
