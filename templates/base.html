@@ -10,8 +10,11 @@
     <!-- Google Fonts: Plus Jakarta Sans (Tipografia editorial/geométrica) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -57,12 +60,20 @@
                     <span class="whitespace-nowrap">TECA BORGES</span>
                 </a>
 
-                <!-- Lado Direito (Desktop): Início + Login / Nome + Sair -->
-                <div class="hidden md:flex items-center gap-4">
-                    <a href="{{ url_for('index') }}" class="hover:text-amber-400 transition font-medium">Início</a>
+                <!-- Lado Direito (Desktop): Início • Serviços • Sobre • Login -->
+                <div class="hidden md:flex items-center gap-6">
+                    <a href="{{ url_for('index') }}"
+                        class="hover:text-amber-400 transition font-medium {% if request.endpoint == 'index' %}text-amber-400{% endif %}">Início</a>
+                    <a href="{{ url_for('servicos') }}"
+                        class="hover:text-amber-400 transition font-medium {% if request.endpoint == 'servicos' %}text-amber-400{% endif %}">Serviços</a>
+                    <a href="{{ url_for('sobre') }}"
+                        class="hover:text-amber-400 transition font-medium {% if request.endpoint == 'sobre' %}text-amber-400{% endif %}">Sobre</a>
+
+                    <span class="text-slate-700">|</span>
 
                     {% if session.get('user_id') %}
-                    <span class="text-gray-300 text-sm whitespace-nowrap">Olá, {{ session.get('user_nome').split()[0] if session.get('user_nome') else '' }}</span>
+                    <span class="text-gray-300 text-sm whitespace-nowrap">Olá, {{ session.get('user_nome').split()[0] if
+                        session.get('user_nome') else '' }}</span>
                     <a href="{{ url_for('logout') }}" class="text-amber-400 hover:text-white transition font-medium">
                         Sair
                     </a>
@@ -73,13 +84,15 @@
                 </div>
 
                 <!-- Botão Hambúrguer (Apenas Mobile) -->
-                <button type="button" id="btn-menu-mobile" onclick="toggleMenuMobile()"
-                    aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-mobile"
+                <button type="button" id="btn-menu-mobile" onclick="toggleMenuMobile()" aria-label="Abrir menu"
+                    aria-expanded="false" aria-controls="menu-mobile"
                     class="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-slate-700 text-white hover:border-amber-400 hover:text-amber-400 transition cursor-pointer shrink-0">
-                    <svg id="icone-hamburguer" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <svg id="icone-hamburguer" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
-                    <svg id="icone-fechar-menu" class="w-6 h-6 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <svg id="icone-fechar-menu" class="w-6 h-6 hidden" fill="none" stroke="currentColor"
+                        stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
@@ -92,10 +105,13 @@
         <div class="hidden md:block bg-white border-b border-slate-200">
             <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap justify-end gap-2">
                 {% if session.get('papel') == 'admin' %}
-                    <a href="{{ url_for('meu_perfil') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PERFIL</a>
-                    <a href="{{ url_for('admin_usuarios') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'usuarios' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">USUÁRIOS</a>
-                    <a href="{{ url_for('admin_imoveis') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">IMÓVEIS</a>
-                    <a href="{{ url_for('admin_painel') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition
+                <a href="{{ url_for('meu_perfil') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PERFIL</a>
+                <a href="{{ url_for('admin_usuarios') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'usuarios' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">USUÁRIOS</a>
+                <a href="{{ url_for('admin_imoveis') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">IMÓVEIS</a>
+                <a href="{{ url_for('admin_painel') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition
                         {% if active_tab == 'admin_painel' or active_tab == 'painel' %}
                             bg-slate-900 text-white shadow-md ring-2 ring-slate-600
                         {% else %}
@@ -103,19 +119,29 @@
                         {% endif %}">PAINEL</a>
 
                 {% elif session.get('papel') == 'corretor' %}
-                    <a href="{{ url_for('meu_perfil') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PERFIL</a>
-                    <a href="{{ url_for('admin_imoveis') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">IMÓVEIS</a>
-                    <a href="{{ url_for('painel_corretor') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PAINEL</a>
+                <a href="{{ url_for('meu_perfil') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PERFIL</a>
+                <a href="{{ url_for('admin_imoveis') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">IMÓVEIS</a>
+                <a href="{{ url_for('painel_corretor') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PAINEL</a>
 
                 {% elif session.get('papel') in ['proprietario', 'parceiro'] %}
-                    <a href="{{ url_for('meu_perfil') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PERFIL</a>
-                    <a href="{{ url_for('meus_favoritos') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">FAVORITOS</a>
-                    <a href="{{ url_for('meus_agendamentos') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'agendamentos' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">AGENDAMENTOS</a>
-                    <a href="{{ url_for('painel_proprietario') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'proprietario_painel' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">MEUS IMÓVEIS</a>
+                <a href="{{ url_for('meu_perfil') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PERFIL</a>
+                <a href="{{ url_for('meus_favoritos') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">FAVORITOS</a>
+                <a href="{{ url_for('meus_agendamentos') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'agendamentos' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">AGENDAMENTOS</a>
+                <a href="{{ url_for('painel_proprietario') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'proprietario_painel' %}bg-slate-900 text-white shadow-md ring-2 ring-slate-600{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">MEUS
+                    IMÓVEIS</a>
 
                 {% elif session.get('papel') == 'cliente' %}
-                    <a href="{{ url_for('meus_favoritos') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' or active_tab == 'agendamentos' %}bg-slate-900 text-white{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PAINEL</a>
-                    <a href="{{ url_for('meu_perfil') }}" class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PERFIL</a>
+                <a href="{{ url_for('meus_favoritos') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' or active_tab == 'agendamentos' %}bg-slate-900 text-white{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PAINEL</a>
+                <a href="{{ url_for('meu_perfil') }}"
+                    class="px-4 py-1.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-slate-900 text-white{% else %}bg-slate-200 text-slate-900 hover:bg-slate-300{% endif %}">PERFIL</a>
                 {% endif %}
             </div>
         </div>
@@ -141,51 +167,73 @@
 
             <!-- Links Principais em Coluna -->
             <nav class="flex flex-col space-y-2 text-sm">
-                
-
                 {% if session.get('user_id') %}
-                    <div class="px-3 py-1.5 text-xs text-gray-400">
-                        Olá, {{ session.get('user_nome').split()[0] if session.get('user_nome') else '' }}
-                    </div>
+                <div class="px-3 py-1.5 text-xs text-gray-400">
+                    Olá, {{ session.get('user_nome').split()[0] if session.get('user_nome') else '' }}
+                </div>
                 {% else %}
-                    <a href="{{ url_for('login') }}" onclick="fecharMenuMobile()"
-                        class="px-3 py-2.5 rounded-lg font-medium text-amber-400 hover:bg-slate-900 hover:text-white transition">
-                        Login
-                    </a>
+                <a href="{{ url_for('login') }}" onclick="fecharMenuMobile()"
+                    class="px-3 py-2.5 rounded-lg font-medium text-amber-400 hover:bg-slate-900 hover:text-white transition">
+                    Login
+                </a>
                 {% endif %}
 
                 <a href="{{ url_for('index') }}" onclick="fecharMenuMobile()"
-                    class="px-3 py-2.5 rounded-lg font-medium text-white hover:bg-slate-900 hover:text-amber-400 transition">
+                    class="px-3 py-2.5 rounded-lg font-medium transition {% if request.endpoint == 'index' %}bg-slate-900 text-amber-400{% else %}text-white hover:bg-slate-900 hover:text-amber-400{% endif %}">
                     Início
                 </a>
 
+                <a href="{{ url_for('servicos') }}" onclick="fecharMenuMobile()"
+                    class="px-3 py-2.5 rounded-lg font-medium transition {% if request.endpoint == 'servicos' %}bg-slate-900 text-amber-400{% else %}text-white hover:bg-slate-900 hover:text-amber-400{% endif %}">
+                    Serviços
+                </a>
+
+                <a href="{{ url_for('sobre') }}" onclick="fecharMenuMobile()"
+                    class="px-3 py-2.5 rounded-lg font-medium transition {% if request.endpoint == 'sobre' %}bg-slate-900 text-amber-400{% else %}text-white hover:bg-slate-900 hover:text-amber-400{% endif %}">
+                    Sobre
+                </a>
             </nav>
 
             <!-- Abas do Usuário em Coluna -->
             {% if session.get('user_id') %}
             <div class="pt-4 border-t border-slate-800 flex flex-col space-y-2">
-                <span class="px-3 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">Navegação</span>
+                <span
+                    class="px-3 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400">Navegação</span>
 
                 {% if session.get('papel') == 'admin' %}
-                    <a href="{{ url_for('meu_perfil') }}" class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs text-center transition {% if active_tab == 'perfil' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PERFIL</a>
-                    <a href="{{ url_for('admin_usuarios') }}" class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'usuarios' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">USUÁRIOS</a>
-                    <a href="{{ url_for('admin_imoveis') }}" class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">IMÓVEIS</a>
-                    <a href="{{ url_for('admin_painel') }}" class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'admin_painel' or active_tab == 'painel' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PAINEL</a>
+                <a href="{{ url_for('meu_perfil') }}"
+                    class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs text-center transition {% if active_tab == 'perfil' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PERFIL</a>
+                <a href="{{ url_for('admin_usuarios') }}"
+                    class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'usuarios' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">USUÁRIOS</a>
+                <a href="{{ url_for('admin_imoveis') }}"
+                    class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">IMÓVEIS</a>
+                <a href="{{ url_for('admin_painel') }}"
+                    class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'admin_painel' or active_tab == 'painel' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PAINEL</a>
 
                 {% elif session.get('papel') == 'corretor' %}
-                    <a href="{{ url_for('meu_perfil') }}" class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PERFIL</a>
-                    <a href="{{ url_for('admin_imoveis') }}" class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">IMÓVEIS</a>
-                    <a href="{{ url_for('painel_corretor') }}" class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PAINEL</a>
+                <a href="{{ url_for('meu_perfil') }}"
+                    class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PERFIL</a>
+                <a href="{{ url_for('admin_imoveis') }}"
+                    class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'imoveis' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">IMÓVEIS</a>
+                <a href="{{ url_for('painel_corretor') }}"
+                    class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'painel_corretor' or active_tab == 'corretor' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PAINEL</a>
 
                 {% elif session.get('papel') in ['proprietario', 'parceiro'] %}
-                    <a href="{{ url_for('meu_perfil') }}" class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PERFIL</a>
-                    <a href="{{ url_for('meus_favoritos') }}" class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">FAVORITOS</a>
-                    <a href="{{ url_for('meus_agendamentos') }}" class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'agendamentos' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">AGENDAMENTOS</a>
-                    <a href="{{ url_for('painel_proprietario') }}" class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'proprietario_painel' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">MEUS IMÓVEIS</a>
+                <a href="{{ url_for('meu_perfil') }}"
+                    class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PERFIL</a>
+                <a href="{{ url_for('meus_favoritos') }}"
+                    class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">FAVORITOS</a>
+                <a href="{{ url_for('meus_agendamentos') }}"
+                    class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'agendamentos' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">AGENDAMENTOS</a>
+                <a href="{{ url_for('painel_proprietario') }}"
+                    class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'proprietario_painel' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">MEUS
+                    IMÓVEIS</a>
 
                 {% elif session.get('papel') == 'cliente' %}
-                    <a href="{{ url_for('meus_favoritos') }}" class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' or active_tab == 'agendamentos' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PAINEL</a>
-                    <a href="{{ url_for('meu_perfil') }}" class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PERFIL</a>
+                <a href="{{ url_for('meus_favoritos') }}"
+                    class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'favoritos' or active_tab == 'agendamentos' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PAINEL</a>
+                <a href="{{ url_for('meu_perfil') }}"
+                    class=" text-center px-3 py-2.5 rounded-lg font-bold text-xs transition {% if active_tab == 'perfil' %}bg-amber-400 text-slate-950{% else %}bg-slate-900 text-white hover:bg-slate-800{% endif %}">PERFIL</a>
                 {% endif %}
             </div>
             {% endif %}
@@ -208,11 +256,11 @@
 
     <!-- Botão Flutuante do WhatsApp (24h) -->
     <a href="https://wa.me/5511993999997?text=Olá,%20vim%20pelo%20site%20e%20gostaria%20de%20atendimento."
-       target="_blank"
-       title="Fale conosco no WhatsApp 24h"
-       class="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition transform hover:scale-110 cursor-pointer">
+        target="_blank" title="Fale conosco no WhatsApp 24h"
+        class="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition transform hover:scale-110 cursor-pointer">
         <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24">
-            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+            <path
+                d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
         </svg>
     </a>
 
@@ -241,7 +289,8 @@
                         </svg>
                     </div>
                     <div>
-                        <span class="block text-[10px] font-medium uppercase tracking-widest text-slate-400">WhatsApp</span>
+                        <span
+                            class="block text-[10px] font-medium uppercase tracking-widest text-slate-400">WhatsApp</span>
                         <span
                             class="block text-sm font-bold tracking-wide text-white group-hover:text-amber-400 transition">(11)
                             99399-9997</span>
@@ -257,7 +306,8 @@
                         </svg>
                     </div>
                     <div>
-                        <span class="block text-[10px] font-medium uppercase tracking-widest text-slate-400">E-mail</span>
+                        <span
+                            class="block text-[10px] font-medium uppercase tracking-widest text-slate-400">E-mail</span>
                         <span
                             class="block text-sm font-bold uppercase tracking-wide text-white group-hover:text-amber-400 transition">contato@tecaborges.com.br</span>
                     </div>
@@ -281,40 +331,40 @@
     </footer>
 
     <script>
-        (function () {
-            const cabecalho = document.getElementById('cabecalho-principal');
-            if (!cabecalho) return;
+            (function () {
+                const cabecalho = document.getElementById('cabecalho-principal');
+                if (!cabecalho) return;
 
-            let ultimoScrollY = window.scrollY;
-            const tolerancia = 8;
+                let ultimoScrollY = window.scrollY;
+                const tolerancia = 8;
 
-            window.addEventListener('scroll', () => {
-                const menuMobile = document.getElementById('menu-mobile');
-                if (menuMobile && !menuMobile.classList.contains('translate-x-full')) {
-                    cabecalho.classList.remove('-translate-y-full');
-                    ultimoScrollY = window.scrollY;
-                    return;
-                }
+                window.addEventListener('scroll', () => {
+                    const menuMobile = document.getElementById('menu-mobile');
+                    if (menuMobile && !menuMobile.classList.contains('translate-x-full')) {
+                        cabecalho.classList.remove('-translate-y-full');
+                        ultimoScrollY = window.scrollY;
+                        return;
+                    }
 
-                const atualScrollY = window.scrollY;
+                    const atualScrollY = window.scrollY;
 
-                if (atualScrollY <= 50) {
-                    cabecalho.classList.remove('-translate-y-full');
+                    if (atualScrollY <= 50) {
+                        cabecalho.classList.remove('-translate-y-full');
+                        ultimoScrollY = atualScrollY;
+                        return;
+                    }
+
+                    if (Math.abs(atualScrollY - ultimoScrollY) < tolerancia) return;
+
+                    if (atualScrollY > ultimoScrollY) {
+                        cabecalho.classList.add('-translate-y-full');
+                    } else {
+                        cabecalho.classList.remove('-translate-y-full');
+                    }
+
                     ultimoScrollY = atualScrollY;
-                    return;
-                }
-
-                if (Math.abs(atualScrollY - ultimoScrollY) < tolerancia) return;
-
-                if (atualScrollY > ultimoScrollY) {
-                    cabecalho.classList.add('-translate-y-full');
-                } else {
-                    cabecalho.classList.remove('-translate-y-full');
-                }
-
-                ultimoScrollY = atualScrollY;
-            }, { passive: true });
-        })();
+                }, { passive: true });
+            })();
 
         function abrirMenuMobile() {
             const menu = document.getElementById('menu-mobile');

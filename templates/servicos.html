@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+
+    <!-- Cabeçalho da Página -->
+    <div class="text-center space-y-2 max-w-2xl mx-auto">
+        <span class="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-600">Atuação Técnica Especializada</span>
+        <h1 class="fonte-marca text-3xl sm:text-4xl text-slate-950 uppercase">Serviços</h1>
+        <p class="text-sm text-slate-600">
+            Escolha abaixo entre <strong>Avaliação</strong> de imóveis ou <strong>Perícia</strong> técnica e envie os detalhes da sua solicitação.
+        </p>
+    </div>
+
+    <!-- Abas: Avaliação / Perícia -->
+    <div class="flex justify-center">
+        <div class="inline-flex bg-white p-1.5 rounded-2xl border border-gray-200 shadow-sm gap-2">
+            <button type="button" id="aba-btn-avaliacao" onclick="trocarAbaServico('avaliacao')"
+                class="px-6 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition cursor-pointer bg-slate-900 text-white shadow">
+                Avaliação
+            </button>
+            <button type="button" id="aba-btn-pericia" onclick="trocarAbaServico('pericia')"
+                class="px-6 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition cursor-pointer bg-gray-100 text-slate-700 hover:bg-gray-200">
+                Perícia
+            </button>
+        </div>
+    </div>
+
+    <!-- Conteúdo da Aba: AVALIAÇÃO -->
+    <section id="conteudo-avaliacao" class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-10 space-y-6">
+        <div class="border-b border-gray-100 pb-5 space-y-2">
+            <span class="text-[11px] font-bold uppercase tracking-widest text-amber-600">Precificação e Valor de Mercado</span>
+            <h2 class="text-2xl font-extrabold text-slate-900">Avaliamos o seu imóvel</h2>
+            <p class="text-sm sm:text-[15px] text-slate-700 leading-relaxed">
+                A avaliação imobiliária determina o valor justo de mercado de um imóvel para venda, locação, negociação patrimonial ou tomada de decisão segura. Consideramos localização, liquidez da região, padrão construtivo, estado de conservação, documentação e comparativos reais de mercado.
+            </p>
+            <p class="text-sm text-slate-600 leading-relaxed">
+                Mande para nós a descrição do imóvel e a região para que possamos analisar o caso e retornar com o direcionamento adequado.
+            </p>
+        </div>
+
+        <form id="form-servico-avaliacao" onsubmit="iniciarSolicitacaoServico(event, 'AVALIAÇÃO')" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-900 mb-1">Tipo de Imóvel</label>
+                    <input type="text" id="av-tipo" required
+                        placeholder="Ex: Apartamento 3 quartos, Casa, Comercial..."
+                        class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-900 mb-1">Região</label>
+                    <input type="text" id="av-bairro" required
+                        placeholder="Ex: Mooca, Tatuapé, Alphaville..."
+                        class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+            </div>
+
+            {% if not session.get('user_id') %}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-900 mb-1">Seu Nome</label>
+                    <input type="text" id="av-nome" required placeholder="Nome completo"
+                        class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-900 mb-1">E-mail</label>
+                    <input type="email" id="av-email" required placeholder="seu@email.com"
+                        class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-900 mb-1">Contato</label>
+                    <input type="tel" id="av-whatsapp" required placeholder="11 91234-5678" maxlength="11"
+                        oninput="this.value = this.value.replace(/\D/g, '')"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+            </div>
+            {% endif %}
+
+            <div>
+                <label class="block text-sm font-medium text-slate-900 mb-1">Observações e Descrição do Imóvel</label>
+                <textarea id="av-obs" rows="3"
+                    placeholder="Ex: Metragem aproximada, reformas, vagas, finalidade (venda, locação ou patrimônio)..."
+                    class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400"></textarea>
+            </div>
+
+            <div class="pt-2 text-center">
+                <button type="submit"
+                    class="w-full sm:w-auto px-8 py-3.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold text-sm uppercase rounded-xl transition shadow-lg cursor-pointer">
+                    Avalie para mim
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <!-- Conteúdo da Aba: PERÍCIA -->
+    <section id="conteudo-pericia" class="hidden bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-10 space-y-6">
+        <div class="border-b border-gray-100 pb-5 space-y-2">
+            <span class="text-[11px] font-bold uppercase tracking-widest text-amber-600">Laudos e Assistência Técnica</span>
+            <h2 class="text-2xl font-extrabold text-slate-900">Perícia Imobiliária</h2>
+            <p class="text-sm sm:text-[15px] text-slate-700 leading-relaxed">
+                A perícia imobiliária consiste na análise técnica imparcial e fundamentada de imóveis e direitos sobre eles para apoiar processos judiciais, extrajudiciais, inventários, partilhas, disputas contratuais, revisionais de aluguel e apuração de valores.
+            </p>
+            <p class="text-sm text-slate-600 leading-relaxed">
+                Descreva o tipo de imóvel, a região e o contexto da sua necessidade para avaliarmos o atendimento.
+            </p>
+        </div>
+
+        <form id="form-servico-pericia" onsubmit="iniciarSolicitacaoServico(event, 'PERÍCIA')" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-900 mb-1">Tipo de Imóvel</label>
+                    <input type="text" id="pe-tipo" required
+                        placeholder="Ex: Residencial, Comercial, Terreno, Galpão..."
+                        class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-900 mb-1">Região</label>
+                    <input type="text" id="pe-bairro" required
+                        placeholder="Ex: São Paulo, Zona Leste, Grande SP..."
+                        class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+            </div>
+
+            {% if not session.get('user_id') %}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-900 mb-1">Seu Nome</label>
+                    <input type="text" id="pe-nome" required placeholder="Nome completo"
+                        class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-900 mb-1">E-mail</label>
+                    <input type="email" id="pe-email" required placeholder="seu@email.com"
+                        class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-900 mb-1">Contato</label>
+                    <input type="tel" id="pe-whatsapp" required placeholder="11 91234-5678" maxlength="11"
+                        oninput="this.value = this.value.replace(/\D/g, '')"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                </div>
+            </div>
+            {% endif %}
+
+            <div>
+                <label class="block text-sm font-medium text-slate-900 mb-1">Observações</label>
+                <textarea id="pe-obs" rows="3"
+                    placeholder="Ex: Contexto do caso, prazos, informações adicionais relevantes..."
+                    class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400"></textarea>
+            </div>
+
+            <div class="pt-2 text-center">
+                <button type="submit"
+                    class="w-full sm:w-auto px-8 py-3.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold text-sm uppercase rounded-xl transition shadow-lg cursor-pointer">
+                    Solicitar análise de perícia
+                </button>
+            </div>
+        </form>
+    </section>
+
+</div>
+
+<!-- MODAL DE VERIFICAÇÃO DE E-MAIL (OTP) -->
+<div id="modal-otp-servico"
+    class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-slate-900 relative">
+        <button type="button" onclick="fecharModalOtpServico()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold cursor-pointer">×</button>
+
+        <div class="text-center mb-6">
+            <span class="text-3xl">✉️</span>
+            <h3 class="text-xl font-extrabold text-slate-900 mt-2">Confirme seu E-mail</h3>
+            <p class="text-xs text-gray-500 mt-1">Enviamos um código de verificação para <span id="span-email-servico"
+                    class="font-bold text-slate-800"></span>.</p>
+        </div>
+
+        <form onsubmit="confirmarOtpServico(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1 text-center">Digite o Código de
+                    Verificação</label>
+                <input type="text" id="input-codigo-otp-servico" required placeholder="Ex: 1234" maxlength="6"
+                    class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-center text-xl font-bold tracking-widest text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900">
+            </div>
+            <button type="submit"
+                class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md cursor-pointer">
+                Confirmar e Enviar Solicitação
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const usuarioLogadoServico = {{ 'true' if session.get('user_id') else 'false' }};
+    let payloadServicoPendente = null;
+
+    function trocarAbaServico(aba) {
+        const secAv = document.getElementById('conteudo-avaliacao');
+        const secPe = document.getElementById('conteudo-pericia');
+        const btnAv = document.getElementById('aba-btn-avaliacao');
+        const btnPe = document.getElementById('aba-btn-pericia');
+
+        const ativa = 'px-6 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition cursor-pointer bg-slate-900 text-white shadow';
+        const inativa = 'px-6 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition cursor-pointer bg-gray-100 text-slate-700 hover:bg-gray-200';
+
+        if (aba === 'pericia') {
+            secAv.classList.add('hidden');
+            secPe.classList.remove('hidden');
+            btnPe.className = ativa;
+            btnAv.className = inativa;
+        } else {
+            secPe.classList.add('hidden');
+            secAv.classList.remove('hidden');
+            btnAv.className = ativa;
+            btnPe.className = inativa;
+        }
+    }
+
+    async function iniciarSolicitacaoServico(event, categoria) {
+        event.preventDefault();
+        const isPericia = categoria === 'PERÍCIA';
+        const prefixo = isPericia ? 'pe' : 'av';
+
+        const tipoBruto = document.getElementById(`${prefixo}-tipo`).value.trim();
+        const bairro = document.getElementById(`${prefixo}-bairro`).value.trim();
+        const observacoes = document.getElementById(`${prefixo}-obs`).value.trim();
+        const tipoFormatado = `[${categoria}] ${tipoBruto}`;
+
+        if (usuarioLogadoServico) {
+            try {
+                const response = await fetch('/api/salvar-busca-logado', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tipo: tipoFormatado, bairro, observacoes })
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    alert('Solicitação enviada com sucesso! Usamos os dados do seu cadastro.');
+                    event.target.reset();
+                } else {
+                    alert(data.message || 'Não foi possível enviar sua solicitação.');
+                }
+            } catch (err) {
+                console.error('Erro:', err);
+                alert('Ocorreu um erro de conexão.');
+            }
+            return;
+        }
+
+        const nome = document.getElementById(`${prefixo}-nome`).value.trim();
+        const email = document.getElementById(`${prefixo}-email`).value.trim();
+        const whatsapp = document.getElementById(`${prefixo}-whatsapp`).value.trim();
+
+        payloadServicoPendente = {
+            nome,
+            email,
+            whatsapp,
+            tipo: tipoFormatado,
+            bairro,
+            observacoes,
+            formElement: event.target
+        };
+
+        try {
+            const response = await fetch('/api/enviar-otp-busca', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await response.json();
+
+            if (data.status === 'success' || data.success) {
+                document.getElementById('span-email-servico').textContent = email;
+                document.getElementById('modal-otp-servico').classList.remove('hidden');
+            } else {
+                if (data.message && data.message.includes('já está cadastrado')) {
+                    const irLogin = confirm(data.message + '\n\nDeseja ir para a tela de login?');
+                    if (irLogin) {
+                        window.location.href = "{{ url_for('login', next=request.path) }}";
+                    }
+                } else {
+                    alert(data.message || 'Erro ao enviar código de verificação. Tente novamente.');
+                }
+            }
+        } catch (err) {
+            console.error('Erro:', err);
+            alert('Ocorreu um erro de conexão.');
+        }
+    }
+
+    function fecharModalOtpServico() {
+        document.getElementById('modal-otp-servico').classList.add('hidden');
+    }
+
+    async function confirmarOtpServico(event) {
+        event.preventDefault();
+        if (!payloadServicoPendente) return;
+
+        const codigo = document.getElementById('input-codigo-otp-servico').value;
+        const { nome, email, whatsapp, tipo, bairro, observacoes, formElement } = payloadServicoPendente;
+
+        try {
+            const response = await fetch('/api/verificar-otp-e-salvar-busca', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codigo, email, nome, whatsapp, tipo, bairro, observacoes })
+            });
+            const data = await response.json();
+
+            if (data.status === 'success' || data.success) {
+                alert('Solicitação enviada com sucesso! Entraremos em contato em breve.');
+                fecharModalOtpServico();
+                formElement?.reset();
+                payloadServicoPendente = null;
+            } else {
+                alert(data.message || 'Código inválido ou expirado.');
+            }
+        } catch (err) {
+            console.error('Erro:', err);
+            alert('Erro ao validar código.');
+        }
+    }
+</script>
+{% endblock %}

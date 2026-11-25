@@ -399,6 +399,14 @@ def index():
     
     return render_template('index.html', secoes=secoes, favoritos_ids=favoritos_ids)
 
+@app.route('/servicos')
+def servicos():
+    return render_template('servicos.html', active_tab='servicos')
+
+@app.route('/sobre')
+def sobre():
+    return render_template('sobre.html', active_tab='sobre')
+
 @app.route('/cadastrar')
 def cadastrar_cliente():
     return render_template('cadastrar.html')

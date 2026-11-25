@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-12">
+
+    <!-- Bloco Principal: Quem é e o que faz Teca Borges -->
+    <section class="bg-white border border-gray-200 rounded-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 shadow-sm">
+        <div class="lg:col-span-7 p-8 sm:p-12 flex flex-col justify-center space-y-5 bg-stone-50/70">
+            <span class="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-600">Sobre</span>
+            <h1 class="fonte-marca text-3xl sm:text-4xl text-slate-950 leading-tight">
+                Teca Borges
+            </h1>
+
+            <div class="space-y-4 text-sm sm:text-[15px] text-slate-700 leading-relaxed font-normal">
+                <p>
+                    Teca Borges atua com foco em <strong>Venda, Locação, Avaliação e Perícia Judicial</strong>, além de
+                    <strong>Administração de Bens Imóveis e Condomínios</strong>, oferecendo um atendimento próximo,
+                    técnico e transparente para quem compra, vende, aluga ou administra patrimônio.
+                </p>
+                <p>
+                    Cada imóvel exige leitura de mercado, critério na precificação e atenção aos detalhes jurídicos
+                    e operacionais. Na avaliação e na perícia, o trabalho segue rigor técnico para entregar análises
+                    claras, objetivas e bem fundamentadas.
+                </p>
+                <p>
+                    Na administração de bens e condomínios, o foco está na organização, na preservação do patrimônio
+                    e na tranquilidade de proprietários, locatários e moradores no dia a dia.
+                </p>
+            </div>
+
+            <div class="pt-2 flex flex-wrap gap-3">
+                <a href="{{ url_for('index') }}"
+                    class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition">
+                    Ver Imóveis
+                </a>
+                <a href="{{ url_for('servicos') }}"
+                    class="px-5 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold uppercase tracking-wider rounded-xl transition">
+                    Avaliação e Perícia
+                </a>
+            </div>
+        </div>
+
+        <div class="lg:col-span-5 min-h-[320px] sm:min-h-[420px] bg-slate-200 relative overflow-hidden">
+            <img src="{{ url_for('static', filename='img/info.webp') }}"
+                alt="Teca Borges - Imóveis, Avaliação, Perícia e Administração" class="w-full h-full object-cover">
+        </div>
+    </section>
+
+    <!-- Pilares de Atuação -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-2">
+            <span class="text-[11px] font-bold uppercase tracking-widest text-amber-600">01 • Negócios</span>
+            <h2 class="text-lg font-extrabold text-slate-900">Venda e Locação</h2>
+            <p class="text-sm text-slate-600 leading-relaxed">
+                Acompanhamento completo na compra, venda ou locação de imóveis residenciais e comerciais, com transparência e orientação em cada etapa.
+            </p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-2">
+            <span class="text-[11px] font-bold uppercase tracking-widest text-amber-600">02 • Parecer Técnico</span>
+            <h2 class="text-lg font-extrabold text-slate-900">Avaliação e Perícia</h2>
+            <p class="text-sm text-slate-600 leading-relaxed">
+                Apuração técnica de valor de mercado e atuação pericial para demandas judiciais, extrajudiciais, inventários e acordos.
+            </p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-2">
+            <span class="text-[11px] font-bold uppercase tracking-widest text-amber-600">03 • Gestão</span>
+            <h2 class="text-lg font-extrabold text-slate-900">Administração de Bens</h2>
+            <p class="text-sm text-slate-600 leading-relaxed">
+                Gestão organizada de imóveis e condomínios com foco na conservação patrimonial, controle e clareza na comunicação.
+            </p>
+        </div>
+    </section>
+
+    <!-- Formulário: Nos mande uma mensagem -->
+    <section class="w-full max-w-4xl mx-auto px-4 sm:px-8 py-8 bg-white rounded-2xl shadow-sm border border-gray-200">
+        <div class="w-full max-w-2xl mx-auto space-y-6">
+            <div class="text-center space-y-2">
+                <h2 class="text-xl sm:text-2xl font-bold text-amber-600 uppercase">Nos mande uma mensagem</h2>
+                <p class="font-bold text-sm sm:text-base text-slate-900">
+                    Tire dúvidas, envie um recado ou fale diretamente com a equipe.
+                </p>
+            </div>
+
+            <form id="form-mensagem-sobre" onsubmit="enviarMensagemSobre(event)" class="space-y-4">
+                {% if not session.get('user_id') %}
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-900 mb-1">Seu Nome</label>
+                        <input type="text" id="msg-nome" required placeholder="Nome completo"
+                            class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-900 mb-1">E-mail</label>
+                        <input type="email" id="msg-email" required placeholder="seu@email.com"
+                            class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-900 mb-1">Contato</label>
+                        <input type="tel" id="msg-whatsapp" required placeholder="11 91234-5678" maxlength="11"
+                            oninput="this.value = this.value.replace(/\D/g, '')"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    </div>
+                </div>
+                {% endif %}
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-900 mb-1">Observações</label>
+                    <textarea id="msg-obs" rows="4" required
+                        placeholder="Escreva aqui a sua mensagem..."
+                        class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400"></textarea>
+                </div>
+
+                <div class="pt-2 text-center">
+                    <button type="submit"
+                        class="w-full sm:w-auto px-8 py-3.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold text-sm uppercase rounded-xl transition shadow-lg cursor-pointer">
+                        Enviar mensagem
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+</div>
+
+<!-- MODAL DE VERIFICAÇÃO DE E-MAIL (OTP) PARA MENSAGEM -->
+<div id="modal-otp-sobre"
+    class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-slate-900 relative">
+        <button type="button" onclick="fecharModalOtpSobre()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-slate-800 text-xl font-bold cursor-pointer">×</button>
+
+        <div class="text-center mb-6">
+            <span class="text-3xl">✉️</span>
+            <h3 class="text-xl font-extrabold text-slate-900 mt-2">Confirme seu E-mail</h3>
+            <p class="text-xs text-gray-500 mt-1">Enviamos um código de verificação para <span id="span-email-sobre"
+                    class="font-bold text-slate-800"></span>.</p>
+        </div>
+
+        <form onsubmit="confirmarOtpSobre(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1 text-center">Digite o Código de
+                    Verificação</label>
+                <input type="text" id="input-codigo-otp-sobre" required placeholder="Ex: 1234" maxlength="6"
+                    class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-center text-xl font-bold tracking-widest text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900">
+            </div>
+            <button type="submit"
+                class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-3 rounded-xl transition text-sm shadow-md cursor-pointer">
+                Confirmar e Enviar Mensagem
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const usuarioLogadoSobre = {{ 'true' if session.get('user_id') else 'false' }};
+    let payloadSobrePendente = null;
+
+    async function enviarMensagemSobre(event) {
+        event.preventDefault();
+        const observacoes = document.getElementById('msg-obs').value.trim();
+        const tipo = '[CONTATO - SOBRE] Mensagem';
+        const bairro = 'Página Sobre';
+
+        if (usuarioLogadoSobre) {
+            try {
+                const response = await fetch('/api/salvar-busca-logado', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tipo, bairro, observacoes })
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    alert('Mensagem enviada com sucesso! Usamos os dados do seu cadastro.');
+                    event.target.reset();
+                } else {
+                    alert(data.message || 'Não foi possível enviar sua mensagem.');
+                }
+            } catch (err) {
+                console.error('Erro:', err);
+                alert('Ocorreu um erro de conexão.');
+            }
+            return;
+        }
+
+        const nome = document.getElementById('msg-nome').value.trim();
+        const email = document.getElementById('msg-email').value.trim();
+        const whatsapp = document.getElementById('msg-whatsapp').value.trim();
+
+        payloadSobrePendente = {
+            nome,
+            email,
+            whatsapp,
+            tipo,
+            bairro,
+            observacoes,
+            formElement: event.target
+        };
+
+        try {
+            const response = await fetch('/api/enviar-otp-busca', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await response.json();
+
+            if (data.status === 'success' || data.success) {
+                document.getElementById('span-email-sobre').textContent = email;
+                document.getElementById('modal-otp-sobre').classList.remove('hidden');
+            } else {
+                if (data.message && data.message.includes('já está cadastrado')) {
+                    const irLogin = confirm(data.message + '\n\nDeseja ir para a tela de login?');
+                    if (irLogin) {
+                        window.location.href = "{{ url_for('login', next=request.path) }}";
+                    }
+                } else {
+                    alert(data.message || 'Erro ao enviar código de verificação. Tente novamente.');
+                }
+            }
+        } catch (err) {
+            console.error('Erro:', err);
+            alert('Ocorreu um erro de conexão.');
+        }
+    }
+
+    function fecharModalOtpSobre() {
+        document.getElementById('modal-otp-sobre').classList.add('hidden');
+    }
+
+    async function confirmarOtpSobre(event) {
+        event.preventDefault();
+        if (!payloadSobrePendente) return;
+
+        const codigo = document.getElementById('input-codigo-otp-sobre').value;
+        const { nome, email, whatsapp, tipo, bairro, observacoes, formElement } = payloadSobrePendente;
+
+        try {
+            const response = await fetch('/api/verificar-otp-e-salvar-busca', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codigo, email, nome, whatsapp, tipo, bairro, observacoes })
+            });
+            const data = await response.json();
+
+            if (data.status === 'success' || data.success) {
+                alert('Mensagem enviada com sucesso! Entraremos em contato em breve.');
+                fecharModalOtpSobre();
+                formElement?.reset();
+                payloadSobrePendente = null;
+            } else {
+                alert(data.message || 'Código inválido ou expirado.');
+            }
+        } catch (err) {
+            console.error('Erro:', err);
+            alert('Erro ao validar código.');
+        }
+    }
+</script>
+{% endblock %}
