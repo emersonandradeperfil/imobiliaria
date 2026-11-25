@@ -64,25 +64,48 @@
                 </div>
             </div>
 
-            <!-- Linha 2: Tipo de Imóvel + Busca em Tempo Real -->
+            <!-- Linha 2: Tipo de Imóvel (Dinâmico conforme cadastro) + Ordenação + Busca em Tempo Real -->
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                <div class="sm:col-span-5">
+                <div class="sm:col-span-4">
                     <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Tipo de Imóvel</label>
+                    {% set ns_tipos = namespace(lista=[]) %}
+                    {% for categoria, lista_imoveis in secoes.items() %}
+                        {% for imovel in lista_imoveis %}
+                            {% set t_norm = (imovel.tipo or '')|lower|trim %}
+                            {% if t_norm and t_norm not in ns_tipos.lista %}
+                                {% set ns_tipos.lista = ns_tipos.lista + [t_norm] %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                    {% set labels_tipo = {
+                        'apartamento': 'Apartamentos',
+                        'cobertura': 'Coberturas',
+                        'casa': 'Casas de Condomínio',
+                        'comercial': 'Conjuntos Comerciais'
+                    } %}
                     <select id="select-tipo" onchange="aplicarFiltros()"
                         class="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-slate-900">
                         <option value="">Todos os tipos</option>
-                        <option value="apartamento">Apartamentos</option>
-                        <option value="cobertura">Coberturas</option>
-                        <option value="casa">Casas de Condomínio</option>
-                        <option value="comercial">Conjuntos Comerciais</option>
+                        {% for t in ns_tipos.lista|sort %}
+                        <option value="{{ t }}">{{ labels_tipo.get(t, t|capitalize) }}</option>
+                        {% endfor %}
                     </select>
                 </div>
 
-                <div class="sm:col-span-7">
-                    <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Bairro, Código ou
-                        Palavra-chave</label>
+                <div class="sm:col-span-4">
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Ordenar por</label>
+                    <select id="select-ordem" onchange="aplicarFiltros()"
+                        class="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-slate-900">
+                        <option value="preco_asc">Menor preço</option>
+                        <option value="preco_desc" selected>Maior preço</option>
+                        <option value="padrao">Recentes</option>
+                    </select>
+                </div>
+
+                <div class="sm:col-span-4">
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Bairro ou Código</label>
                     <input type="text" id="input-busca" oninput="aplicarFiltros()"
-                        placeholder="Digite para filtrar na hora (ex: Jardins, Brooklin, AP0001)..."
+                        placeholder="Ex: Jardins, AP0001..."
                         class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900">
                 </div>
             </div>
@@ -108,22 +131,39 @@
     <!-- ========================================== -->
     <div id="container-vitrine" class="space-y-8">
         <div id="grid-imoveis" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
+            {% set ns = namespace(idx=0) %}
             {% for categoria, lista_imoveis in secoes.items() %}
             {% for imovel in lista_imoveis %}
+            {% set ns.idx = ns.idx + 1 %}
+            {% set preco_v = imovel.precos.venda if imovel.precos and imovel.precos.venda else 0 %}
+            {% set preco_l = imovel.precos.locacao if imovel.precos and imovel.precos.locacao else 0 %}
             <div id="imovel-{{ imovel._id }}"
                 onclick="window.location.href='{{ url_for('imovel_detalhe', slug=imovel.slug) }}'"
+                data-ordem-inicial="{{ ns.idx }}"
                 data-tipo="{{ imovel.tipo|lower }}"
-                data-venda="{{ '1' if imovel.precos.venda and imovel.precos.venda > 0 else '0' }}"
-                data-locacao="{{ '1' if imovel.precos.locacao and imovel.precos.locacao > 0 else '0' }}"
+                data-venda="{{ '1' if preco_v > 0 else '0' }}"
+                data-locacao="{{ '1' if preco_l > 0 else '0' }}"
+                data-preco-venda="{{ preco_v }}"
+                data-preco-locacao="{{ preco_l }}"
                 data-busca="{{ (imovel.titulo ~ ' ' ~ imovel.local_publico.bairro ~ ' ' ~ imovel.codigo ~ ' ' ~ imovel.tipo)|lower }}"
                 class="card-imovel bg-white rounded-none border border-gray-200 overflow-hidden flex flex-col justify-between hover:shadow-md transition cursor-pointer group">
 
                 <div>
-                    <!-- Foto de Capa -->
+                    <!-- Foto de Capa (Cloudinary ou Fallback Local) -->
                     <div class="relative h-56 w-full bg-slate-100 overflow-hidden">
-                        {% set capa = imovel.midia.fotos[0].arquivo if imovel.midia and imovel.midia.fotos else
-                        'upload/default.jpg' %}
-                        <img src="{{ url_for('static', filename=capa) }}" alt="{{ imovel.titulo }}"
+                        {% if imovel.midia and imovel.midia.fotos and imovel.midia.fotos|length > 0 %}
+                            {% set foto0 = imovel.midia.fotos[0] %}
+                            {% if foto0 is mapping and foto0.get('url') %}
+                                {% set capa = foto0.get('url') %}
+                            {% elif foto0 is mapping and foto0.get('arquivo') %}
+                                {% set capa = url_for('static', filename=foto0.get('arquivo')) %}
+                            {% else %}
+                                {% set capa = url_for('static', filename=foto0) %}
+                            {% endif %}
+                        {% else %}
+                            {% set capa = url_for('static', filename='upload/default.jpg') %}
+                        {% endif %}
+                        <img src="{{ capa }}" alt="{{ imovel.titulo }}"
                             class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
 
                         <div class="absolute top-3 left-3 flex flex-col gap-1">
@@ -511,11 +551,41 @@
         aplicarFiltros();
     }
 
+    function obterPrecoOrdenacao(card) {
+        const venda = parseFloat(card.getAttribute('data-preco-venda')) || 0;
+        const locacao = parseFloat(card.getAttribute('data-preco-locacao')) || 0;
+
+        if (finalidadeSelecionada === 'locacao') {
+            return locacao > 0 ? locacao : venda;
+        }
+        if (finalidadeSelecionada === 'venda') {
+            return venda > 0 ? venda : locacao;
+        }
+        return venda > 0 ? venda : locacao;
+    }
+
     function aplicarFiltros() {
         const tipoSelecionado = document.getElementById('select-tipo').value.toLowerCase();
+        const ordemSelecionada = document.getElementById('select-ordem').value;
         const termoBusca = document.getElementById('input-busca').value.toLowerCase().trim();
 
-        const cards = document.querySelectorAll('#grid-imoveis .card-imovel');
+        const grid = document.getElementById('grid-imoveis');
+        const cards = Array.from(grid.querySelectorAll('.card-imovel'));
+
+        cards.sort((a, b) => {
+            if (ordemSelecionada === 'preco_desc') {
+                return obterPrecoOrdenacao(b) - obterPrecoOrdenacao(a);
+            }
+            if (ordemSelecionada === 'preco_asc') {
+                return obterPrecoOrdenacao(a) - obterPrecoOrdenacao(b);
+            }
+            const idxA = parseInt(a.getAttribute('data-ordem-inicial'), 10) || 0;
+            const idxB = parseInt(b.getAttribute('data-ordem-inicial'), 10) || 0;
+            return idxA - idxB;
+        });
+
+        cards.forEach(card => grid.appendChild(card));
+
         const cardsCompativeis = [];
 
         cards.forEach(card => {
@@ -569,6 +639,7 @@
 
     function limparFiltros() {
         document.getElementById('select-tipo').value = '';
+        document.getElementById('select-ordem').value = 'preco_desc';
         document.getElementById('input-busca').value = '';
         mostrarTodosImoveis = false;
         mudarFinalidade('');

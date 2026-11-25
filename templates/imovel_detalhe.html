@@ -8,7 +8,15 @@
         <!-- BANNER DA FOTO PRINCIPAL NO TOPO -->
         <div class="w-full h-72 sm:h-96 bg-slate-900 relative">
             {% if imovel.midia and imovel.midia.fotos and imovel.midia.fotos|length > 0 %}
-                <img src="{{ url_for('static', filename=imovel.midia.fotos[0].arquivo) }}" class="w-full h-full object-cover">
+                {% set foto_capa = imovel.midia.fotos[0] %}
+                {% if foto_capa is mapping and foto_capa.get('url') %}
+                    {% set src_capa = foto_capa.get('url') %}
+                {% elif foto_capa is mapping and foto_capa.get('arquivo') %}
+                    {% set src_capa = url_for('static', filename=foto_capa.get('arquivo')) %}
+                {% else %}
+                    {% set src_capa = url_for('static', filename=foto_capa) %}
+                {% endif %}
+                <img src="{{ src_capa }}" class="w-full h-full object-cover">
             {% else %}
                 <div class="w-full h-full flex items-center justify-center text-gray-400">Sem Foto Principal</div>
             {% endif %}
@@ -376,8 +384,19 @@
             <div onclick="window.location.href='{{ url_for('imovel_detalhe', slug=dest.slug) }}'"
                  class="min-w-[280px] sm:min-w-[340px] max-w-[340px] flex-shrink-0 bg-white border border-gray-200 overflow-hidden cursor-pointer group hover:shadow-md transition">
                 <div class="h-52 bg-slate-100 overflow-hidden relative">
-                    {% set capa_d = dest.midia.fotos[0].arquivo if dest.midia and dest.midia.fotos and dest.midia.fotos|length > 0 else 'upload/default.jpg' %}
-                    <img src="{{ url_for('static', filename=capa_d) }}" alt="{{ dest.titulo }}"
+                    {% if dest.midia and dest.midia.fotos and dest.midia.fotos|length > 0 %}
+                        {% set f_dest = dest.midia.fotos[0] %}
+                        {% if f_dest is mapping and f_dest.get('url') %}
+                            {% set src_dest = f_dest.get('url') %}
+                        {% elif f_dest is mapping and f_dest.get('arquivo') %}
+                            {% set src_dest = url_for('static', filename=f_dest.get('arquivo')) %}
+                        {% else %}
+                            {% set src_dest = url_for('static', filename=f_dest) %}
+                        {% endif %}
+                    {% else %}
+                        {% set src_dest = url_for('static', filename='upload/default.jpg') %}
+                    {% endif %}
+                    <img src="{{ src_dest }}" alt="{{ dest.titulo }}"
                          class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                     {% if dest.destaque %}
                     <span class="absolute top-3 left-3 bg-slate-900/85 text-white text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1">

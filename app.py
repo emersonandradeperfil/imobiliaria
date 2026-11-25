@@ -16,6 +16,8 @@ from pymongo.errors import DuplicateKeyError
 import requests
 from dotenv import load_dotenv
 import re
+import cloudinary
+import cloudinary.uploader
 
 # Carrega as variáveis de ambiente do arquivo .env local
 load_dotenv()
@@ -37,10 +39,28 @@ else:
 
 init_db(app)
 
-# Configuração da pasta de uploads de imóveis
+# Configuração da pasta de uploads de imóveis (usada no modo 'local' ou como fallback)
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'upload')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Configuração do Cloudinary + chave de alternância ('cloudinary' | 'local')
+STORAGE_MODE = os.getenv("STORAGE_MODE", "cloudinary").strip().lower()
+CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "").strip()
+CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "").strip()
+CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET", "").strip()
+
+CLOUDINARY_CONFIGURADO = bool(
+    CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET
+)
+
+if CLOUDINARY_CONFIGURADO:
+    cloudinary.config(
+        cloud_name=CLOUDINARY_CLOUD_NAME,
+        api_key=CLOUDINARY_API_KEY,
+        api_secret=CLOUDINARY_API_SECRET,
+        secure=True,
+    )
 
 # --- FUNÇÕES AUXILIARES DE SEGURANÇA E INTEGRAÇÃO ---
 def sanitizar_texto(texto):
@@ -242,12 +262,42 @@ def gerar_codigo_proprietario(papel="proprietario"):
             pass
     return f"{prefixo}0001"
 
+# --- FUNÇÕES AUXILIARES DE ARMAZENAMENTO DE FOTOS (CLOUDINARY + FALLBACK LOCAL) ---
+def _salvar_arquivo_local(file_storage, codigo, cat, ordem, extensao, pasta_imovel):
+    os.makedirs(pasta_imovel, exist_ok=True)
+    nome_arquivo = secure_filename(f"{codigo}_{cat}_{ordem}{extensao}")
+    caminho_completo = os.path.join(pasta_imovel, nome_arquivo)
+    file_storage.seek(0)
+    file_storage.save(caminho_completo)
+    return f"upload/{codigo}/{nome_arquivo}"
+
+def _excluir_recurso_foto(foto_dict):
+    if not isinstance(foto_dict, dict):
+        return
+
+    public_id = foto_dict.get("public_id")
+    if public_id and CLOUDINARY_CONFIGURADO:
+        try:
+            cloudinary.uploader.destroy(public_id, resource_type="image")
+        except Exception as e:
+            print(f"Erro ao remover foto '{public_id}' no Cloudinary: {e}")
+
+    arquivo_rel = foto_dict.get("arquivo")
+    if arquivo_rel and not str(arquivo_rel).endswith("/default.jpg") and arquivo_rel != "upload/default.jpg":
+        caminho_fisico = os.path.join(app.root_path, 'static', str(arquivo_rel).replace("/", os.sep))
+        if os.path.isfile(caminho_fisico):
+            try:
+                os.remove(caminho_fisico)
+            except Exception as e:
+                print(f"Erro ao deletar arquivo físico: {e}")
+
 # --- FUNÇÃO PARA PROCESSAR UPLOADS DINÂMICOS DE FOTOS ---
 def processar_upload_fotos_dinamicas(request_files, request_form, codigo, pasta_imovel, fotos_existentes=None):
     lista_fotos = list(fotos_existentes) if fotos_existentes else []
     contador_ordem = max([f.get("ordem", 0) for f in lista_fotos], default=0) + 1
     extensoes_permitidas = {".jpg", ".jpeg", ".png", ".webp"}
-    
+    usar_cloudinary = (STORAGE_MODE == "cloudinary") and CLOUDINARY_CONFIGURADO
+
     for key in request_files:
         if key.startswith("fotos_"):
             idx = key.split("_")[1]
@@ -267,22 +317,58 @@ def processar_upload_fotos_dinamicas(request_files, request_form, codigo, pasta_
                     extensao = os.path.splitext(file.filename)[1].lower()
                     if extensao not in extensoes_permitidas:
                         continue
-                    nome_arquivo = secure_filename(f"{codigo}_{cat}_{contador_ordem}{extensao}")
-                    file.save(os.path.join(pasta_imovel, nome_arquivo))
-                    
+
                     is_capa = True if (cat == 'capa' and not any(f.get('capa') for f in lista_fotos)) else False
-                    
-                    lista_fotos.append({
-                        "arquivo": f"upload/{codigo}/{nome_arquivo}",
-                        "categoria": cat,
-                        "legenda": legenda,
-                        "ordem": contador_ordem,
-                        "capa": is_capa
-                    })
+                    foto_salva = None
+
+                    if usar_cloudinary:
+                        try:
+                            file.seek(0)
+                            res_cloud = cloudinary.uploader.upload(
+                                file,
+                                folder=f"teca_borges/imoveis/{codigo}",
+                                resource_type="image",
+                            )
+                            foto_salva = {
+                                "url": res_cloud.get("secure_url"),
+                                "public_id": res_cloud.get("public_id"),
+                                "arquivo": None,
+                                "storage": "cloudinary",
+                                "categoria": cat,
+                                "legenda": legenda,
+                                "ordem": contador_ordem,
+                                "capa": is_capa
+                            }
+                        except Exception as e:
+                            print(f"Falha no upload para Cloudinary (usando fallback local): {e}")
+
+                    if not foto_salva:
+                        caminho_rel = _salvar_arquivo_local(file, codigo, cat, contador_ordem, extensao, pasta_imovel)
+                        foto_salva = {
+                            "url": None,
+                            "public_id": None,
+                            "arquivo": caminho_rel,
+                            "storage": "local",
+                            "categoria": cat,
+                            "legenda": legenda,
+                            "ordem": contador_ordem,
+                            "capa": is_capa
+                        }
+
+                    lista_fotos.append(foto_salva)
                     contador_ordem += 1
                     
     if not lista_fotos:
-        lista_fotos.append({"arquivo": f"upload/{codigo}/default.jpg", "categoria": "capa", "legenda": "Capa", "ordem": 1, "capa": True})
+        lista_fotos.append({
+            "url": None,
+            "public_id": None,
+            "arquivo": f"upload/{codigo}/default.jpg",
+            "storage": "local",
+            "categoria": "capa",
+            "legenda": "Capa",
+            "ordem": 1,
+            "capa": True
+        })
         
     return lista_fotos
 
@@ -1297,8 +1383,6 @@ def admin_imovel_novo():
         proprietario_oid = oid_seguro(request.form.get('proprietario_id'))
         
         pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
-        os.makedirs(pasta_imovel, exist_ok=True)
-        
         lista_fotos = processar_upload_fotos_dinamicas(request.files, request.form, codigo, pasta_imovel)
 
         videos = []
@@ -1362,7 +1446,7 @@ def admin_imovel_novo():
             "posicao_solar": sanitizar_texto(request.form.get('posicao_solar', ''))
         })
         
-        flash(f'Imóvel {codigo} cadastrado com sucesso!', 'success')
+        # flash(f'Imóvel {codigo} cadastrado com sucesso!', 'success')
         return redirect(url_for('admin_imoveis'))
         
     proprietarios = list(db.users.find({"papel": {"$in": ["proprietario", "parceiro"]}, "ativo": {"$ne": False}}))
@@ -1423,7 +1507,6 @@ def editar_imovel(codigo):
         proprietario_oid = oid_seguro(request.form.get('proprietario_id'))
         
         pasta_imovel = os.path.join(app.config['UPLOAD_FOLDER'], codigo)
-        os.makedirs(pasta_imovel, exist_ok=True)
         
         fotos_atuais = imovel.get("midia", {}).get("fotos", [])
         lista_fotos = processar_upload_fotos_dinamicas(request.files, request.form, codigo, pasta_imovel, fotos_atuais)
@@ -1516,21 +1599,29 @@ def remover_foto_imovel(codigo):
     db = mongo.db
     dados = request.json or {}
     caminho_foto = dados.get('arquivo')
+    public_id_alvo = dados.get('public_id')
     
     imovel = db.imoveis.find_one({"codigo": codigo})
     if not imovel:
         return jsonify({"status": "error", "message": "Imóvel não encontrado."}), 404
         
     fotos = imovel.get("midia", {}).get("fotos", [])
-    novas_fotos = [f for f in fotos if f.get("arquivo") != caminho_foto]
-    
-    if caminho_foto:
-        caminho_fisico = os.path.join(app.root_path, 'static', caminho_foto)
-        if os.path.exists(caminho_fisico):
-            try:
-                os.remove(caminho_fisico)
-            except Exception as e:
-                print(f"Erro ao deletar arquivo físico: {e}")
+    novas_fotos = []
+    fotos_removidas = []
+
+    for f in fotos:
+        match_arquivo = bool(caminho_foto and f.get("arquivo") == caminho_foto)
+        match_public_id = bool(public_id_alvo and f.get("public_id") == public_id_alvo)
+        if match_arquivo or match_public_id:
+            fotos_removidas.append(f)
+        else:
+            novas_fotos.append(f)
+
+    for f_rem in fotos_removidas:
+        _excluir_recurso_foto(f_rem)
+
+    if not fotos_removidas and caminho_foto:
+        _excluir_recurso_foto({"arquivo": caminho_foto, "public_id": public_id_alvo})
                 
     db.imoveis.update_one(
         {"codigo": codigo},

@@ -228,9 +228,18 @@
                 imovel.midia.fotos|length }} fotos):</label>
             <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
                 {% for foto in imovel.midia.fotos %}
+                {% if foto is mapping and foto.get('url') %}
+                    {% set src_thumb = foto.get('url') %}
+                {% elif foto is mapping and foto.get('arquivo') %}
+                    {% set src_thumb = url_for('static', filename=foto.get('arquivo')) %}
+                {% else %}
+                    {% set src_thumb = url_for('static', filename=foto) %}
+                {% endif %}
+                {% set arq_param = foto.get('arquivo') if foto is mapping and foto.get('arquivo') else '' %}
+                {% set pid_param = foto.get('public_id') if foto is mapping and foto.get('public_id') else '' %}
                 <div id="foto-item-{{ loop.index0 }}"
                     class="relative rounded-xl overflow-hidden shadow-sm border bg-white h-32 group">
-                    <img src="{{ url_for('static', filename=foto.arquivo) }}" class="w-full h-full object-cover">
+                    <img src="{{ src_thumb }}" class="w-full h-full object-cover">
         
                     <div
                         class="absolute bottom-0 inset-x-0 bg-slate-950/70 text-white text-[10px] font-bold text-center py-0.5 uppercase">
@@ -239,7 +248,7 @@
         
                     <!-- Botão de Remover Foto -->
                     <button type="button"
-                        onclick="removerFotoCadastrada('{{ imovel.codigo }}', '{{ foto.arquivo }}', 'foto-item-{{ loop.index0 }}')"
+                        onclick="removerFotoCadastrada('{{ imovel.codigo }}', '{{ arq_param }}', 'foto-item-{{ loop.index0 }}', '{{ pid_param }}')"
                         class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition opacity-0 group-hover:opacity-100 cursor-pointer"
                         title="Remover foto">
                         ✕
@@ -480,14 +489,14 @@
         }
     });
 
-    async function removerFotoCadastrada(codigoImovel, caminhoArquivo, elementoId) {
+    async function removerFotoCadastrada(codigoImovel, caminhoArquivo, elementoId, publicId = '') {
         if (!confirm("Deseja realmente remover esta foto?")) return;
 
         try {
             let response = await fetch(`/admin/imoveis/remover-foto/${codigoImovel}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ arquivo: caminhoArquivo })
+                body: JSON.stringify({ arquivo: caminhoArquivo, public_id: publicId })
             });
             let data = await response.json();
 

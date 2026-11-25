@@ -50,9 +50,16 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {% for foto in fotos_cat %}
+                            {% if foto is mapping and foto.get('url') %}
+                                {% set src_foto = foto.get('url') %}
+                            {% elif foto is mapping and foto.get('arquivo') %}
+                                {% set src_foto = url_for('static', filename=foto.get('arquivo')) %}
+                            {% else %}
+                                {% set src_foto = url_for('static', filename=foto) %}
+                            {% endif %}
                             <div onclick="abrirLightboxGaleria({{ ns.indice_global }})"
                                 class="h-56 bg-slate-100 overflow-hidden border border-gray-100 cursor-pointer group relative">
-                                <img src="{{ url_for('static', filename=foto.arquivo) }}" alt="{{ nome_comodo }}"
+                                <img src="{{ src_foto }}" alt="{{ nome_comodo }}"
                                     class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                                 <div class="absolute bottom-0 inset-x-0 bg-slate-950/70 text-white text-[11px] px-3 py-1.5 flex justify-between items-center">
                                     <span>{{ nome_comodo }}</span>
@@ -126,8 +133,15 @@
                     {% else %}{% set rotulo_comodo = fotos_cat[0].legenda or cat|replace('_', ' ')|title %}{% endif %}
 
                     {% for foto in fotos_cat %}
+                    {% if foto is mapping and foto.get('url') %}
+                        {% set src_lb = foto.get('url') %}
+                    {% elif foto is mapping and foto.get('arquivo') %}
+                        {% set src_lb = url_for('static', filename=foto.get('arquivo')) %}
+                    {% else %}
+                        {% set src_lb = url_for('static', filename=foto) %}
+                    {% endif %}
                     {
-                        arquivo: {{ foto.arquivo | tojson | safe }},
+                        url: {{ src_lb | tojson | safe }},
                         comodo: {{ rotulo_comodo | tojson | safe }}
                     },
                     {% endfor %}
@@ -177,7 +191,7 @@
     function renderLightboxGaleria() {
         if (!todasFotosGaleria.length) return;
         const item = todasFotosGaleria[lbIdx];
-        document.getElementById('lb-galeria-img').src = '/static/' + item.arquivo;
+        document.getElementById('lb-galeria-img').src = item.url;
         document.getElementById('lb-galeria-comodo').textContent = item.comodo;
         document.getElementById('lb-galeria-contador').textContent = `${lbIdx + 1} / ${todasFotosGaleria.length}`;
     }
